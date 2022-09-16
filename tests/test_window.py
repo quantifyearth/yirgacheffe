@@ -1,6 +1,6 @@
 import pytest
 
-from yirgacheffe.layers import Window
+from yirgacheffe.window import Window
 
 @pytest.mark.parametrize(
 	"lhs,rhs,is_greater,is_equal",

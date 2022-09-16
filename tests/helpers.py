@@ -1,5 +1,5 @@
 from math import ceil
-from typing import Set, Optional
+from typing import Set, Optional, Tuple
 
 import numpy
 from osgeo import gdal, ogr
@@ -28,6 +28,28 @@ def make_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[st
 	band = dataset.GetRasterBand(1)
 	for yoffset in range(dataset.RasterYSize):
 		band.WriteArray(numpy.array([[(yoffset % 256),] * dataset.RasterXSize]), 0, yoffset)
+	return dataset
+
+def make_dataset_with_data(origin: Tuple, pixel_pitch: float, data: numpy.array) -> gdal.Dataset:
+	assert data.ndim == 2
+	datatype = gdal.GDT_Byte
+	if isinstance(data[0][0], float):
+		datatype = gdal.GDT_Float32
+	dataset = gdal.GetDriverByName('mem').Create(
+		'mem',
+		len(data[0]),
+		len(data),
+		1,
+		datatype,
+		[]
+	)
+	dataset.SetGeoTransform([
+		origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0
+	])
+	dataset.SetProjection("WGS 84")
+	band = dataset.GetRasterBand(1)
+	for index in range(len(data)):
+		band.WriteArray(numpy.array([list(data[index])]), 0, index)
 	return dataset
 
 def make_vectors_with_id(id: int, areas: Set[Area], filename: str) -> None:
