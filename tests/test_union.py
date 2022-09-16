@@ -1,6 +1,6 @@
 import pytest
 
-from helpers import make_dataset_of_region
+from helpers import gdal_dataset_of_region
 from yirgacheffe.layers import Area, Layer, NullLayer, Window
 
 
@@ -9,45 +9,45 @@ def test_find_union_empty_list() -> None:
         Layer.find_union([])
 
 def test_find_union_single_item() -> None:
-    layer = Layer(make_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    layer = Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     union = Layer.find_union([layer])
     assert union == layer.area
 
 def test_find_union_same() -> None:
     layers = [
-        Layer(make_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        Layer(make_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+        Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
+        Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     ]
     union = Layer.find_union(layers)
     assert union == layers[0].area
 
 def test_find_union_subset() -> None:
     layers = [
-        Layer(make_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        Layer(make_dataset_of_region(Area(-1, 1, 1, -1), 0.02))
+        Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
+        Layer(gdal_dataset_of_region(Area(-1, 1, 1, -1), 0.02))
     ]
     union = Layer.find_union(layers)
     assert union == layers[0].area
 
 def test_find_union_overlap() -> None:
     layers = [
-        Layer(make_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        Layer(make_dataset_of_region(Area(-15, 15, -5, -5), 0.02))
+        Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
+        Layer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02))
     ]
     union = Layer.find_union(layers)
     assert union == Area(-15, 15, 10, -10)
 
 def test_find_union_distinct() -> None:
     layers = [
-        Layer(make_dataset_of_region(Area(-110, 10, -100, -10), 0.02)),
-        Layer(make_dataset_of_region(Area(100, 10, 110, -10), 0.02))
+        Layer(gdal_dataset_of_region(Area(-110, 10, -100, -10), 0.02)),
+        Layer(gdal_dataset_of_region(Area(100, 10, 110, -10), 0.02))
     ]
     union = Layer.find_union(layers)
     assert union == Area(-110, 10, 110, -10)
 
 def test_find_union_with_null() -> None:
     layers = [
-        Layer(make_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
+        Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
         NullLayer()
     ]
     union = Layer.find_union(layers)
@@ -55,8 +55,8 @@ def test_find_union_with_null() -> None:
 
 def test_find_union_different_pixel_pitch() -> None:
     layers = [
-        Layer(make_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        Layer(make_dataset_of_region(Area(-15, 15, -5, -5), 0.01))
+        Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
+        Layer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.01))
     ]
     with pytest.raises(ValueError):
         _ = Layer.find_union(layers)
@@ -87,7 +87,7 @@ def test_set_union_superset(left_padding: int, right_padding: int, top_padding: 
     pixel_density = 0.02
     origin_area = Area(-1, 1, 1, -1)
 
-    layer = Layer(make_dataset_of_region(origin_area, pixel_density))
+    layer = Layer(gdal_dataset_of_region(origin_area, pixel_density))
     assert layer.window == Window(0, 0, 100, 100)
 
     # The make_dataset... function fills rows with the yoffset, and so the first row

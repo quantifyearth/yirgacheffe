@@ -5,11 +5,11 @@ import numpy
 import pytest
 
 from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
-from helpers import make_dataset_of_region, make_vectors_with_id
+from helpers import gdal_dataset_of_region, make_vectors_with_id
 
 def test_make_basic_layer() -> None:
 	area = Area(-10, 10, 10, -10)
-	layer = Layer(make_dataset_of_region(area, 0.02))
+	layer = Layer(gdal_dataset_of_region(area, 0.02))
 	assert layer.area == area
 	assert layer.pixel_scale == (0.02, -0.02)
 	assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
@@ -29,7 +29,7 @@ def test_open_file() -> None:
 	with tempfile.TemporaryDirectory() as tempdir:
 		path = os.path.join(tempdir, "test.tif")
 		area = Area(-10, 10, 10, -10)
-		_ = make_dataset_of_region(area, 0.02, filename=path)
+		_ = gdal_dataset_of_region(area, 0.02, filename=path)
 		assert os.path.exists(path)
 		layer = Layer.layer_from_file(path)
 		assert layer.area == area
