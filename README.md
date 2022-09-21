@@ -14,7 +14,7 @@ The motivation for Yirgacheffe layers is to make working with gdal data slightly
 
 For example, say we had three layers that overlapped and we wanted to know the
 
-```
+```python
 elevation_layer = Layer.layer_from_file('elecation.tiff')
 area_layer = UniformAreaLayer('area.tiff')
 validity_layer = Layer.layer_from_file('validity.tiff')
@@ -27,7 +27,7 @@ validity_layer.set_window_for_intersection(intersection)
 
 # Work out the area where the data is valid and over 3000ft
 def is_munro(data):
-	return numpy.where(data > 3000.0, 0.0, 1.0)
+    return numpy.where(data > 3000.0, 0.0, 1.0)
 result = validity_layer * area_layer * elevation_layer.apply(is_munro)
 
 result_band = result_gdal_dataset.GetRasterBand(1)
@@ -36,7 +36,7 @@ result.save(result_band)
 
 If you want the union then you can simply swap do:
 
-```
+```python
 intersection = Layer.find_union(elecation_layer, area_layer, validity_layer)
 elevation_layer.set_window_for_union(intersection)
 area_layer.set_window_for_union(intersection)
@@ -52,7 +52,7 @@ If you want to work on the data in a layer directly you can call `read_array`, a
 
 This is your basic GDAL raster layer, which you load from a geotiff.
 
-```
+```python
 layer1 = Layer.layer_from_file('test1.tif')
 ```
 
@@ -71,9 +71,9 @@ area_layer = UniformAreaLayer('area.tiff')
 
 Note that loading this data can still be very slow, due to how image compression works. So if you plan to use area.tiff more than once, we recommend use save an optimised version - this will do the slow uncompression once and then save a minimal file to speed up future processing:
 
-```
+```python
 if not os.path.exists('yirgacheffe_area.tiff'):
-	UniformAreaLayer('area.tiff', 'yirgacheffe_area.tiff')
+    UniformAreaLayer('area.tiff', 'yirgacheffe_area.tiff')
 area_layer = UniformAreaLayer('yirgacheffe_area.tiff')
 ```
 
@@ -82,11 +82,11 @@ area_layer = UniformAreaLayer('yirgacheffe_area.tiff')
 
 This is there to simplify code when you have some optional layers. Rather than littering your code with checks, you can just use a null layer, which can be included in calculations and will just return an identity value as if it wasn't there.
 
-```
+```python
 try:
-	area_layer = UniformAreaLayer('myarea.tiff')
+    area_layer = UniformAreaLayer('myarea.tiff')
 except FileDoesNotExist:
-	area_layer = NullLayer()
+    area_layer = NullLayer()
 ```
 
 
@@ -98,7 +98,7 @@ Once you have two layers, you can perform numberical analysis on them similar to
 
 Pixel-wise addition, subtraction, multiplication or division, either between arrays, or with constants:
 
-```
+```python
 layer1 = Layer.layer_from_file('test1.tif')
 layer2 = Layer.layer_from_file('test2.tif')
 
@@ -110,7 +110,7 @@ result.save(result_band)
 
 or
 
-```
+```python
 layer1 = Layer.layer_from_file('test1.tif')
 
 result = layer1 * 42.0
@@ -123,7 +123,7 @@ result.save(result_band)
 
 Pixel-wise raising to a constant power:
 
-```
+```python
 layer1 = Layer.layer_from_file('test1.tif')
 
 result = layer1 ** 0.65
@@ -137,9 +137,9 @@ result.save(result_band)
 
 You can specify a function that takes either data from one layer or from two layers, and returns the processed data.
 
-```
+```python
 def is_over_ten(input_array):
-	return numpy.where(input_array > 10.0, 0.0, 1.0)
+    return numpy.where(input_array > 10.0, 0.0, 1.0)
 
 layer1 = Layer.layer_from_file('test1.tif')
 
@@ -151,9 +151,9 @@ result.save(result_band)
 
 or
 
-```
+```python
 def simple_add(first_array, second_array):
-	return first_array + second_array
+    return first_array + second_array
 
 layer1 = Layer.layer_from_file('test1.tif')
 layer2 = Layer.layer_from_file('test2.tif')
