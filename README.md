@@ -45,6 +45,16 @@ validity_layer.set_window_for_union(intersection)
 
 If you want to work on the data in a layer directly you can call `read_array`, as you would with gdal. The data you access will be relative to the specified window - that is, if you've called either `set_window_for_intersection` or `set_window_for_union` then `read_array` will be relative to that and Yirgacheffe will clip or expand the data with zero values as necessary.
 
+### Todo but not supported
+
+Yirgacheffe is work in progress, so things planned but not supported currently:
+
+* Pixel scale adjustment - all raster layers must be provided at the same pixel scale currently
+* A fold operation
+* CUPY support
+* Dispatching work across multiple CPUs
+
+
 
 ## Layer types
 
@@ -59,6 +69,12 @@ layer1 = Layer.layer_from_file('test1.tif')
 ### DynamicVectorRangeLayer
 
 This layer will load vector data and rasterize it on demand as part of a calculation - becase it only rasterizes the data when needed, it is memory efficient.
+
+Becuase it will be rasterized you need to specify the pixel scale and map projection to be used when rasterising the data, and the common way to do that is by using one of your other layers.
+
+```python
+vector_layer = DynamicVectorRangeLayer('range.gpkg', 'id_no == 42', layer1.pixel_scale, layer1.projection)
+```
 
 
 ### UniformAreaLayer
