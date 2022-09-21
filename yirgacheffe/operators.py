@@ -32,6 +32,9 @@ class LayerMathMixin:
 		window = self.window
 		return self.read_array(0, index, window.xsize, 1)
 
+	def apply(self, func, other=None):
+		return LayerOperation(self, func, other)
+
 
 class LayerOperation(LayerMathMixin):
 
@@ -66,7 +69,12 @@ class LayerOperation(LayerMathMixin):
 	def _eval(self, yoffset):
 		try:
 			return getattr(self.lhs._eval(yoffset), self.op)(self.rhs._eval(yoffset))
-		except AttributeError:
+		except TypeError: # op not a string
+			try:
+				return self.op(self.lhs._eval(yoffset), self.rhs._eval(yoffset))
+			except AttributeError: # no rhs
+				return self.op(self.lhs._eval(yoffset))
+		except AttributeError: # no op attr
 			window = self.lhs.window
 			val = self.lhs.read_array(0, yoffset, window.xsize, 1)
 			return val
