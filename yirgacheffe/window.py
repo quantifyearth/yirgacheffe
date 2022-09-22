@@ -1,6 +1,6 @@
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import List
 
 Area = namedtuple('Area', ['left', 'top', 'right', 'bottom'])
 

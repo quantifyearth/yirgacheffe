@@ -105,5 +105,14 @@ def test_set_union_superset(left_padding: int, right_padding: int, top_padding: 
         (2 + top_padding + bottom_padding) / pixel_density,
     )
 
-    origin_after_pixel = layer.read_array(0, 1 + int(top_padding / pixel_density), 100 + int((left_padding + right_padding) / pixel_density), 1)
-    assert list(origin_after_pixel[0]) == ([0,] * int(left_padding / pixel_density)) + list(origin_before_pixel[0]) + ([0,] * int(right_padding / pixel_density))
+    origin_after_pixel = layer.read_array(
+        0,
+        1 + int(top_padding / pixel_density),
+        100 + int((left_padding + right_padding) / pixel_density),
+        1
+    )
+    assert list(origin_after_pixel[0]) == (
+        [0,] * int(left_padding / pixel_density)) +\
+        list(origin_before_pixel[0]) +\
+        ([0,] * int(right_padding / pixel_density)
+    )
