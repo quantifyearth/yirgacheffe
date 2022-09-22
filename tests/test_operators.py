@@ -1,4 +1,5 @@
 import numpy
+import pytest
 from osgeo import gdal
 
 from helpers import gdal_dataset_with_data
@@ -245,6 +246,39 @@ def test_binary_apply() -> None:
 	comp.save(band=band)
 
 	expected = data1 + data2
+	actual = band.ReadAsArray(0, 0, 4, 2)
+
+	assert (expected == actual).all()
+
+
+@pytest.mark.parametrize("operator",
+	[
+		lambda a, b: a == b,
+		lambda a, b: a != b,
+		lambda a, b: a > b,
+		lambda a, b: a >= b,
+		lambda a, b: a < b,
+		lambda a, b: a <= b,
+	]
+)
+def test_comparison_float_layer_by_const(operator) -> None:
+	data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+	layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+	comp = operator(layer1, 3.0)
+
+	result_data = gdal.GetDriverByName('mem').Create(
+		'mem',
+		4,
+		2,
+		1,
+		gdal.GDT_Byte,
+		[]
+	)
+	band = result_data.GetRasterBand(1)
+	comp.save(band=band)
+
+	expected = operator(data1, 3.0)
 	actual = band.ReadAsArray(0, 0, 4, 2)
 
 	assert (expected == actual).all()

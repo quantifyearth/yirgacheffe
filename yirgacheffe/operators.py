@@ -28,6 +28,27 @@ class LayerMathMixin:
 	def __pow__(self, other):
 		return LayerOperation(self, "__pow__", other)
 
+	def __eq__(self, other):
+		return LayerOperation(self, "__eq__", other)
+
+	def __ne__(self, other):
+		return LayerOperation(self, "__ne__", other)
+
+	def __lt__(self, other):
+		return LayerOperation(self, "__lt__", other)
+
+	def __le__(self, other):
+		return LayerOperation(self, "__le__", other)
+
+	def __gt__(self, other):
+		return LayerOperation(self, "__gt__", other)
+
+	def __ge__(self, other):
+		return LayerOperation(self, "__ge__", other)
+
+	def __setitem__(self, other):
+		return LayerOperation(self, "__setitem__", other)
+
 	def _eval(self, index):
 		window = self.window
 		return self.read_array(0, index, window.xsize, 1)
