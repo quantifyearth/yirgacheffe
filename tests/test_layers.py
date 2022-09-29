@@ -4,10 +4,14 @@ import tempfile
 import numpy
 import pytest
 
-
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 
 from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
+
+# There is a lot of "del" in this file, due to a combination of gdal having no way
+# to explicitly close a file beyond forcing the gdal object's deletion, and Windows
+# getting upset that it tries to clear up the TemporaryDirectory and there's an open
+# file handle within that directory.
 
 def test_make_basic_layer() -> None:
     area = Area(-10, 10, 10, -10)
@@ -31,13 +35,15 @@ def test_open_file() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10)
-        _ = gdal_dataset_of_region(area, 0.02, filename=path)
+        dataset = gdal_dataset_of_region(area, 0.02, filename=path)
+        del dataset
         assert os.path.exists(path)
         layer = Layer.layer_from_file(path)
         assert layer.area == area
         assert layer.pixel_scale == (0.02, -0.02)
         assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
         assert layer.window == Window(0, 0, 1000, 1000)
+        del layer
 
 def test_basic_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -49,6 +55,8 @@ def test_basic_vector_layer() -> None:
         assert layer.area == area
         assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 10)
+
+        del layer
 
 def test_basic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -69,6 +77,8 @@ def test_basic_dyanamic_vector_layer() -> None:
         assert layer.area == area
         assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 10)
+
+        del layer
 
 def test_basic_dynamic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -103,3 +113,6 @@ def test_multi_area_vector() -> None:
             dynamic_raster = dynamic_layer.read_array(0, yoffset, window.xsize, 1)
 
             assert (vector_raster == dynamic_raster).all()
+
+        del vector_layer
+        del dynamic_layer
