@@ -180,6 +180,26 @@ result_band = result_gdal_dataset.GetRasterBand(1)
 result.save(result_band)
 ```
 
+## Getting an answer out
+
+There are two ways to store the result of a computation. In all the above examples we use the `save` call, to which you pass a gdal dataset band, into which the results will be written.
+
+The alternative is to call `sum` which will give you a total:
+
+```python
+area_layer = Layer.layer_from_file(...)
+mask_layer = DynamicVectorRangeLayer(...)
+
+intersection = Layer.find_intersection([area_layer, mask_layer])
+area_layer.set_intersection_window(intersection)
+mask_layer.set_intersection_window(intersection)
+
+result = area_layer * mask_layer
+
+total_area = result.sum()
+```
+
+
 ## Thanks
 
 Thanks to discussion and feedback from the 4C team, particularly Alison Eyres, Amelia Holcomb, and Anil Madhavapeddy.
