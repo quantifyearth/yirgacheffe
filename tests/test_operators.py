@@ -250,7 +250,6 @@ def test_binary_apply() -> None:
 
     assert (expected == actual).all()
 
-
 @pytest.mark.parametrize("operator",
     [
         lambda a, b: a == b,
@@ -282,3 +281,17 @@ def test_comparison_float_layer_by_const(operator) -> None:
     actual = band.ReadAsArray(0, 0, 4, 2)
 
     assert (expected == actual).all()
+
+def test_sum_layer() -> None:
+    data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    # a no-op just to get us into an operator
+    comp = layer1 + 0.0
+
+    actual = comp.sum()
+
+    expected = numpy.sum(data1)
+    assert expected == actual
+
+

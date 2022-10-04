@@ -1,3 +1,5 @@
+import numpy
+
 from .window import Window
 
 class LayerConstant:
@@ -97,6 +99,14 @@ class LayerOperation(LayerMathMixin):
             window = self.lhs.window
             val = self.lhs.read_array(0, index, window.xsize, 1)
             return val
+
+    def sum(self):
+        total = 0.0
+        window = self.window
+        for yoffset in range(window.ysize):
+            line = self._eval(yoffset)
+            total += numpy.sum(line)
+        return total
 
     def save(self, band):
         window = self.window
