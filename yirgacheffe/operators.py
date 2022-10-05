@@ -67,7 +67,7 @@ class LayerOperation(LayerMathMixin):
         self.lhs = lhs
         if operator:
             self.operator = operator
-        if rhs:
+        if rhs is not None:
             if isinstance(rhs, (float, int)):
                 self.rhs = LayerConstant(rhs)
             else:
