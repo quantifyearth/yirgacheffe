@@ -197,14 +197,14 @@ def test_power_float_layer_by_const() -> None:
 
     assert (expected == actual).all()
 
-def test_unary_apply() -> None:
+def test_simple_unary_numpy_apply() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
 
-    def simple_add(value):
-        return value + 1.0
+    def simple_add(chunk):
+        return chunk + 1.0
 
-    comp = layer1.apply(simple_add)
+    comp = layer1.numpy_apply(simple_add)
 
     result_data = gdal.GetDriverByName('mem').Create(
         'mem',
@@ -222,17 +222,97 @@ def test_unary_apply() -> None:
 
     assert (expected == actual).all()
 
-def test_binary_apply() -> None:
+def test_isin_unary_numpy_apply() -> None:
+    data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    def simple_add(chunk):
+        return numpy.isin(chunk, [2.0, 3.0])
+
+    comp = layer1.numpy_apply(simple_add)
+
+    result_data = gdal.GetDriverByName('mem').Create(
+        'mem',
+        4,
+        2,
+        1,
+        gdal.GDT_Float64,
+        []
+    )
+    band = result_data.GetRasterBand(1)
+    comp.save(band=band)
+
+    # The * 1.0 is because the numpy result will be bool, but we bounced
+    # our answer via a float gdal dataset
+    expected = numpy.isin(data1, [2.0, 3.0]) * 1.0
+    actual = band.ReadAsArray(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_simple_binary_numpy_apply() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     data2 = numpy.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
 
     layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
 
-    def simple_add(value1, value2):
-        return value1 + value2
+    def simple_add(chunk1, chunk2):
+        return chunk1 + chunk2
 
-    comp = layer1.apply(simple_add, layer2)
+    comp = layer1.numpy_apply(simple_add, layer2)
+
+    result_data = gdal.GetDriverByName('mem').Create(
+        'mem',
+        4,
+        2,
+        1,
+        gdal.GDT_Float64,
+        []
+    )
+    band = result_data.GetRasterBand(1)
+    comp.save(band=band)
+
+    expected = data1 + data2
+    actual = band.ReadAsArray(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_simple_unary_shader_apply() -> None:
+    data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    def simple_add(pixel):
+        return pixel + 1.0
+
+    comp = layer1.shader_apply(simple_add)
+
+    result_data = gdal.GetDriverByName('mem').Create(
+        'mem',
+        4,
+        2,
+        1,
+        gdal.GDT_Float64,
+        []
+    )
+    band = result_data.GetRasterBand(1)
+    comp.save(band=band)
+
+    expected = data1 + 1.0
+    actual = band.ReadAsArray(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_simple_binary_shader_apply() -> None:
+    data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    data2 = numpy.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+
+    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+
+    def simple_add(pixel1, pixel2):
+        return pixel1 + pixel2
+
+    comp = layer1.shader_apply(simple_add, layer2)
 
     result_data = gdal.GetDriverByName('mem').Create(
         'mem',
@@ -293,5 +373,3 @@ def test_sum_layer() -> None:
 
     expected = numpy.sum(data1)
     assert expected == actual
-
-

@@ -1,7 +1,6 @@
 import os
 import tempfile
 
-import numpy
 import pytest
 
 from helpers import gdal_dataset_of_region, make_vectors_with_id

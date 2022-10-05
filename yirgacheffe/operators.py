@@ -2,6 +2,8 @@ import numpy
 
 from .window import Window
 
+YSIZE = 1
+
 class LayerConstant:
     def __init__(self, val):
         self.val = val
@@ -50,10 +52,13 @@ class LayerMathMixin:
 
     def _eval(self, index):
         window = self.window
-        return self.read_array(0, index, window.xsize, 1)
+        return self.read_array(0, index, window.xsize, YSIZE)
 
-    def apply(self, func, other=None):
+    def numpy_apply(self, func, other=None):
         return LayerOperation(self, func, other)
+
+    def shader_apply(self, func, other=None):
+        return ShaderStyleOperation(self, func, other)
 
 
 class LayerOperation(LayerMathMixin):
@@ -97,7 +102,7 @@ class LayerOperation(LayerMathMixin):
                 return self.operator(self.lhs._eval(index))
         except AttributeError: # no operator attr
             window = self.lhs.window
-            val = self.lhs.read_array(0, index, window.xsize, 1)
+            val = self.lhs.read_array(0, index, window.xsize, YSIZE)
             return val
 
     def sum(self):
@@ -113,3 +118,29 @@ class LayerOperation(LayerMathMixin):
         for yoffset in range(window.ysize):
             line = self._eval(yoffset)
             band.WriteArray(line, 0, yoffset)
+
+
+class ShaderStyleOperation(LayerOperation):
+
+    def _eval(self, index):
+        lhs = self.lhs._eval(index)
+        window = self.lhs.window
+        result = numpy.empty_like(lhs)
+        try:
+            rhs = self.rhs._eval(index)
+        except AttributeError: # no rhs
+            rhs = None
+
+        for yoffset in range(YSIZE):
+            for xoffset in range(window.xsize):
+                if rhs is not None:
+                    result[yoffset][xoffset] = self.operator(
+                        lhs[yoffset][xoffset],
+                        rhs[yoffset][xoffset]
+                    )
+                else:
+                    result[yoffset][xoffset] = self.operator(
+                        lhs[yoffset][xoffset]
+                    )
+
+        return result

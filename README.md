@@ -152,7 +152,9 @@ result.save(result_band)
 
 ### Apply
 
-You can specify a function that takes either data from one layer or from two layers, and returns the processed data.
+You can specify a function that takes either data from one layer or from two layers, and returns the processed data. There's two version of this: one that lets you specify a numpy function that'll be applied to the layer data as an array, or one that is more shader like that lets you do pixel wise processing.
+
+Firstly the numpy version looks like this:
 
 ```python
 def is_over_ten(input_array):
@@ -160,7 +162,7 @@ def is_over_ten(input_array):
 
 layer1 = Layer.layer_from_file('test1.tif')
 
-result = layer1.apply(is_over_ten)
+result = layer1.numpy_apply(is_over_ten)
 
 result_band = result_gdal_dataset.GetRasterBand(1)
 result.save(result_band)
@@ -175,7 +177,21 @@ def simple_add(first_array, second_array):
 layer1 = Layer.layer_from_file('test1.tif')
 layer2 = Layer.layer_from_file('test2.tif')
 
-result = layer1.apply(simple_add, layer2)
+result = layer1.numpy_apply(simple_add, layer2)
+
+result_band = result_gdal_dataset.GetRasterBand(1)
+result.save(result_band)
+```
+
+If you want to do something specific on the pixel level, then you can also do that, again either on a unary or binary form.
+
+```python
+def is_over_ten(input_pixel):
+    return 1.0 if input_pixel > 10 else 0.0
+
+layer1 = Layer.layer_from_file('test1.tif')
+
+result = layer1.shader_apply(is_over_ten)
 
 result_band = result_gdal_dataset.GetRasterBand(1)
 result.save(result_band)
