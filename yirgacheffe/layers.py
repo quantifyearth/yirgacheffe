@@ -292,8 +292,8 @@ class DynamicVectorRangeLayer(Layer):
         self.window = Window(
             xoff=0,
             yoff=0,
-            xsize=(self.area.right - self.area.left) / scale.xstep,
-            ysize=(self.area.bottom - self.area.top) / scale.ystep,
+            xsize=ceil((self.area.right - self.area.left) / scale.xstep),
+            ysize=ceil((self.area.bottom - self.area.top) / scale.ystep),
         )
 
 
