@@ -244,7 +244,8 @@ class VectorRangeLayer(Layer):
         dataset.SetProjection(projection)
         dataset.SetGeoTransform([area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep])
         gdal.RasterizeLayer(dataset, [1], range_layer, burn_values=[1], options=["ALL_TOUCHED=TRUE"])
-
+        print(projection)
+        print(dataset.GetProjection())
         super().__init__(dataset)
 
 
@@ -296,6 +297,9 @@ class DynamicVectorRangeLayer(Layer):
             ysize=ceil((self.area.bottom - self.area.top) / scale.ystep),
         )
 
+    @property
+    def projection(self) -> str:
+        return self._projection
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
 

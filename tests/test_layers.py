@@ -7,6 +7,11 @@ from helpers import gdal_dataset_of_region, make_vectors_with_id
 
 from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
 
+WSG_84_PROJECTION = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,'\
+    'AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],'\
+    'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],'\
+    'AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'
+
 # There is a lot of "del" in this file, due to a combination of gdal having no way
 # to explicitly close a file beyond forcing the gdal object's deletion, and Windows
 # getting upset that it tries to clear up the TemporaryDirectory and there's an open
@@ -50,10 +55,11 @@ def test_basic_vector_layer() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), "WGS 84")
+        layer = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
         assert layer.area == area
         assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 10)
+        assert layer.projection == WSG_84_PROJECTION
 
         del layer
 
@@ -72,10 +78,11 @@ def test_basic_dyanamic_vector_layer() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), "WGS 84")
+        layer = DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
         assert layer.area == area
         assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 10)
+        assert layer.projection == WSG_84_PROJECTION
 
         del layer
 
@@ -86,7 +93,7 @@ def test_basic_dynamic_vector_layer_no_filter_match() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with pytest.raises(ValueError):
-            _ = DynamicVectorRangeLayer(path, "id_no = 123", PixelScale(1.0, -1.0), "WGS 84")
+            _ = DynamicVectorRangeLayer(path, "id_no = 123", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
 
 def test_multi_area_vector() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -97,8 +104,8 @@ def test_multi_area_vector() -> None:
         }
         make_vectors_with_id(42, areas, path)
 
-        vector_layer = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), "WGS 84")
-        dynamic_layer = DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), "WGS 84")
+        vector_layer = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        dynamic_layer = DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
 
         for layer in (dynamic_layer, vector_layer):
             assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
