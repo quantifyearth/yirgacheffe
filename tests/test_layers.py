@@ -4,6 +4,7 @@ import tempfile
 import pytest
 
 from helpers import gdal_dataset_of_region, make_vectors_with_id
+from yirgacheffe.h3layer import H3CellLayer
 
 from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
 
@@ -114,11 +115,37 @@ def test_multi_area_vector() -> None:
 
         window = vector_layer.window
         for yoffset in range(window.ysize):
-            print(yoffset)
             vector_raster = vector_layer.read_array(0, yoffset, window.xsize, 1)
             dynamic_raster = dynamic_layer.read_array(0, yoffset, window.xsize, 1)
-
+            assert vector_raster.shape == (1, window.xsize)
             assert (vector_raster == dynamic_raster).all()
 
         del vector_layer
         del dynamic_layer
+
+
+@pytest.mark.parametrize(
+    "cell_id,is_valid,expected_zoom",
+    [
+        ("hello", False, 0),
+        ("88972eac11fffff", True, 8),
+    ]
+)
+def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
+    if is_valid:
+        layer = H3CellLayer(cell_id, PixelScale(0.001, -0.001), WSG_84_PROJECTION)
+        assert layer.zoom == expected_zoom
+        assert layer.projection == WSG_84_PROJECTION
+
+        # without getting too deep, we'd expect a mix of zeros and ones in the data
+        window = layer.window
+        one_count = 0
+        for yoffset in range(window.ysize):
+            data = layer.read_array(0, yoffset, window.xsize, 1)
+            assert data.shape == (1, window.xsize)
+            one_count += data.sum()
+        assert one_count != 0
+
+    else:
+        with pytest.raises(ValueError):
+            _ = H3CellLayer(cell_id, PixelScale(0.001, -0.001), WSG_84_PROJECTION)

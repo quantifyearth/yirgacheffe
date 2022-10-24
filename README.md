@@ -107,6 +107,17 @@ except FileDoesNotExist:
 ```
 
 
+### H3CellLayer
+
+If you have H3 installed, you can generate a mask layer based on an H3 cell identifier, where pixels inside the cell will have a value of 1, and those outside will have a value of 0.
+
+Becuase it will be rasterized you need to specify the pixel scale and map projection to be used when rasterising the data, and the common way to do that is by using one of your other layers.
+
+```python
+hex_cell_layer = H3CellLayer('88972eac11fffff', layer1.pixel_scale, layer1.projection)
+```
+
+
 ## Supported operations on layers
 
 Once you have two layers, you can perform numberical analysis on them similar to how numpy works:
