@@ -51,8 +51,11 @@ class LayerMathMixin:
         return LayerOperation(self, "__ge__", other)
 
     def _eval(self, index):
-        window = self.window
-        return self.read_array(0, index, window.xsize, YSIZE)
+        try:
+            window = self.window
+            return self.read_array(0, index, window.xsize, YSIZE)
+        except AttributeError:
+            return self.read_array(0, index, 1, YSIZE)
 
     def numpy_apply(self, func, other=None):
         return LayerOperation(self, func, other)
@@ -94,14 +97,30 @@ class LayerOperation(LayerMathMixin):
 
     def _eval(self, index):
         try:
-            return getattr(self.lhs._eval(index), self.operator)(self.rhs._eval(index))
+            lhs = self.lhs._eval(index)
+            # we want operator to fail first, before the rhs check, as we
+            # support unary operations
+            operator = getattr(lhs, self.operator)
+            rhs = self.rhs._eval(index)
+            result = operator(rhs)
+
+            # This is currently a hurried work around for the fact that
+            #   0.0 + numpy array
+            # is valid, but
+            #   getattr(0.0, '__add__')(numpy array)
+            # returns NotImplemented
+            if result.__class__ == NotImplemented.__class__:
+                if self.operator in ['__add__', '__mul__']:
+                    result = getattr(rhs, self.operator)(lhs)
+
+            return result
         except TypeError: # operator not a string
             try:
                 return self.operator(self.lhs._eval(index), self.rhs._eval(index))
             except AttributeError: # no rhs
                 return self.operator(self.lhs._eval(index))
         except AttributeError: # no operator attr
-            window = self.lhs.window
+            window = self.window
             val = self.lhs.read_array(0, index, window.xsize, YSIZE)
             return val
 
@@ -117,7 +136,15 @@ class LayerOperation(LayerMathMixin):
         window = self.window
         for yoffset in range(window.ysize):
             line = self._eval(yoffset)
-            band.WriteArray(line, 0, yoffset)
+            try:
+                band.WriteArray(line, 0, yoffset)
+            except AttributeError:
+                # Likely that line is a constant value
+                if isinstance(line, (float, int)):
+                    constline = numpy.array([[line] * window.xsize])
+                    band.WriteArray(constline, 0, yoffset)
+                else:
+                    raise
 
 
 class ShaderStyleOperation(LayerOperation):

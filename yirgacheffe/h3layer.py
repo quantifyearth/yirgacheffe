@@ -18,10 +18,10 @@ class H3CellLayer(Layer):
 
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
         self.area = Area(
-            left=floor(min(x[1] for x in boundary) / abs_xstep) * abs_xstep,
-            top=ceil(max(x[0] for x in boundary) / abs_ystep) * abs_ystep,
-            right=ceil(max(x[1] for x in boundary) / abs_xstep) * abs_xstep,
-            bottom=floor(min(x[0] for x in boundary) / abs_ystep) * abs_ystep,
+            left=(floor(min(x[1] for x in boundary) / abs_xstep) * abs_xstep) - abs_xstep,
+            top=(ceil(max(x[0] for x in boundary) / abs_ystep) * abs_ystep) + abs_ystep,
+            right=(ceil(max(x[1] for x in boundary) / abs_xstep) * abs_xstep) + abs_xstep,
+            bottom=(floor(min(x[0] for x in boundary) / abs_ystep) * abs_ystep) - abs_ystep,
         )
         self._transform = [self.area.left, scale.xstep, 0.0, self.area.top, 0.0, scale.ystep]
         self._projection = projection
@@ -33,16 +33,21 @@ class H3CellLayer(Layer):
             xsize=ceil((self.area.right - self.area.left) / scale.xstep),
             ysize=ceil((self.area.bottom - self.area.top) / scale.ystep),
         )
+        self._raster_xsize = self.window.xsize
+        self._raster_ysize = self.window.ysize
 
     @property
     def projection(self) -> str:
         return self._projection
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
-        res = np.zeros((ysize, xsize), dtype=np.int8)
 
         # there's some optimisation here were we could check if the requested area
         # is in the polygon
+        if (yoffset + self.window.yoff < 0) or (((yoffset + ysize) + self.window.yoff) > self._raster_ysize):
+            return 0.0
+
+        res = np.zeros((ysize, xsize), dtype=float)
 
         # this all feels very WGS84 specific? I could also throw the h3
         # polygon into OGR and just do the same logic as DynamicVectorTileArray, but if
@@ -57,6 +62,6 @@ class H3CellLayer(Layer):
                 lng = start_x + (xpixel * self._transform[1])
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:
-                    res[ypixel][xpixel] = 1
+                    res[ypixel][xpixel] = 1.0
 
         return res

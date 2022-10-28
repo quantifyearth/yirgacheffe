@@ -1,7 +1,7 @@
 import pytest
 
 from helpers import gdal_dataset_of_region
-from yirgacheffe.layers import Area, Layer, NullLayer, Window
+from yirgacheffe.layers import Area, Layer, ConstantLayer, Window
 
 
 def test_find_intersection_empty_list() -> None:
@@ -45,10 +45,10 @@ def test_find_intersection_distinct() -> None:
     with pytest.raises(ValueError):
         _ = Layer.find_intersection(layers)
 
-def test_find_intersection_with_null() -> None:
+def test_find_intersection_with_constant() -> None:
     layers = [
         Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        NullLayer()
+        ConstantLayer(1.0)
     ]
     intersection = Layer.find_intersection(layers)
     assert intersection == layers[0].area

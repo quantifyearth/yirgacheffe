@@ -95,15 +95,15 @@ area_layer = UniformAreaLayer('yirgacheffe_area.tiff')
 ```
 
 
-### NullLayer
+### constantLayer
 
-This is there to simplify code when you have some optional layers. Rather than littering your code with checks, you can just use a null layer, which can be included in calculations and will just return an identity value as if it wasn't there.
+This is there to simplify code when you have some optional layers. Rather than littering your code with checks, you can just use a constant layer, which can be included in calculations and will just return an fixed value as if it wasn't there. Useful with 0.0 or 1.0 for sum or multiplication null layers.
 
 ```python
 try:
     area_layer = UniformAreaLayer('myarea.tiff')
 except FileDoesNotExist:
-    area_layer = NullLayer()
+    area_layer = ConstantLayer(0.0)
 ```
 
 

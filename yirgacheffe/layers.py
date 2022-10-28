@@ -397,10 +397,11 @@ class UniformAreaLayer(Layer):
         return self.databand[offset:offset + ysize]
 
 
-class NullLayer(Layer):
+class ConstantLayer(Layer):
     """This is a layer that will return the identity value - can be used when an input layer is
     missing (e.g., area) without having the calculation full of branches."""
-    def __init__(self): # pylint: disable=W0231
+    def __init__(self, value): # pylint: disable=W0231
+        self.value = value
         self.area = Area(
             left = -180.0,
             top = 90.0,
@@ -419,5 +420,4 @@ class NullLayer(Layer):
         pass
 
     def read_array(self, _x: int, _y: int, _xsize: int, _ysize: int) -> Any:
-        # This seems to be as close to a noop as I can see in numpy
-        return 1.0
+        return self.value

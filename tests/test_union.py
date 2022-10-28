@@ -1,7 +1,7 @@
 import pytest
 
 from helpers import gdal_dataset_of_region
-from yirgacheffe.layers import Area, Layer, NullLayer, Window
+from yirgacheffe.layers import Area, Layer, ConstantLayer, Window
 
 
 def test_find_union_empty_list() -> None:
@@ -48,7 +48,7 @@ def test_find_union_distinct() -> None:
 def test_find_union_with_null() -> None:
     layers = [
         Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        NullLayer()
+        ConstantLayer(0.0)
     ]
     union = Layer.find_union(layers)
     assert union == layers[1].area
