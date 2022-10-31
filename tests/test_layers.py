@@ -1,12 +1,13 @@
 import os
 import tempfile
 
+import h3
 import pytest
 
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe.h3layer import H3CellLayer
-
 from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
+from yirgacheffe.operators import LayerOperation, ShaderStyleOperation
 
 WSG_84_PROJECTION = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,'\
     'AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],'\
@@ -149,3 +150,62 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
     else:
         with pytest.raises(ValueError):
             _ = H3CellLayer(cell_id, PixelScale(0.001, -0.001), WSG_84_PROJECTION)
+
+@pytest.mark.parametrize(
+    "lat,lng",
+    [
+        (0.0, 0.0),
+        (0.0, 45.0),
+        (45.0, 0.0),
+        (45.0, 45.0),
+        (85.0, 0.0),
+        (85.0, 45.0),
+        (1.0, 95.0),
+    ]
+)
+def test_h3_layer_magnifications(lat: float, lng: float) -> None:
+    for zoom in range(6, 10):
+        cell_id = h3.latlng_to_cell(lat, lng, zoom)
+        h3_layer = H3CellLayer(cell_id, PixelScale(0.000898315284120,-0.000898315284120), WSG_84_PROJECTION)
+
+        on_cell_count = LayerOperation(h3_layer).sum()
+        total_count = ShaderStyleOperation(h3_layer, lambda _: 1).sum()
+
+        assert total_count == (h3_layer.window.xsize * h3_layer.window.ysize)
+        assert 0 < on_cell_count < total_count
+
+
+
+@pytest.mark.parametrize(
+    "lat,lng",
+    [
+        (0.0, 0.0),
+        (0.0, 45.0),
+        (45.0, 0.0),
+        (45.0, 45.0),
+        (85.0, 0.0),
+        (85.0, 45.0),
+        (1.0, 95.0),
+    ]
+)
+def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
+    for zoom in range(6, 10):
+        cell_id = h3.latlng_to_cell(lat, lng, zoom)
+        scale = PixelScale(0.000898315284120,-0.000898315284120)
+        h3_layer = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+
+        on_cell_count = LayerOperation(h3_layer).sum()
+
+        before_window = h3_layer.window
+        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+        expanded_area = Area(
+            left=h3_layer.area.left - (2 * abs_xstep),
+            top=h3_layer.area.top + (2 * abs_ystep),
+            right=h3_layer.area.right + (2 * abs_xstep),
+            bottom=h3_layer.area.bottom - (2 * abs_ystep)
+        )
+        h3_layer.set_window_for_union(expanded_area)
+        assert h3_layer.window > before_window
+
+        expanded_on_cell_count = LayerOperation(h3_layer).sum()
+        assert expanded_on_cell_count == on_cell_count

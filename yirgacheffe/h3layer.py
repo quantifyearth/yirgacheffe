@@ -14,14 +14,14 @@ class H3CellLayer(Layer):
         self.cell_id = cell_id
         self.zoom = h3.get_resolution(cell_id)
 
-        boundary = h3.cell_to_boundary(cell_id)
+        self.cell_boundary = h3.cell_to_boundary(cell_id)
 
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
         self.area = Area(
-            left=(floor(min(x[1] for x in boundary) / abs_xstep) * abs_xstep) - abs_xstep,
-            top=(ceil(max(x[0] for x in boundary) / abs_ystep) * abs_ystep) + abs_ystep,
-            right=(ceil(max(x[1] for x in boundary) / abs_xstep) * abs_xstep) + abs_xstep,
-            bottom=(floor(min(x[0] for x in boundary) / abs_ystep) * abs_ystep) - abs_ystep,
+            left=(floor(min(x[1] for x in self.cell_boundary) / abs_xstep) * abs_xstep),
+            top=(ceil(max(x[0] for x in self.cell_boundary) / abs_ystep) * abs_ystep),
+            right=(ceil(max(x[1] for x in self.cell_boundary) / abs_xstep) * abs_xstep),
+            bottom=(floor(min(x[0] for x in self.cell_boundary) / abs_ystep) * abs_ystep),
         )
         self._transform = [self.area.left, scale.xstep, 0.0, self.area.top, 0.0, scale.ystep]
         self._projection = projection
@@ -57,11 +57,28 @@ class H3CellLayer(Layer):
         start_y = self._intersection.top + (yoffset * self._transform[5])
 
         for ypixel in range(ysize):
+
+            # The latlng_to_cell is quite expensive, so we could in from either side
+            # and then fill. A binary search probably would be nicer...
+            left_most = xsize + 1
+            right_most = -1
+
             lat = start_y + (ypixel * self._transform[5])
             for xpixel in range(xsize):
                 lng = start_x + (xpixel * self._transform[1])
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:
-                    res[ypixel][xpixel] = 1.0
+                    left_most = xpixel
+                    break
+
+            for xpixel in range(xsize, 0, -1):
+                lng = start_x + (xpixel * self._transform[1])
+                this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
+                if this_cell == self.cell_id:
+                    right_most = xpixel
+                    break
+
+            for xpixel in range(left_most, right_most + 1, 1):
+                res[ypixel][xpixel] = 1.0
 
         return res

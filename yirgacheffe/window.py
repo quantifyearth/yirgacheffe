@@ -20,16 +20,16 @@ class Window:
             (self.ysize < other.ysize) and \
             (self.xoff >= other.xoff) and \
             (self.yoff >= other.yoff) and \
-            ((self.xoff + self.xsize) < (other.xoff + other.xsize)) and \
-            ((self.yoff + self.ysize) < (other.yoff + other.ysize))
+            ((self.xoff + self.xsize) <= (other.xoff + other.xsize)) and \
+            ((self.yoff + self.ysize) <= (other.yoff + other.ysize))
 
     def __gt__(self, other) -> bool:
         return (self.xsize > other.xsize) and \
             (self.ysize > other.ysize) and \
             (self.xoff <= other.xoff) and \
             (self.yoff <= other.yoff) and \
-            ((self.xoff + self.xsize) > (other.xoff + other.xsize)) and \
-            ((self.yoff + self.ysize) > (other.yoff + other.ysize))
+            ((self.xoff + self.xsize) >= (other.xoff + other.xsize)) and \
+            ((self.yoff + self.ysize) >= (other.yoff + other.ysize))
 
     def __le__(self, other) -> bool:
         return (self.xsize <= other.xsize) and \

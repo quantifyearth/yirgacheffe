@@ -26,12 +26,17 @@ from yirgacheffe.window import Window # pylint: disable=E0401, E0611
         (Window(10, 10, 10, 10), Window(0, 0, 100, 100), True, False),
         (Window(0, 0, 10, 10),   Window(0, 0, 100, 100), True, False),
         (Window(11, 11, 8, 8),   Window(10, 10, 10, 10), True, False),
+        (Window(0, 0, 10, 10), Window(-1, -1, 12, 12), True, False),
 
         # Here the LHS is smaller, but isn't a subset
         (Window(-5, -5, 10, 10), Window(0, 0, 100, 100), False, False),
         (Window(95, 95, 10, 10), Window(0, 0, 100, 100), False, False),
         (Window(9, 9, 5, 5),     Window(10, 10, 10, 10), False, False),
         (Window(19, 19, 5, 5),   Window(10, 10, 10, 10), False, False),
+
+        # Smaller but with bounaries touching
+        (Window(0, 0, 10, 10), Window(-2, -2, 12, 12), True, False),
+        (Window(0, 0, 10, 10), Window(0, 0, 11, 11), True, False),
     ]
 )
 def test_window_operators(lhs: Window, rhs: Window, is_greater: bool, is_equal: bool) -> None:
