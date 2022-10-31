@@ -232,8 +232,8 @@ class VectorRangeLayer(Layer):
         # create new dataset for just that area
         dataset = gdal.GetDriverByName('mem').Create(
             'mem',
-            int((area.right - area.left) / abs_xstep),
-            int((area.top - area.bottom) / abs_ystep),
+            round((area.right - area.left) / abs_xstep),
+            round((area.top - area.bottom) / abs_ystep),
             1,
             gdal.GDT_Byte,
             []
