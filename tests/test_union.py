@@ -61,6 +61,16 @@ def test_find_union_different_pixel_pitch() -> None:
     with pytest.raises(ValueError):
         _ = Layer.find_union(layers)
 
+@pytest.mark.parametrize("scale", [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09])
+def test_set_union_self(scale) -> None:
+    layer = Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), scale))
+    old_window = layer.window
+
+    # note that the area we passed to gdal_dataset_of_region isn't pixel aligned, so we must
+    # use the area from loading the dataset
+    layer.set_window_for_union(layer.area)
+    assert layer.window == old_window
+
 @pytest.mark.parametrize(
     "left_padding,right_padding,top_padding,bottom_padding",
     [
