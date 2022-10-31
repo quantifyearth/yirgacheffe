@@ -120,8 +120,8 @@ class Layer(LayerMathMixin):
 
     def set_window_for_intersection(self, intersection: Area) -> None:
         new_window = Window(
-            xoff=floor((intersection.left - self.area.left) / self._transform[1]),
-            yoff=floor((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
+            xoff=round((intersection.left - self.area.left) / self._transform[1]),
+            yoff=round((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
             xsize=round((intersection.right - intersection.left) / self._transform[1]),
             ysize=round((intersection.top - intersection.bottom) / (self._transform[5] * -1.0)),
         )
@@ -137,8 +137,8 @@ class Layer(LayerMathMixin):
 
     def set_window_for_union(self, intersection: Area) -> None:
         new_window = Window(
-            xoff=floor((intersection.left - self.area.left) / self._transform[1]),
-            yoff=floor((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
+            xoff=round((intersection.left - self.area.left) / self._transform[1]),
+            yoff=round((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
             xsize=round((intersection.right - intersection.left) / self._transform[1]),
             ysize=round((intersection.top - intersection.bottom) / (self._transform[5] * -1.0)),
         )

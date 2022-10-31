@@ -42,10 +42,11 @@ class H3CellLayer(Layer):
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
 
-        # there's some optimisation here were we could check if the requested area
-        # is in the polygon
-        if (yoffset + self.window.yoff < 0) or (((yoffset + ysize) + self.window.yoff) > self._raster_ysize):
-            return 0.0
+        if ((xoffset + xsize) > self.window.xsize) or \
+            ((yoffset + ysize) > self.window.ysize) or \
+            (xoffset < 0) or \
+            (yoffset < 0):
+            raise ValueError("Request area goes out of bounds")
 
         res = np.zeros((ysize, xsize), dtype=float)
 
@@ -53,32 +54,37 @@ class H3CellLayer(Layer):
         # polygon into OGR and just do the same logic as DynamicVectorTileArray, but if
         # we are in the usual mode, this code should be faster.
 
-        start_x = self._intersection.left + (xoffset * self._transform[1])
-        start_y = self._intersection.top + (yoffset * self._transform[5])
+        # trim the interesting bit of x
+        if self.window.xoff < 0:
+            xoffset -= self.window.xoff
+            xsize += self.window.xoff
+        if (xsize - xoffset) > self._raster_xsize:
+            xsize = self._raster_xsize - xoffset
 
-        for ypixel in range(ysize):
+        for ypixel in range(yoffset, yoffset + ysize):
 
             # The latlng_to_cell is quite expensive, so we could in from either side
             # and then fill. A binary search probably would be nicer...
-            left_most = xsize + 1
+            left_most = xoffset + xsize + 1
             right_most = -1
 
-            lat = start_y + (ypixel * self._transform[5])
-            for xpixel in range(xsize):
-                lng = start_x + (xpixel * self._transform[1])
+            lat = self._intersection.top + (ypixel * self._transform[5])
+
+            for xpixel in range(xoffset, xoffset + xsize):
+                lng = self._intersection.left + (xpixel * self._transform[1])
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:
                     left_most = xpixel
                     break
 
-            for xpixel in range(xsize - 1, 0, -1):
-                lng = start_x + (xpixel * self._transform[1])
+            for xpixel in range(xoffset + xsize - 1, left_most - 1, -1):
+                lng = self._intersection.left + (xpixel * self._transform[1])
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:
                     right_most = xpixel
                     break
 
             for xpixel in range(left_most, right_most + 1, 1):
-                res[ypixel][xpixel] = 1.0
+                res[ypixel - yoffset][xpixel - xoffset] = 1.0
 
         return res
