@@ -174,8 +174,6 @@ def test_h3_layer_magnifications(lat: float, lng: float) -> None:
         assert total_count == (h3_layer.window.xsize * h3_layer.window.ysize)
         assert 0 < on_cell_count < total_count
 
-
-
 @pytest.mark.parametrize(
     "lat,lng",
     [

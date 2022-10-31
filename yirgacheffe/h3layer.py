@@ -71,7 +71,7 @@ class H3CellLayer(Layer):
                     left_most = xpixel
                     break
 
-            for xpixel in range(xsize, 0, -1):
+            for xpixel in range(xsize - 1, 0, -1):
                 lng = start_x + (xpixel * self._transform[1])
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:

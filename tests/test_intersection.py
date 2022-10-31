@@ -61,6 +61,15 @@ def test_find_intersection_different_pixel_pitch() -> None:
     with pytest.raises(ValueError):
         _ = Layer.find_intersection(layers)
 
+@pytest.mark.parametrize("scale", [0.02, 0.03])
+def test_set_intersection_self(scale) -> None:
+    area = Area(-10, 10, 10, -10)
+    layer = Layer(gdal_dataset_of_region(area, scale))
+    old_window = layer.window
+
+    layer.set_window_for_intersection(area)
+    assert layer.window == old_window
+
 def test_set_intersection_subset() -> None:
     layer = Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     assert layer.window == Window(0, 0, 1000, 1000)
