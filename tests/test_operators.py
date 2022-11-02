@@ -427,3 +427,30 @@ def test_constant_layer_result_lhs() -> None:
     expected = 1.0 + data1
 
     assert (expected == actual).all()
+
+def test_direct_layer_save() -> None:
+    data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    result_data = gdal.GetDriverByName('mem').Create(
+        'mem',
+        4,
+        2,
+        1,
+        gdal.GDT_Byte,
+        []
+    )
+    band = result_data.GetRasterBand(1)
+    layer1.save(band)
+    actual = band.ReadAsArray(0, 0, 4, 2)
+
+    assert (data1 == actual).all()
+
+def test_direct_layer_sum() -> None:
+    data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    actual = layer1.sum()
+
+    expected = numpy.sum(data1)
+    assert expected == actual

@@ -68,7 +68,7 @@ def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
         scale = PixelScale(0.000898315284120,-0.000898315284120)
         optimised_layer = H3CellLayer(cell_id, scale, "NOTUSED")
         naive_layer = NaiveH3CellLayer(cell_id, scale, "NOTUSED")
-        
+
         before_cell_count = LayerOperation(optimised_layer).sum()
 
         superset_area = Area(
@@ -104,7 +104,7 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
         scale = PixelScale(0.000898315284120,-0.000898315284120)
         optimised_layer = H3CellLayer(cell_id, scale, "NOTUSED")
         naive_layer = NaiveH3CellLayer(cell_id, scale, "NOTUSED")
-        
+
         before_cell_count = LayerOperation(optimised_layer).sum()
 
         subset_area = Area(

@@ -63,6 +63,12 @@ class LayerMathMixin:
     def shader_apply(self, func, other=None):
         return ShaderStyleOperation(self, func, other)
 
+    def save(self, band):
+        return LayerOperation(self).save(band)
+
+    def sum(self):
+        return LayerOperation(self).sum()
+
 
 class LayerOperation(LayerMathMixin):
 
