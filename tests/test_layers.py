@@ -7,7 +7,7 @@ import pytest
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
-from yirgacheffe.operators import LayerOperation, ShaderStyleOperation
+from yirgacheffe.operators import ShaderStyleOperation
 
 WSG_84_PROJECTION = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,'\
     'AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],'\
@@ -168,7 +168,7 @@ def test_h3_layer_magnifications(lat: float, lng: float) -> None:
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         h3_layer = H3CellLayer(cell_id, PixelScale(0.000898315284120,-0.000898315284120), WSG_84_PROJECTION)
 
-        on_cell_count = LayerOperation(h3_layer).sum()
+        on_cell_count = h3_layer.sum()
         total_count = ShaderStyleOperation(h3_layer, lambda _: 1).sum()
 
         assert total_count == (h3_layer.window.xsize * h3_layer.window.ysize)
@@ -192,7 +192,7 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
         scale = PixelScale(0.000898315284120,-0.000898315284120)
         h3_layer = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
 
-        on_cell_count = LayerOperation(h3_layer).sum()
+        on_cell_count = h3_layer.sum()
 
         before_window = h3_layer.window
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
@@ -205,5 +205,5 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
         h3_layer.set_window_for_union(expanded_area)
         assert h3_layer.window > before_window
 
-        expanded_on_cell_count = LayerOperation(h3_layer).sum()
+        expanded_on_cell_count = h3_layer.sum()
         assert expanded_on_cell_count == on_cell_count

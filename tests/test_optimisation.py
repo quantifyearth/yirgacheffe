@@ -6,7 +6,6 @@ import pytest
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.layers import PixelScale
 from yirgacheffe.window import Area
-from yirgacheffe.operators import LayerOperation
 
 class NaiveH3CellLayer(H3CellLayer):
     """h3.latlng_to_cell is quite expensive when you call it thousands of times
@@ -44,8 +43,8 @@ def test_h3_vs_naive(lat: float, lng: float) -> None:
         optimised_layer = H3CellLayer(cell_id, PixelScale(0.000898315284120,-0.000898315284120), "NOTUSED")
         naive_layer = NaiveH3CellLayer(cell_id, PixelScale(0.000898315284120,-0.000898315284120), "NOTUSED")
 
-        optimised_cell_count = LayerOperation(optimised_layer).sum()
-        naive_cell_count = LayerOperation(naive_layer).sum()
+        optimised_cell_count = optimised_layer.sum()
+        naive_cell_count = naive_layer.sum()
 
         assert optimised_cell_count != 0
         assert optimised_cell_count == naive_cell_count
@@ -69,7 +68,7 @@ def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
         optimised_layer = H3CellLayer(cell_id, scale, "NOTUSED")
         naive_layer = NaiveH3CellLayer(cell_id, scale, "NOTUSED")
 
-        before_cell_count = LayerOperation(optimised_layer).sum()
+        before_cell_count = optimised_layer.sum()
 
         superset_area = Area(
             left=optimised_layer.area.left - (5 * scale.xstep),
@@ -80,8 +79,8 @@ def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
         optimised_layer.set_window_for_union(superset_area)
         naive_layer.set_window_for_union(superset_area)
 
-        optimised_cell_count = LayerOperation(optimised_layer).sum()
-        naive_cell_count = LayerOperation(naive_layer).sum()
+        optimised_cell_count = optimised_layer.sum()
+        naive_cell_count = naive_layer.sum()
 
         assert optimised_cell_count == before_cell_count
         assert optimised_cell_count == naive_cell_count
@@ -105,7 +104,7 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
         optimised_layer = H3CellLayer(cell_id, scale, "NOTUSED")
         naive_layer = NaiveH3CellLayer(cell_id, scale, "NOTUSED")
 
-        before_cell_count = LayerOperation(optimised_layer).sum()
+        before_cell_count = optimised_layer.sum()
 
         subset_area = Area(
             left=optimised_layer.area.left + (2 * scale.xstep),
@@ -116,8 +115,8 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
         optimised_layer.set_window_for_intersection(subset_area)
         naive_layer.set_window_for_intersection(subset_area)
 
-        optimised_cell_count = LayerOperation(optimised_layer).sum()
-        naive_cell_count = LayerOperation(naive_layer).sum()
+        optimised_cell_count = optimised_layer.sum()
+        naive_cell_count = naive_layer.sum()
 
         assert optimised_cell_count < before_cell_count
         assert optimised_cell_count == naive_cell_count
