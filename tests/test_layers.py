@@ -207,3 +207,31 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
 
         expanded_on_cell_count = h3_layer.sum()
         assert expanded_on_cell_count == on_cell_count
+
+@pytest.mark.parametrize(
+    "lat,lng",
+    [
+        (50.0, 179.9),
+        (50.0, -179.9),
+    ]
+)
+def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
+    cell_id = h3.latlng_to_cell(lat, lng, 2)
+    scale = PixelScale(0.01, -0.01)
+    h3_layer = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+
+    # Just sanity check this test has caught a cell that wraps the entire planet and is testing
+    # what we think it is testing:
+    assert h3_layer.window.xsize == (360 / 0.01)
+
+    area = h3_layer.sum()
+    assert area > 0.0 # sanity check
+
+    # Go around the cell neighbours, of which some will not wrap the planet, and
+    # check they are all of a similarish size - we had a bug early on where we'd
+    # mistakenly invert the area for the band, counting all the cells across the planet
+    for cell_id in h3.grid_disk(cell_id, 1):
+        neighbour = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+        neighbour_area = neighbour.sum()
+        # We're happy if they're within 10% for now
+        assert abs((neighbour_area - area) / area) < 0.1
