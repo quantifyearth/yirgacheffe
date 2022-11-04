@@ -427,6 +427,58 @@ def test_constant_layer_result_lhs() -> None:
 
     assert (expected == actual).all()
 
+def test_shader_apply_constant_lhs() -> None:
+    data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    const_layer = ConstantLayer(1.0)
+
+    def simple_add(pixel1, pixel2):
+        return pixel1 + pixel2
+
+    comp = const_layer.shader_apply(simple_add, layer1)
+
+    result_data = gdal.GetDriverByName('mem').Create(
+        'mem',
+        4,
+        2,
+        1,
+        gdal.GDT_Float64,
+        []
+    )
+    band = result_data.GetRasterBand(1)
+    comp.save(band=band)
+
+    expected = data1 + 1.0
+    actual = band.ReadAsArray(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_shader_apply_constant_rhs() -> None:
+    data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    const_layer = ConstantLayer(1.0)
+
+    def simple_add(pixel1, pixel2):
+        return pixel1 + pixel2
+
+    comp = layer1.shader_apply(simple_add, const_layer)
+
+    result_data = gdal.GetDriverByName('mem').Create(
+        'mem',
+        4,
+        2,
+        1,
+        gdal.GDT_Float64,
+        []
+    )
+    band = result_data.GetRasterBand(1)
+    comp.save(band=band)
+
+    expected = data1 + 1.0
+    actual = band.ReadAsArray(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
 def test_direct_layer_save() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))

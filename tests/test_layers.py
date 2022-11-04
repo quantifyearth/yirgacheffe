@@ -289,7 +289,7 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
 
 
     before_window = h3_layer.window
-    abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+    _, abs_ystep = abs(scale.xstep), abs(scale.ystep)
     expanded_area = Area(
         left=h3_layer.area.left,
         top=h3_layer.area.top + (22 * abs_ystep),

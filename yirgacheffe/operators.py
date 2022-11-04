@@ -157,23 +157,37 @@ class ShaderStyleOperation(LayerOperation):
 
     def _eval(self, index):
         lhs = self.lhs._eval(index)
-        window = self.lhs.window
-        result = numpy.empty_like(lhs)
         try:
             rhs = self.rhs._eval(index)
         except AttributeError: # no rhs
             rhs = None
 
+        # Costant results make this a bit messier. Might in future
+        # be nicer to promote them to arrays sooner?
+        if isinstance(lhs, (int, float)):
+            if rhs is None:
+                return self.operator(lhs)
+            if isinstance(rhs, (int, float)):
+                return self.operator(lhs, rhs)
+            else:
+                result = numpy.empty_like(rhs)
+        else:
+            result = numpy.empty_like(lhs)
+
+        window = self.window
         for yoffset in range(YSIZE):
             for xoffset in range(window.xsize):
+                try:
+                    lhs_val = lhs[yoffset][xoffset]
+                except TypeError:
+                    lhs_val = lhs
                 if rhs is not None:
-                    result[yoffset][xoffset] = self.operator(
-                        lhs[yoffset][xoffset],
-                        rhs[yoffset][xoffset]
-                    )
+                    try:
+                        rhs_val = rhs[yoffset][xoffset]
+                    except TypeError:
+                        rhs_val = rhs
+                    result[yoffset][xoffset] = self.operator(lhs_val, rhs_val)
                 else:
-                    result[yoffset][xoffset] = self.operator(
-                        lhs[yoffset][xoffset]
-                    )
+                    result[yoffset][xoffset] = self.operator(lhs_val)
 
         return result
