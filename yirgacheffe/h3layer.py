@@ -71,57 +71,79 @@ class H3CellLayer(Layer):
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
 
-        if ((xoffset + xsize) > self.window.xsize) or \
-            ((yoffset + ysize) > self.window.ysize) or \
-            (xoffset < 0) or \
-            (yoffset < 0):
-            raise ValueError("Request area goes out of bounds")
-
-        res = np.zeros((ysize, xsize), dtype=float)
-
-        # this all feels very WGS84 specific? I could also throw the h3
-        # polygon into OGR and just do the same logic as DynamicVectorTileArray, but if
-        # we are in the usual mode, this code should be faster.
-
-        # trim the interesting bit of x
-        if self.window.xoff < 0:
-            xoffset -= self.window.xoff
-            xsize += self.window.xoff
-        if (xsize - xoffset) > self._raster_xsize:
-            xsize = self._raster_xsize - xoffset
-
-        # Now we have trimmed the size to the bit we care about, now
-        # limit how far we walk when scanning
+        # We have two paths: one for the common case where the hex cell doesn't cross 180˚ longitude,
+        # and another case for where it does
         max_width_projection = (self.area.right - self.area.left)
         if max_width_projection < 180:
 
-            for ypixel in range(yoffset, yoffset + ysize):
+            target_window = Window(
+                self.window.xoff + xoffset,
+                self.window.yoff + yoffset,
+                xsize,
+                ysize
+            )
+            source_window = Window(
+                xoff=0,
+                yoff=0,
+                xsize=self._raster_xsize,
+                ysize=self._raster_ysize,
+            )
+            try:
+                intersection = Window.find_intersection([source_window, target_window])
+            except ValueError:
+                return 0.0
+
+            subset = np.zeros((intersection.ysize, intersection.xsize), dtype=float)
+
+            start_x = self._intersection.left + ((intersection.xoff - self.window.xoff) * self._transform[1])
+            start_y = self._intersection.top + ((intersection.yoff - self.window.yoff) * self._transform[5])
+
+            for ypixel in range(intersection.ysize):
 
                 # The latlng_to_cell is quite expensive, so we could in from either side
                 # and then fill. A binary search probably would be nicer...
-                left_most = xoffset + xsize + 1
+                left_most = intersection.xsize + 1
                 right_most = -1
 
-                lat = self._intersection.top + (ypixel * self._transform[5])
+                lat = start_y + (ypixel * self._transform[5])
 
-                for xpixel in range(xoffset, xoffset + xsize):
-                    lng = self._intersection.left + (xpixel * self._transform[1])
+                for xpixel in range(intersection.xsize):
+
+                    lng = start_x + (xpixel * self._transform[1])
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
+                        # subset[ypixel][xpixel] = 1.0
                         left_most = xpixel
                         break
 
-                for xpixel in range(xoffset + xsize - 1, left_most - 1, -1):
-                    lng = self._intersection.left + (xpixel * self._transform[1])
+                for xpixel in range(intersection.xsize - 1, left_most - 1, -1):
+                    lng = start_x + (xpixel * self._transform[1])
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
                         right_most = xpixel
                         break
 
                 for xpixel in range(left_most, right_most + 1, 1):
-                    res[ypixel - yoffset][xpixel - xoffset] = 1.0
+                    subset[ypixel][xpixel] = 1.0
 
+            return np.pad(
+                subset,
+                (
+                    (
+                        (intersection.yoff - self.window.yoff) - yoffset,
+                        (ysize - ((intersection.yoff - self.window.yoff) + intersection.ysize)) + yoffset,
+                    ),
+                    (
+                        (intersection.xoff - self.window.xoff) - xoffset,
+                        xsize - ((intersection.xoff - self.window.xoff) + intersection.xsize) + xoffset,
+                    )
+                ),
+                'constant'
+            )
         else:
+            # This handles the case where the cell wraps over 180˚ longitude
+            res = np.zeros((ysize, xsize), dtype=float)
+
             left = min(x[1] for x in self.cell_boundary if x[1] > 0.0)
             right = max(x[1] for x in self.cell_boundary if x[1] < 0.0) + 360.0
             max_width_projection = right - left
@@ -141,5 +163,4 @@ class H3CellLayer(Layer):
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
                         res[ypixel - yoffset][xpixel - xoffset] = 1.0
-
-        return res
+            return res

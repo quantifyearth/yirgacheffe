@@ -13,7 +13,6 @@ def test_add_byte_layers() -> None:
     layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
 
     comp = layer1 + layer2
-    print(comp)
 
     result_data = gdal.GetDriverByName('mem').Create(
         'mem',
