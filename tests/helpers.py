@@ -4,7 +4,7 @@ from typing import Set, Optional, Tuple
 import numpy
 from osgeo import gdal, ogr
 
-from yirgacheffe.layers import Area
+from yirgacheffe.layers import Area, Layer
 
 def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[str]=None) -> gdal.Dataset:
     if filename:
@@ -28,6 +28,24 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[st
     band = dataset.GetRasterBand(1)
     for yoffset in range(dataset.RasterYSize):
         band.WriteArray(numpy.array([[(yoffset % 256),] * dataset.RasterXSize]), 0, yoffset)
+    return dataset
+
+def gdal_dataset_of_layer(layer: Layer, filename: Optional[str]=None) -> gdal.Dataset:
+    if filename:
+        driver = gdal.GetDriverByName('GTiff')
+    else:
+        driver = gdal.GetDriverByName('mem')
+        filename = 'mem'   
+    dataset = driver.Create(
+        filename,
+        layer.window.xsize,
+        layer.window.ysize,
+        1,
+        gdal.GDT_Float32,
+        []
+    )
+    dataset.SetGeoTransform(layer.geo_transform)
+    dataset.SetProjection(layer.projection)
     return dataset
 
 def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: numpy.array) -> gdal.Dataset:

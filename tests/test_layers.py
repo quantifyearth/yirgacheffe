@@ -5,7 +5,7 @@ import h3
 import numpy as np
 import pytest
 
-from helpers import gdal_dataset_of_region, make_vectors_with_id
+from helpers import gdal_dataset_of_region, make_vectors_with_id, gdal_dataset_of_layer
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
 from yirgacheffe.operators import ShaderStyleOperation
@@ -281,7 +281,7 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     # Go around the cell neighbours, of which some will not wrap the planet, and
     # check they are all of a similarish size - we had a bug early on where we'd
     # mistakenly invert the area for the band, counting all the cells across the planet
-    for cell_id in h3.grid_disk(cell_id, 1):
+    for cell_id in h3.grid_ring(cell_id, 1):
         neighbour = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
         neighbour_area = neighbour.sum()
         # We're happy if they're within 10% for now
@@ -310,3 +310,45 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     # whilst we're here, check that we do have an empty border (i.e., does window for union do the right thing)
     assert np.sum(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2)) == 0.0
     assert np.sum(h3_layer.read_array(0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2)) == 0.0
+
+@pytest.mark.parametrize(
+    "cell_id",
+    [
+        "87a968290ffffff",
+        # "87a9680e0ffffff",
+        # "87a96811cffffff",
+        # "87a968293ffffff",
+        # "87a968768ffffff",
+        # "87a968893ffffff",
+        # "87a968000ffffff",
+        # "87a96b934ffffff",
+        # "87a968130ffffff",
+    ]
+)
+def test_cells_dont_overlap(cell_id):
+
+    cluster = h3.grid_disk(cell_id, 1)
+    scale = PixelScale(0.000898315284120,-0.000898315284120)
+    layers = [H3CellLayer(x, scale, WSG_84_PROJECTION) for x in cluster]
+    union = Layer.find_union(layers)
+    for layer in layers:
+        layer.set_window_for_union(union)
+    
+    dataset = gdal_dataset_of_layer(layers[0])
+
+    def combine(a, b):
+        val = a + b
+        # if we have rounding errors, then cells will overlap
+        # and we'll end up with values higher than 1.0 in the cell
+        # which would leave to double accounting
+        if np.sum(val > 1.5):
+            print(val)
+            raise Exception
+        return val
+
+    for layer in layers:
+        output = Layer(dataset)
+        calc = output.numpy_apply(combine, layer)
+        calc.save(dataset.GetRasterBand(1))
+    
+    # If we didn't get an exception, then there's no double account...

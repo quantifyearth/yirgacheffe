@@ -106,6 +106,7 @@ class H3CellLayer(Layer):
                 right_most = -1
 
                 lat = start_y + (ypixel * self._transform[5])
+                print(f'{self.cell_id}, {lat}')
 
                 for xpixel in range(intersection.xsize):
 
