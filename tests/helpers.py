@@ -6,6 +6,11 @@ from osgeo import gdal, ogr
 
 from yirgacheffe.layers import Area, Layer
 
+WSG_84_PROJECTION = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,'\
+    'AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],'\
+    'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],'\
+    'AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'
+
 def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[str]=None) -> gdal.Dataset:
     if filename:
         driver = gdal.GetDriverByName('GTiff')
@@ -23,7 +28,7 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[st
     dataset.SetGeoTransform([
         area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0
     ])
-    dataset.SetProjection("WGS 84")
+    dataset.SetProjection(WSG_84_PROJECTION)
     # the dataset isn't valid until you populate the data
     band = dataset.GetRasterBand(1)
     for yoffset in range(dataset.RasterYSize):
@@ -35,7 +40,7 @@ def gdal_dataset_of_layer(layer: Layer, filename: Optional[str]=None) -> gdal.Da
         driver = gdal.GetDriverByName('GTiff')
     else:
         driver = gdal.GetDriverByName('mem')
-        filename = 'mem'   
+        filename = 'mem'
     dataset = driver.Create(
         filename,
         layer.window.xsize,
@@ -64,7 +69,7 @@ def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: numpy.array)
     dataset.SetGeoTransform([
         origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0
     ])
-    dataset.SetProjection("WGS 84")
+    dataset.SetProjection(WSG_84_PROJECTION)
     band = dataset.GetRasterBand(1)
     for index, val in enumerate(data):
         band.WriteArray(numpy.array([list(val)]), 0, index)

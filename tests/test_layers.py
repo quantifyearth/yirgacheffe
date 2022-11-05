@@ -5,15 +5,11 @@ import h3
 import numpy as np
 import pytest
 
-from helpers import gdal_dataset_of_region, make_vectors_with_id, gdal_dataset_of_layer
+from helpers import gdal_dataset_of_region, make_vectors_with_id, gdal_dataset_of_layer, WSG_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
-from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
+from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer, ConstantLayer
 from yirgacheffe.operators import ShaderStyleOperation
 
-WSG_84_PROJECTION = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,'\
-    'AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],'\
-    'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],'\
-    'AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'
 
 # There is a lot of "del" in this file, due to a combination of gdal having no way
 # to explicitly close a file beyond forcing the gdal object's deletion, and Windows
@@ -230,7 +226,6 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
 )
 def test_h3_layer_clipped(lat: float, lng: float) -> None:
     for zoom in range(6, 8):
-        print(zoom)
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         scale = PixelScale(0.000898315284120,-0.000898315284120)
         h3_layer = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
@@ -310,45 +305,3 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     # whilst we're here, check that we do have an empty border (i.e., does window for union do the right thing)
     assert np.sum(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2)) == 0.0
     assert np.sum(h3_layer.read_array(0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2)) == 0.0
-
-@pytest.mark.parametrize(
-    "cell_id",
-    [
-        "87a968290ffffff",
-        # "87a9680e0ffffff",
-        # "87a96811cffffff",
-        # "87a968293ffffff",
-        # "87a968768ffffff",
-        # "87a968893ffffff",
-        # "87a968000ffffff",
-        # "87a96b934ffffff",
-        # "87a968130ffffff",
-    ]
-)
-def test_cells_dont_overlap(cell_id):
-
-    cluster = h3.grid_disk(cell_id, 1)
-    scale = PixelScale(0.000898315284120,-0.000898315284120)
-    layers = [H3CellLayer(x, scale, WSG_84_PROJECTION) for x in cluster]
-    union = Layer.find_union(layers)
-    for layer in layers:
-        layer.set_window_for_union(union)
-    
-    dataset = gdal_dataset_of_layer(layers[0])
-
-    def combine(a, b):
-        val = a + b
-        # if we have rounding errors, then cells will overlap
-        # and we'll end up with values higher than 1.0 in the cell
-        # which would leave to double accounting
-        if np.sum(val > 1.5):
-            print(val)
-            raise Exception
-        return val
-
-    for layer in layers:
-        output = Layer(dataset)
-        calc = output.numpy_apply(combine, layer)
-        calc.save(dataset.GetRasterBand(1))
-    
-    # If we didn't get an exception, then there's no double account...

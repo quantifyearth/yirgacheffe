@@ -65,6 +65,14 @@ class H3CellLayer(Layer):
         self._raster_xsize = self.window.xsize
         self._raster_ysize = self.window.ysize
 
+        # see comment in read_array for why we're doing this
+        sorted_lats = [x[0] for x in self.cell_boundary]
+        sorted_lats.sort()
+        self._raster_safe_bounds = (
+            (sorted_lats[-2] / abs_ystep) * abs_ystep,
+            (sorted_lats[1] / abs_ystep) * abs_ystep,
+        )
+
     @property
     def projection(self) -> str:
         return self._projection
@@ -99,33 +107,57 @@ class H3CellLayer(Layer):
             start_y = self._intersection.top + ((intersection.yoff - self.window.yoff) * self._transform[5])
 
             for ypixel in range(intersection.ysize):
+                # The latlng_to_cell is quite expensive, so ideally we want to avoid
+                # calling latlng_to_cell for every pixel, though I do want to do that
+                # rather than infer from the cell_boundary, as this way I'm ensured
+                # I get an authoritative result and no pixel falls between the cracks.
 
-                # The latlng_to_cell is quite expensive, so we could in from either side
-                # and then fill. A binary search probably would be nicer...
-                left_most = intersection.xsize + 1
-                right_most = -1
+                # Originally I just tried the old-school way of finding the left-most
+                # and the right-most pixel per row, and then filling between, which in
+                # theory should work fine for rasterising hexagons, but in certain places
+                # the map projection distorts the edges sufficiently they become concave,
+                # and that approach lead to over filling, which caused issues with cells
+                # overlapping.
+
+                # The current implementation tries to hedge its bets by looking where the
+                # lowest and highest edges are (stored in _raster_safe_bounds) and then
+                # only doing the fill between left and right within those bounds. I suspect
+                # longer term this will need some padding, but it works for the current set
+                # of known failures in test_optimisation. As we hit more issues we should
+                # expand that test case before tweaking here. This is quite wasteful, as it's
+                # only a tiny number of cells that have convex edges, so in future it'd be
+                # interesting to see if we can infer when that is.
 
                 lat = start_y + (ypixel * self._transform[5])
-                print(f'{self.cell_id}, {lat}')
 
-                for xpixel in range(intersection.xsize):
+                if self._raster_safe_bounds[0] < lat < self._raster_safe_bounds[1]:
+                    # In "safe" zone, try to be clever
+                    left_most = intersection.xsize + 1
+                    right_most = -1
 
-                    lng = start_x + (xpixel * self._transform[1])
-                    this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
-                    if this_cell == self.cell_id:
-                        # subset[ypixel][xpixel] = 1.0
-                        left_most = xpixel
-                        break
+                    for xpixel in range(intersection.xsize):
+                        lng = start_x + (xpixel * self._transform[1])
+                        this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
+                        if this_cell == self.cell_id:
+                            left_most = xpixel
+                            break
 
-                for xpixel in range(intersection.xsize - 1, left_most - 1, -1):
-                    lng = start_x + (xpixel * self._transform[1])
-                    this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
-                    if this_cell == self.cell_id:
-                        right_most = xpixel
-                        break
+                    for xpixel in range(intersection.xsize - 1, left_most - 1, -1):
+                        lng = start_x + (xpixel * self._transform[1])
+                        this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
+                        if this_cell == self.cell_id:
+                            right_most = xpixel
+                            break
 
-                for xpixel in range(left_most, right_most + 1, 1):
-                    subset[ypixel][xpixel] = 1.0
+                    for xpixel in range(left_most, right_most + 1, 1):
+                        subset[ypixel][xpixel] = 1.0
+                else:
+                    # Not in safe zone, be diligent.
+                    for xpixel in range(intersection.xsize):
+                        lng = start_x + (xpixel * self._transform[1])
+                        this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
+                        if this_cell == self.cell_id:
+                            subset[ypixel][xpixel] = 1.0
 
             return np.pad(
                 subset,
