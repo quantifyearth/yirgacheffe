@@ -98,7 +98,7 @@ class LayerOperation(LayerMathMixin):
         except AttributeError:
             # If neither side had a window attribute then
             # the operation doesn't have anything useful to
-            # say, so let the exception propegate up
+            # say, so let the exception propagate up
             return self.rhs.window
 
     def _eval(self, index):
@@ -143,12 +143,12 @@ class LayerOperation(LayerMathMixin):
         for yoffset in range(window.ysize):
             line = self._eval(yoffset)
             try:
-                band.WriteArray(line, 0, yoffset)
+                band.WriteArray(line, window.xoff, yoffset + window.yoff)
             except AttributeError:
                 # Likely that line is a constant value
                 if isinstance(line, (float, int)):
                     constline = numpy.array([[line] * window.xsize])
-                    band.WriteArray(constline, 0, yoffset)
+                    band.WriteArray(constline, window.xoff, yoffset + window.yoff)
                 else:
                     raise
 
