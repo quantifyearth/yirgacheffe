@@ -24,7 +24,13 @@ class Layer(LayerMathMixin):
     of reference."""
 
     @staticmethod
-    def empty_raster_layer(area: Area, scale: PixelScale, type: int, filename: Optional[str]=None, projection: str=WSG_84_PROJECTION):
+    def empty_raster_layer(
+        area: Area,
+        scale: PixelScale,
+        data_type: int,
+        filename: Optional[str]=None,
+        projection: str=WSG_84_PROJECTION
+    ):
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
         # We treat the provided area as aspirational, and we need to align it to pixel boundaries
@@ -45,7 +51,7 @@ class Layer(LayerMathMixin):
             ceil((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep),
             ceil((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep),
             1,
-            type,
+            data_type,
             [] if filename == 'mem' else ['COMPRESS=LZW'],
         )
         dataset.SetGeoTransform([
