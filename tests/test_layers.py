@@ -5,7 +5,8 @@ import h3
 import numpy as np
 import pytest
 
-from helpers import gdal_dataset_of_region, make_vectors_with_id, gdal_dataset_of_layer, WSG_84_PROJECTION
+from helpers import gdal_dataset_of_region, make_vectors_with_id, gdal_dataset_of_layer
+from yirgacheffe import WSG_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer, ConstantLayer
 from yirgacheffe.operators import ShaderStyleOperation

@@ -3,10 +3,11 @@ import h3
 import numpy as np
 import pytest
 
+from helpers import gdal_dataset_of_layer
+from yirgacheffe import WSG_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.layers import PixelScale, ConstantLayer, Layer
 from yirgacheffe.window import Area
-from helpers import gdal_dataset_of_layer, WSG_84_PROJECTION
 
 class NaiveH3CellLayer(H3CellLayer):
     """h3.latlng_to_cell is quite expensive when you call it thousands of times
