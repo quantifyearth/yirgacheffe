@@ -1,3 +1,4 @@
+import math
 import sys
 from collections import namedtuple
 from math import ceil, floor
@@ -6,6 +7,7 @@ from typing import Any, List, Optional, Tuple
 import numpy
 from osgeo import gdal, ogr
 
+from . import WSG_84_PROJECTION
 from .window import Area, Window
 from .operators import LayerMathMixin
 
@@ -20,6 +22,56 @@ class Layer(LayerMathMixin):
     """Layer provides a wrapper around a gdal dataset/band that also records offset state so that
     we can work with maps over different geographic regions but work withing a particular frame
     of reference."""
+
+    @staticmethod
+    def empty_raster_layer(area: Area, scale: PixelScale, type: int, filename: Optional[str]=None, projection: str=WSG_84_PROJECTION):
+        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+
+        # We treat the provided area as aspirational, and we need to align it to pixel boundaries
+        pixel_friendly_area = Area(
+            left=math.floor(area.left / abs_xstep) * abs_xstep,
+            right=math.ceil(area.right / abs_xstep) * abs_xstep,
+            top=math.ceil(area.top / abs_ystep) * abs_ystep,
+            bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
+        )
+
+        if filename:
+            driver = gdal.GetDriverByName('GTiff')
+        else:
+            driver = gdal.GetDriverByName('mem')
+            filename = 'mem'
+        dataset = driver.Create(
+            filename,
+            ceil((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep),
+            ceil((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep),
+            1,
+            type,
+            [] if filename == 'mem' else ['COMPRESS=LZW'],
+        )
+        dataset.SetGeoTransform([
+            pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
+        ])
+        dataset.SetProjection(projection)
+        return Layer(dataset)
+
+    @staticmethod
+    def empty_raster_layer_like(layer, filename: Optional[str]=None):
+        if filename:
+            driver = gdal.GetDriverByName('GTiff')
+        else:
+            driver = gdal.GetDriverByName('mem')
+            filename = 'mem'
+        dataset = driver.Create(
+            filename,
+            layer._raster_xsize,
+            layer._raster_ysize,
+            1,
+            layer._dataset.GetRasterBand(1).DataType,
+            [] if filename == 'mem' else ['COMPRESS=LZW'],
+        )
+        dataset.SetGeoTransform(layer.geo_transform)
+        dataset.SetProjection(layer.projection)
+        return Layer(dataset)
 
     @staticmethod
     def find_intersection(layers: List) -> Area:
@@ -203,7 +255,6 @@ class Layer(LayerMathMixin):
                 'constant'
             )
             return data
-
 
 class VectorRangeLayer(Layer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization
