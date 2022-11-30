@@ -152,8 +152,8 @@ def test_cells_dont_overlap(cell_id):
 
     dataset = gdal_dataset_of_layer(layers[0], 'test.tif')
 
-    def combine(a, b):
-        val = a + b
+    def combine(lhs, rhs):
+        val = lhs + rhs
         # if we have rounding errors, then cells will overlap
         # and we'll end up with values higher than 1.0 in the cell
         # which would leave to double accounting
@@ -161,9 +161,8 @@ def test_cells_dont_overlap(cell_id):
             raise Exception
         return val
 
-    for i in range(len(layers)):
-        layer = layers[i]
-        const = ConstantLayer(float( 1))
+    for layer in layers:
+        const = ConstantLayer(1.0)
         output = Layer(dataset)
         calc = output.numpy_apply(combine, (layer * const))
         calc.save(dataset.GetRasterBand(1))
