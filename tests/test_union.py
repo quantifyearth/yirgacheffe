@@ -71,6 +71,10 @@ def test_set_union_self(scale) -> None:
     layer.set_window_for_union(layer.area)
     assert layer.window == old_window
 
+    # reset should not do much here
+    layer.reset_window()
+    assert layer.window == old_window
+
 @pytest.mark.parametrize(
     "left_padding,right_padding,top_padding,bottom_padding",
     [
@@ -126,3 +130,6 @@ def test_set_union_superset(left_padding: int, right_padding: int, top_padding: 
         list(origin_before_pixel[0]) +\
         ([0,] * int(right_padding / pixel_density)
     )
+
+    layer.reset_window()
+    assert layer.window == Window(0, 0, 100, 100)

@@ -152,6 +152,15 @@ class Layer(LayerMathMixin):
         self.window = new_window
         self._intersection = intersection
 
+    def reset_window(self):
+        self._intersection = None
+        self.window = Window(
+            xoff=0,
+            yoff=0,
+            xsize=self._dataset.RasterXSize,
+            ysize=self._dataset.RasterYSize,
+        )
+
     def read_array(self, xoffset, yoffset, xsize, ysize) -> Any:
         # if we're dealing with an intersection, we can just read the data directly,
         # otherwise we need to read the data into another array with suitable padding

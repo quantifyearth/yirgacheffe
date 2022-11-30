@@ -71,6 +71,10 @@ def test_set_intersection_self(scale) -> None:
     layer.set_window_for_intersection(layer.area)
     assert layer.window == old_window
 
+    # reset should not do much here
+    layer.reset_window()
+    assert layer.window == old_window
+
 def test_set_intersection_subset() -> None:
     layer = Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     assert layer.window == Window(0, 0, 1000, 1000)
@@ -86,6 +90,9 @@ def test_set_intersection_subset() -> None:
     # were not a multiple of 256 off, these pixels should not have the same
     # value in them
     assert origin_before_pixel[0][0] != origin_after_pixel[0][0]
+
+    layer.reset_window()
+    assert layer.window == Window(0, 0, 1000, 1000)
 
 def test_set_intersection_distinct() -> None:
     layer = Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
