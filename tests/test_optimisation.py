@@ -3,7 +3,6 @@ import h3
 import numpy as np
 import pytest
 
-from helpers import gdal_dataset_of_layer
 from yirgacheffe import WSG_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.layers import PixelScale, ConstantLayer, Layer

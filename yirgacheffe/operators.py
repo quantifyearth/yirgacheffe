@@ -63,8 +63,8 @@ class LayerMathMixin:
     def shader_apply(self, func, other=None):
         return ShaderStyleOperation(self, func, other)
 
-    def save_to_layer(self, layer):
-        return LayerOperation(self).save_to_layer(layer)
+    def save_to_layer(self, destination_layer):
+        return LayerOperation(self).save_to_layer(destination_layer)
 
     def sum(self):
         return LayerOperation(self).sum()
@@ -141,8 +141,8 @@ class LayerOperation(LayerMathMixin):
             raise ValueError("Layer is required")
         try:
             band = destination_layer._dataset.GetRasterBand(1)
-        except AttributeError:
-            raise ValueError("Layer must be a raster backed layer")
+        except AttributeError as exc:
+            raise ValueError("Layer must be a raster backed layer") from exc
 
         computation_window = self.window
         destination_window = destination_layer.window
