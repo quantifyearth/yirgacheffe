@@ -17,11 +17,11 @@ def test_add_byte_layers_with_union() -> None:
         layer.set_window_for_union(window)
 
     comp = layer1 + layer2
-
     comp.save_to_layer(result)
 
     expected = numpy.array([[1, 2, 3, 4,], [5, 16, 27, 8,], [9, 60, 71, 12,], [13, 14, 15, 16,]])
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 4)
+    result.reset_window()
+    actual = result.read_array(0, 0, 4, 4)
 
     assert (expected == actual).all()
 
@@ -42,7 +42,8 @@ def test_add_byte_layers_with_intersection_with_max_save_raster() -> None:
     comp.save_to_layer(result)
 
     expected = numpy.array([[0, 0, 0, 0,], [0, 16, 27, 0,], [0, 60, 71, 0,], [0, 0, 0, 0,]])
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 4)
+    result.reset_window()
+    actual = result.read_array(0, 0, 4, 4)
 
     assert (expected == actual).all()
 
@@ -55,22 +56,15 @@ def test_add_byte_layers_with_intersection_with_min_save_raster() -> None:
     result = Layer.empty_raster_layer_like(layer2)
     layers = [layer1, layer2, result]
 
-    for layer in layers: print(layer.area)
-    for layer in layers: print(layer.window)
-    for layer in layers: print(layer._intersection)
-
     window = Layer.find_intersection(layers)
     for layer in layers:
         layer.set_window_for_intersection(window)
-
-    for layer in layers: print(layer.area)
-    for layer in layers: print(layer.window)
-    for layer in layers: print(layer._intersection)
 
     comp = layer1 + layer2
     comp.save_to_layer(result)
 
     expected = numpy.array([[16, 27,], [60, 71,],])
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 2, 2)
+    result.reset_window()
+    actual = result.read_array(0, 0, 2, 2)
 
     assert (expected == actual).all()

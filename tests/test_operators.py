@@ -16,7 +16,7 @@ def test_add_byte_layers() -> None:
     comp.save_to_layer(result)
 
     expected = data1 + data2
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -32,7 +32,7 @@ def test_sub_byte_layers() -> None:
     comp.save_to_layer(result)
 
     expected = data1 - data2
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -48,7 +48,7 @@ def test_add_float_layers() -> None:
     comp.save_to_layer(result)
 
     expected = data1 + data2
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -64,7 +64,7 @@ def test_sub_float_layers() -> None:
     comp.save_to_layer(result)
 
     expected = data1 - data2
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -80,7 +80,7 @@ def test_mult_float_layers() -> None:
     comp.save_to_layer(result)
 
     expected = data1 * data2
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -93,7 +93,7 @@ def test_mult_float_layer_by_const() -> None:
     comp.save_to_layer(result)
 
     expected = data1 * 2.5
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -106,7 +106,7 @@ def test_div_float_layer_by_const() -> None:
     comp.save_to_layer(result)
 
     expected = data1 / 2.5
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -119,7 +119,7 @@ def test_power_float_layer_by_const() -> None:
     comp.save_to_layer(result)
 
     expected = data1 ** 2.5
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -135,7 +135,7 @@ def test_simple_unary_numpy_apply() -> None:
     comp.save_to_layer(result)
 
     expected = data1 + 1.0
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -153,7 +153,7 @@ def test_isin_unary_numpy_apply() -> None:
     # The * 1.0 is because the numpy result will be bool, but we bounced
     # our answer via a float gdal dataset
     expected = numpy.isin(data1, [2.0, 3.0]) * 1.0
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -172,7 +172,7 @@ def test_simple_binary_numpy_apply() -> None:
     comp.save_to_layer(result)
 
     expected = data1 + data2
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -188,7 +188,7 @@ def test_simple_unary_shader_apply() -> None:
     comp.save_to_layer(result)
 
     expected = data1 + 1.0
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -207,7 +207,7 @@ def test_simple_binary_shader_apply() -> None:
     comp.save_to_layer(result)
 
     expected = data1 + data2
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -230,7 +230,7 @@ def test_comparison_float_layer_by_const(operator) -> None:
     comp.save_to_layer(result)
 
     expected = operator(data1, 3.0)
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -259,8 +259,8 @@ def test_constant_layer_result_rhs() -> None:
 
     comp = layer1 + const_layer
     comp.save_to_layer(result)
-
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    result.reset_window()
+    actual = result.read_array(0, 0, 4, 2)
 
     expected = 1.0 + data1
 
@@ -279,7 +279,7 @@ def test_constant_layer_result_lhs() -> None:
     comp = const_layer + layer1
     comp.save_to_layer(result)
 
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     expected = 1.0 + data1
 
@@ -298,7 +298,7 @@ def test_shader_apply_constant_lhs() -> None:
     comp.save_to_layer(result)
 
     expected = data1 + 1.0
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -317,7 +317,7 @@ def test_shader_apply_constant_rhs() -> None:
     comp.save_to_layer(result)
 
     expected = data1 + 1.0
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
@@ -327,7 +327,7 @@ def test_direct_layer_save() -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     layer1.save_to_layer(result)
-    actual = result._dataset.GetRasterBand(1).ReadAsArray(0, 0, 4, 2)
+    actual = result.read_array(0, 0, 4, 2)
 
     assert (data1 == actual).all()
 
