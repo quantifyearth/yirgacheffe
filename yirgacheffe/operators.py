@@ -122,13 +122,11 @@ class LayerOperation(LayerMathMixin):
             return result
         except TypeError: # operator not a string
             try:
-                return self.operator(self.lhs._eval(index), self.rhs._eval(index))
+                return self.operator(lhs, self.rhs._eval(index))
             except AttributeError: # no rhs
-                return self.operator(self.lhs._eval(index))
+                return self.operator(lhs)
         except AttributeError: # no operator attr
-            window = self.window
-            val = self.lhs.read_array(0, index, window.xsize, YSIZE)
-            return val
+            return lhs
 
     def sum(self):
         total = 0.0
