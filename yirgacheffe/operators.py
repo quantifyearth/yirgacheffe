@@ -63,8 +63,8 @@ class LayerMathMixin:
     def shader_apply(self, func, other=None):
         return ShaderStyleOperation(self, func, other)
 
-    def save(self, band):
-        return LayerOperation(self).save(band)
+    def save_to_layer(self, layer):
+        return LayerOperation(self).save_to_layer(layer)
 
     def sum(self):
         return LayerOperation(self).sum()
@@ -130,23 +130,40 @@ class LayerOperation(LayerMathMixin):
 
     def sum(self):
         total = 0.0
-        window = self.window
-        for yoffset in range(window.ysize):
+        computation_window = self.window
+        for yoffset in range(computation_window.ysize):
             line = self._eval(yoffset)
             total += numpy.sum(line)
         return total
 
-    def save(self, band):
-        window = self.window
-        for yoffset in range(window.ysize):
+    def save_to_layer(self, destination_layer):
+        if destination_layer is None:
+            raise ValueError("Layer is required")
+        try:
+            band = destination_layer._dataset.GetRasterBand(1)
+        except AttributeError:
+            raise ValueError("Layer must be a raster backed layer")
+
+        computation_window = self.window
+        destination_window = destination_layer.window
+
+        for yoffset in range(computation_window.ysize):
             line = self._eval(yoffset)
             try:
-                band.WriteArray(line, window.xoff, yoffset + window.yoff)
+                band.WriteArray(
+                    line,
+                    destination_window.xoff,
+                    yoffset + destination_window.yoff,
+                )
             except AttributeError:
                 # Likely that line is a constant value
                 if isinstance(line, (float, int)):
-                    constline = numpy.array([[line] * window.xsize])
-                    band.WriteArray(constline, window.xoff, yoffset + window.yoff)
+                    constline = numpy.array([[line] * destination_window.xsize])
+                    band.WriteArray(
+                        constline,
+                        destination_window.xoff,
+                        yoffset + destination_window.yoff,
+                    )
                 else:
                     raise
 

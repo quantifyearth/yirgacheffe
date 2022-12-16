@@ -146,11 +146,12 @@ def test_cells_dont_overlap(cell_id):
     cluster = h3.grid_disk(cell_id, 1)
     scale = PixelScale(0.000898315284120,-0.000898315284120)
     layers = [H3CellLayer(x, scale, WSG_84_PROJECTION) for x in cluster]
+
     union = Layer.find_union(layers)
     for layer in layers:
         layer.set_window_for_union(union)
 
-    dataset = gdal_dataset_of_layer(layers[0], 'test.tif')
+    result = Layer.empty_raster_layer(union, layers[0].pixel_scale, layers[0].datatype)
 
     def combine(lhs, rhs):
         val = lhs + rhs
@@ -163,8 +164,7 @@ def test_cells_dont_overlap(cell_id):
 
     for layer in layers:
         const = ConstantLayer(1.0)
-        output = Layer(dataset)
-        calc = output.numpy_apply(combine, (layer * const))
-        calc.save(dataset.GetRasterBand(1))
+        calc = result.numpy_apply(combine, (layer * const))
+        calc.save_to_layer(result)
 
     # If we didn't get an exception, then there's no over drawing

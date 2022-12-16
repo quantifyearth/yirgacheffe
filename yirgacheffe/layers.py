@@ -182,10 +182,10 @@ class Layer(LayerMathMixin):
 
     def set_window_for_intersection(self, intersection: Area) -> None:
         new_window = Window(
-            xoff=round((intersection.left - self.area.left) / self._transform[1]),
-            yoff=round((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
-            xsize=round((intersection.right - intersection.left) / self._transform[1]),
-            ysize=round((intersection.top - intersection.bottom) / (self._transform[5] * -1.0)),
+            xoff=floor((intersection.left - self.area.left) / self._transform[1]),
+            yoff=floor((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
+            xsize=ceil((intersection.right - intersection.left) / self._transform[1]),
+            ysize=ceil((intersection.top - intersection.bottom) / (self._transform[5] * -1.0)),
         )
         if (new_window.xoff < 0) or (new_window.yoff < 0):
             raise ValueError('Window has negative offset')
@@ -199,10 +199,10 @@ class Layer(LayerMathMixin):
 
     def set_window_for_union(self, intersection: Area) -> None:
         new_window = Window(
-            xoff=round((intersection.left - self.area.left) / self._transform[1]),
-            yoff=round((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
-            xsize=round((intersection.right - intersection.left) / self._transform[1]),
-            ysize=round((intersection.top - intersection.bottom) / (self._transform[5] * -1.0)),
+            xoff=floor((intersection.left - self.area.left) / self._transform[1]),
+            yoff=floor((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
+            xsize=ceil((intersection.right - intersection.left) / self._transform[1]),
+            ysize=ceil((intersection.top - intersection.bottom) / (self._transform[5] * -1.0)),
         )
         if (new_window.xoff > 0) or (new_window.yoff > 0):
             raise ValueError('Window has positive offset')

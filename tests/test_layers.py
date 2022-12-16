@@ -196,10 +196,10 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
         before_window = h3_layer.window
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
         expanded_area = Area(
-            left=h3_layer.area.left - (2 * abs_xstep),
-            top=h3_layer.area.top + (2 * abs_ystep),
-            right=h3_layer.area.right + (2 * abs_xstep),
-            bottom=h3_layer.area.bottom - (2 * abs_ystep)
+            left=h3_layer.area.left - (12 * abs_xstep),
+            top=h3_layer.area.top + (12 * abs_ystep),
+            right=h3_layer.area.right + (12 * abs_xstep),
+            bottom=h3_layer.area.bottom - (12 * abs_ystep)
         )
         h3_layer.set_window_for_union(expanded_area)
         assert h3_layer.window > before_window

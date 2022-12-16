@@ -2,6 +2,7 @@ from math import ceil, floor
 
 import h3
 import numpy as np
+from osgeo import gdal
 
 from .layers import Layer, PixelScale
 from .window import Area, Window
