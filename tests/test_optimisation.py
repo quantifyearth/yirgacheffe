@@ -164,6 +164,6 @@ def test_cells_dont_overlap(cell_id):
     for layer in layers:
         const = ConstantLayer(1.0)
         calc = result.numpy_apply(combine, (layer * const))
-        calc.save_to_layer(result)
+        calc.save(result)
 
     # If we didn't get an exception, then there's no over drawing

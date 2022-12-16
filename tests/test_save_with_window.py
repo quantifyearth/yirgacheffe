@@ -17,7 +17,7 @@ def test_add_byte_layers_with_union() -> None:
         layer.set_window_for_union(window)
 
     comp = layer1 + layer2
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = numpy.array([[1, 2, 3, 4,], [5, 16, 27, 8,], [9, 60, 71, 12,], [13, 14, 15, 16,]])
     result.reset_window()
@@ -39,7 +39,7 @@ def test_add_byte_layers_with_intersection_with_max_save_raster() -> None:
         layer.set_window_for_intersection(window)
 
     comp = layer1 + layer2
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = numpy.array([[0, 0, 0, 0,], [0, 16, 27, 0,], [0, 60, 71, 0,], [0, 0, 0, 0,]])
     result.reset_window()
@@ -61,7 +61,7 @@ def test_add_byte_layers_with_intersection_with_min_save_raster() -> None:
         layer.set_window_for_intersection(window)
 
     comp = layer1 + layer2
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = numpy.array([[16, 27,], [60, 71,],])
     result.reset_window()

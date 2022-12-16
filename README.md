@@ -26,13 +26,21 @@ elevation_layer.set_window_for_intersection(intersection)
 area_layer.set_window_for_intersection(intersection)
 validity_layer.set_window_for_intersection(intersection)
 
+# Create a layer that is just the size of the intersection to store the results
+result = Layer.empty_raster_layer(
+    intersection,
+    area_layer.pixel_scale,
+    area_layer.datatype,
+    "result.tif",
+    area_layer.projection
+)
+
 # Work out the area where the data is valid and over 3000ft
 def is_munro(data):
     return numpy.where(data > 3000.0, 0.0, 1.0)
-result = validity_layer * area_layer * elevation_layer.apply(is_munro)
+calc = validity_layer * area_layer * elevation_layer.apply(is_munro)
 
-result_band = result_gdal_dataset.GetRasterBand(1)
-result.save(result_band)
+calc.save(result)
 ```
 
 If you want the union then you can simply swap do:
@@ -45,6 +53,9 @@ validity_layer.set_window_for_union(intersection)
 ```
 
 If you want to work on the data in a layer directly you can call `read_array`, as you would with gdal. The data you access will be relative to the specified window - that is, if you've called either `set_window_for_intersection` or `set_window_for_union` then `read_array` will be relative to that and Yirgacheffe will clip or expand the data with zero values as necessary.
+
+If you have set either the intersection window or union window on a layer and you wish to undo that restriction, then you can simply call `reset_window()` on the layer.
+
 
 ### Todo but not supported
 
@@ -66,6 +77,24 @@ This is your basic GDAL raster layer, which you load from a geotiff.
 ```python
 layer1 = Layer.layer_from_file('test1.tif')
 ```
+
+You can also create empty layers ready for you to store results, either by taking the dimensions from an existing layer. In both these cases you can either provide a filename to which the data will be written, or if you do not provide a filename then the layer will only exist in memory - this will be more efficient if the layer is being used for intermediary results.
+
+```python
+result = Layer.empty_raster_layer_like(layer1, "results.tiff")
+```
+
+Or you can specify the geographic area directly:
+
+```python
+result = Layer.empty_raster_layer(
+    Area(left=-10.0, top=10.0, right=-5.0, bottom=5.0),
+    PixelScale(0.005,-0.005),
+    gdal.GDT_Float64,
+    "results.tiff"
+)
+```
+
 
 ### DynamicVectorRangeLayer
 
@@ -95,7 +124,7 @@ area_layer = UniformAreaLayer('yirgacheffe_area.tiff')
 ```
 
 
-### constantLayer
+### ConstantLayer
 
 This is there to simplify code when you have some optional layers. Rather than littering your code with checks, you can just use a constant layer, which can be included in calculations and will just return an fixed value as if it wasn't there. Useful with 0.0 or 1.0 for sum or multiplication null layers.
 
@@ -129,22 +158,22 @@ Pixel-wise addition, subtraction, multiplication or division, either between arr
 ```python
 layer1 = Layer.layer_from_file('test1.tif')
 layer2 = Layer.layer_from_file('test2.tif')
+result = Layer.empty_raster_layer_like(layer1, 'result.tif')
 
-result = layer1 + layer2
+calc = layer1 + layer2
 
-result_band = result_gdal_dataset.GetRasterBand(1)
-result.save(result_band)
+calculation.save(result)
 ```
 
 or
 
 ```python
 layer1 = Layer.layer_from_file('test1.tif')
+result = Layer.empty_raster_layer_like(layer1, 'result.tif')
 
-result = layer1 * 42.0
+calc = layer1 * 42.0
 
-result_band = result_gdal_dataset.GetRasterBand(1)
-result.save(result_band)
+calc.save(result)
 ```
 
 ### Power
@@ -153,11 +182,11 @@ Pixel-wise raising to a constant power:
 
 ```python
 layer1 = Layer.layer_from_file('test1.tif')
+result = Layer.empty_raster_layer_like(layer1, 'result.tif')
 
-result = layer1 ** 0.65
+calc = layer1 ** 0.65
 
-result_band = result_gdal_dataset.GetRasterBand(1)
-result.save(result_band)
+calc.save(result)
 ```
 
 
@@ -172,11 +201,11 @@ def is_over_ten(input_array):
     return numpy.where(input_array > 10.0, 0.0, 1.0)
 
 layer1 = Layer.layer_from_file('test1.tif')
+result = Layer.empty_raster_layer_like(layer1, 'result.tif')
 
-result = layer1.numpy_apply(is_over_ten)
+calc = layer1.numpy_apply(is_over_ten)
 
-result_band = result_gdal_dataset.GetRasterBand(1)
-result.save(result_band)
+calc.save(result)
 ```
 
 or
@@ -187,11 +216,11 @@ def simple_add(first_array, second_array):
 
 layer1 = Layer.layer_from_file('test1.tif')
 layer2 = Layer.layer_from_file('test2.tif')
+result = Layer.empty_raster_layer_like(layer1, 'result.tif')
 
-result = layer1.numpy_apply(simple_add, layer2)
+calc = layer1.numpy_apply(simple_add, layer2)
 
-result_band = result_gdal_dataset.GetRasterBand(1)
-result.save(result_band)
+calc.save(result)
 ```
 
 If you want to do something specific on the pixel level, then you can also do that, again either on a unary or binary form.
@@ -201,11 +230,11 @@ def is_over_ten(input_pixel):
     return 1.0 if input_pixel > 10 else 0.0
 
 layer1 = Layer.layer_from_file('test1.tif')
+result = Layer.empty_raster_layer_like(layer1, 'result.tif')
 
-result = layer1.shader_apply(is_over_ten)
+calc = layer1.shader_apply(is_over_ten)
 
-result_band = result_gdal_dataset.GetRasterBand(1)
-result.save(result_band)
+calc.save(result)
 ```
 
 ## Getting an answer out
@@ -222,9 +251,9 @@ intersection = Layer.find_intersection([area_layer, mask_layer])
 area_layer.set_intersection_window(intersection)
 mask_layer.set_intersection_window(intersection)
 
-result = area_layer * mask_layer
+calc = area_layer * mask_layer
 
-total_area = result.sum()
+total_area = calc.sum()
 ```
 
 

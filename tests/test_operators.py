@@ -13,7 +13,7 @@ def test_add_byte_layers() -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     comp = layer1 + layer2
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 + data2
     actual = result.read_array(0, 0, 4, 2)
@@ -29,7 +29,7 @@ def test_sub_byte_layers() -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     comp = layer1 - layer2
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 - data2
     actual = result.read_array(0, 0, 4, 2)
@@ -45,7 +45,7 @@ def test_add_float_layers() -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     comp = layer1 + layer2
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 + data2
     actual = result.read_array(0, 0, 4, 2)
@@ -61,7 +61,7 @@ def test_sub_float_layers() -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     comp = layer1 - layer2
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 - data2
     actual = result.read_array(0, 0, 4, 2)
@@ -77,7 +77,7 @@ def test_mult_float_layers() -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     comp = layer1 * layer2
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 * data2
     actual = result.read_array(0, 0, 4, 2)
@@ -90,7 +90,7 @@ def test_mult_float_layer_by_const() -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     comp = layer1 * 2.5
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 * 2.5
     actual = result.read_array(0, 0, 4, 2)
@@ -103,7 +103,7 @@ def test_div_float_layer_by_const() -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     comp = layer1 / 2.5
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 / 2.5
     actual = result.read_array(0, 0, 4, 2)
@@ -116,7 +116,7 @@ def test_power_float_layer_by_const() -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     comp = layer1 ** 2.5
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 ** 2.5
     actual = result.read_array(0, 0, 4, 2)
@@ -132,7 +132,7 @@ def test_simple_unary_numpy_apply() -> None:
         return chunk + 1.0
 
     comp = layer1.numpy_apply(simple_add)
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 + 1.0
     actual = result.read_array(0, 0, 4, 2)
@@ -148,7 +148,7 @@ def test_isin_unary_numpy_apply() -> None:
         return numpy.isin(chunk, [2.0, 3.0])
 
     comp = layer1.numpy_apply(simple_add)
-    comp.save_to_layer(result)
+    comp.save(result)
 
     # The * 1.0 is because the numpy result will be bool, but we bounced
     # our answer via a float gdal dataset
@@ -169,7 +169,7 @@ def test_simple_binary_numpy_apply() -> None:
         return chunk1 + chunk2
 
     comp = layer1.numpy_apply(simple_add, layer2)
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 + data2
     actual = result.read_array(0, 0, 4, 2)
@@ -185,7 +185,7 @@ def test_simple_unary_shader_apply() -> None:
         return pixel + 1.0
 
     comp = layer1.shader_apply(simple_add)
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 + 1.0
     actual = result.read_array(0, 0, 4, 2)
@@ -204,7 +204,7 @@ def test_simple_binary_shader_apply() -> None:
         return pixel1 + pixel2
 
     comp = layer1.shader_apply(simple_add, layer2)
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 + data2
     actual = result.read_array(0, 0, 4, 2)
@@ -227,7 +227,7 @@ def test_comparison_float_layer_by_const(operator) -> None:
     result = Layer.empty_raster_layer_like(layer1)
 
     comp = operator(layer1, 3.0)
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = operator(data1, 3.0)
     actual = result.read_array(0, 0, 4, 2)
@@ -258,7 +258,7 @@ def test_constant_layer_result_rhs() -> None:
         layer.set_window_for_intersection(intersection)
 
     comp = layer1 + const_layer
-    comp.save_to_layer(result)
+    comp.save(result)
     result.reset_window()
     actual = result.read_array(0, 0, 4, 2)
 
@@ -277,7 +277,7 @@ def test_constant_layer_result_lhs() -> None:
     layer1.set_window_for_intersection(intersection)
 
     comp = const_layer + layer1
-    comp.save_to_layer(result)
+    comp.save(result)
 
     actual = result.read_array(0, 0, 4, 2)
 
@@ -295,7 +295,7 @@ def test_shader_apply_constant_lhs() -> None:
         return pixel1 + pixel2
 
     comp = const_layer.shader_apply(simple_add, layer1)
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 + 1.0
     actual = result.read_array(0, 0, 4, 2)
@@ -314,7 +314,7 @@ def test_shader_apply_constant_rhs() -> None:
     comp = layer1.shader_apply(simple_add, const_layer)
     result = Layer.empty_raster_layer_like(layer1)
 
-    comp.save_to_layer(result)
+    comp.save(result)
 
     expected = data1 + 1.0
     actual = result.read_array(0, 0, 4, 2)
@@ -326,7 +326,7 @@ def test_direct_layer_save() -> None:
     layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = Layer.empty_raster_layer_like(layer1)
 
-    layer1.save_to_layer(result)
+    layer1.save(result)
     actual = result.read_array(0, 0, 4, 2)
 
     assert (data1 == actual).all()

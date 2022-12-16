@@ -63,8 +63,8 @@ class LayerMathMixin:
     def shader_apply(self, func, other=None):
         return ShaderStyleOperation(self, func, other)
 
-    def save_to_layer(self, destination_layer):
-        return LayerOperation(self).save_to_layer(destination_layer)
+    def save(self, destination_layer):
+        return LayerOperation(self).save(destination_layer)
 
     def sum(self):
         return LayerOperation(self).sum()
@@ -136,7 +136,7 @@ class LayerOperation(LayerMathMixin):
             total += numpy.sum(line)
         return total
 
-    def save_to_layer(self, destination_layer):
+    def save(self, destination_layer):
         if destination_layer is None:
             raise ValueError("Layer is required")
         try:
