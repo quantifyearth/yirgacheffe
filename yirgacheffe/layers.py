@@ -72,7 +72,7 @@ class Layer(LayerMathMixin):
             layer._raster_xsize,
             layer._raster_ysize,
             1,
-            layer._dataset.GetRasterBand(1).DataType,
+            layer.datatype,
             [] if filename == 'mem' else ['COMPRESS=LZW'],
         )
         dataset.SetGeoTransform(layer.geo_transform)
@@ -169,6 +169,10 @@ class Layer(LayerMathMixin):
     @property
     def projection(self) -> str:
         return self._dataset.GetProjection()
+
+    @property
+    def datatype(self) -> int:
+        return self._dataset.GetRasterBand(1).DataType
 
     def check_pixel_scale(self, scale: PixelScale) -> bool:
         our_scale = self.pixel_scale
@@ -365,6 +369,10 @@ class DynamicVectorRangeLayer(Layer):
     def projection(self) -> str:
         return self._projection
 
+    @property
+    def datatype(self) -> int:
+        return gdal.GDT_Byte
+
     def read_array(self, xoffset, yoffset, xsize, ysize):
 
         # I did try recycling this object to save allocation/dealloction, but in practice it
@@ -478,6 +486,10 @@ class ConstantLayer(Layer):
     @property
     def pixel_scale(self) -> Optional[PixelScale]:
         return None
+
+    @property
+    def datatype(self) -> int:
+        return gdal.GDT_CFloat64
 
     def check_pixel_scale(self, _scale: PixelScale) -> bool:
         return True
