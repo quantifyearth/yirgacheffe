@@ -1,3 +1,5 @@
+import sys
+
 from collections import namedtuple
 from dataclasses import dataclass
 from typing import List
@@ -51,18 +53,27 @@ class Window:
     def find_intersection(windows: List) -> "Window":
         if not windows:
             raise ValueError("Expected list of windows")
-        areas = [Area(x.xoff, x.yoff, x.xoff + x.xsize, x.yoff + x.ysize) for x in windows]
-        intersection = Area(
-            left=max(x.left for x in areas),
-            top=max(x.top for x in areas),
-            right=min(x.right for x in areas),
-            bottom=min(x.bottom for x in areas)
-        )
-        if (intersection.left >= intersection.right) or (intersection.top >= intersection.bottom):
+        # This isn't very pythonic, as it was originally written, but
+        # this method gets called a lot (by every Layer.read_array), so not looping
+        # over the window list multiple times halves the performance cost (as
+        # measured with cProfile).
+        left, top, right, bottom = -sys.maxsize, -sys.maxsize, sys.maxsize, sys.maxsize
+        for window in windows:
+            if window.xoff > left:
+                left = window.xoff
+            if window.yoff > top:
+                top = window.yoff
+            w_right = window.xoff + window.xsize
+            if  w_right < right:
+                right = w_right
+            w_bottom = window.yoff + window.ysize
+            if w_bottom < bottom:
+                bottom = w_bottom
+        if (left >= right) or (top >= bottom):
             raise ValueError('No intersection possible')
         return Window(
-            intersection.left,
-            intersection.top,
-            intersection.right - intersection.left,
-            intersection.bottom - intersection.top
+            left,
+            top,
+            right - left,
+            bottom - top
         )
