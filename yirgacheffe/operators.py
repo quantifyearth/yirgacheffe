@@ -2,7 +2,7 @@ import numpy
 
 from .window import Window
 
-YSIZE = 1
+YSTEP = 512
 
 class LayerConstant:
     def __init__(self, val):
@@ -11,7 +11,7 @@ class LayerConstant:
     def __str__(self):
         return str(self.val)
 
-    def _eval(self, _index):
+    def _eval(self, _index, _step):
         return self.val
 
 
@@ -50,12 +50,12 @@ class LayerMathMixin:
     def __ge__(self, other):
         return LayerOperation(self, "__ge__", other)
 
-    def _eval(self, index):
+    def _eval(self, index, step):
         try:
             window = self.window
-            return self.read_array(0, index, window.xsize, YSIZE)
+            return self.read_array(0, index, window.xsize, step)
         except AttributeError:
-            return self.read_array(0, index, 1, YSIZE)
+            return self.read_array(0, index, 1, step)
 
     def numpy_apply(self, func, other=None):
         return LayerOperation(self, func, other)
@@ -101,13 +101,13 @@ class LayerOperation(LayerMathMixin):
             # say, so let the exception propagate up
             return self.rhs.window
 
-    def _eval(self, index):
+    def _eval(self, index, step):
         try:
-            lhs = self.lhs._eval(index)
+            lhs = self.lhs._eval(index, step)
             # we want operator to fail first, before the rhs check, as we
             # support unary operations
             operator = getattr(lhs, self.operator)
-            rhs = self.rhs._eval(index)
+            rhs = self.rhs._eval(index, step)
             result = operator(rhs)
 
             # This is currently a hurried work around for the fact that
@@ -122,7 +122,7 @@ class LayerOperation(LayerMathMixin):
             return result
         except TypeError: # operator not a string
             try:
-                return self.operator(lhs, self.rhs._eval(index))
+                return self.operator(lhs, self.rhs._eval(index,step))
             except AttributeError: # no rhs
                 return self.operator(lhs)
         except AttributeError: # no operator attr
@@ -131,9 +131,12 @@ class LayerOperation(LayerMathMixin):
     def sum(self):
         total = 0.0
         computation_window = self.window
-        for yoffset in range(computation_window.ysize):
-            line = self._eval(yoffset)
-            total += numpy.sum(line)
+        for yoffset in range(0, computation_window.ysize, YSTEP):
+            step=YSTEP
+            if yoffset+step > computation_window.ysize:
+                step = computation_window.ysize - yoffset
+            chunk = self._eval(yoffset, step)
+            total += numpy.sum(chunk)
         return total
 
     def save(self, destination_layer):
@@ -147,8 +150,11 @@ class LayerOperation(LayerMathMixin):
         computation_window = self.window
         destination_window = destination_layer.window
 
-        for yoffset in range(computation_window.ysize):
-            line = self._eval(yoffset)
+        for yoffset in range(0, computation_window.ysize, YSTEP):
+            step=YSTEP
+            if yoffset+step > computation_window.ysize:
+                step = computation_window.ysize - yoffset
+            line = self._eval(yoffset, step)
             try:
                 band.WriteArray(
                     line,
@@ -170,10 +176,10 @@ class LayerOperation(LayerMathMixin):
 
 class ShaderStyleOperation(LayerOperation):
 
-    def _eval(self, index):
-        lhs = self.lhs._eval(index)
+    def _eval(self, index, step):
+        lhs = self.lhs._eval(index, step)
         try:
-            rhs = self.rhs._eval(index)
+            rhs = self.rhs._eval(index, step)
         except AttributeError: # no rhs
             rhs = None
 
@@ -190,7 +196,7 @@ class ShaderStyleOperation(LayerOperation):
             result = numpy.empty_like(lhs)
 
         window = self.window
-        for yoffset in range(YSIZE):
+        for yoffset in range(step):
             for xoffset in range(window.xsize):
                 try:
                     lhs_val = lhs[yoffset][xoffset]
