@@ -2,7 +2,8 @@ import numpy
 
 from .window import Window
 
-YSTEP = 512
+XSTEP = 1024*4
+YSTEP = 1024*4
 
 class LayerConstant:
     def __init__(self, val):
@@ -11,7 +12,7 @@ class LayerConstant:
     def __str__(self):
         return str(self.val)
 
-    def _eval(self, _index, _step):
+    def _eval(self, _xoffset, _yoffset, _xstep, _ystep):
         return self.val
 
 
@@ -50,12 +51,8 @@ class LayerMathMixin:
     def __ge__(self, other):
         return LayerOperation(self, "__ge__", other)
 
-    def _eval(self, index, step):
-        try:
-            window = self.window
-            return self.read_array(0, index, window.xsize, step)
-        except AttributeError:
-            return self.read_array(0, index, 1, step)
+    def _eval(self, xoffset, yoffset, xstep, ystep):
+        return self.read_array(xoffset, yoffset, xstep, ystep)
 
     def numpy_apply(self, func, other=None):
         return LayerOperation(self, func, other)
@@ -101,13 +98,13 @@ class LayerOperation(LayerMathMixin):
             # say, so let the exception propagate up
             return self.rhs.window
 
-    def _eval(self, index, step):
+    def _eval(self, xoffset, yoffset, xstep, ystep):
         try:
-            lhs = self.lhs._eval(index, step)
+            lhs = self.lhs._eval(xoffset, yoffset, xstep, ystep)
             # we want operator to fail first, before the rhs check, as we
             # support unary operations
             operator = getattr(lhs, self.operator)
-            rhs = self.rhs._eval(index, step)
+            rhs = self.rhs._eval(xoffset, yoffset, xstep, ystep)
             result = operator(rhs)
 
             # This is currently a hurried work around for the fact that
@@ -122,7 +119,7 @@ class LayerOperation(LayerMathMixin):
             return result
         except TypeError: # operator not a string
             try:
-                return self.operator(lhs, self.rhs._eval(index,step))
+                return self.operator(lhs, self.rhs._eval(xoffset, yoffset, xstep, ystep))
             except AttributeError: # no rhs
                 return self.operator(lhs)
         except AttributeError: # no operator attr
@@ -132,11 +129,16 @@ class LayerOperation(LayerMathMixin):
         total = 0.0
         computation_window = self.window
         for yoffset in range(0, computation_window.ysize, YSTEP):
-            step=YSTEP
-            if yoffset+step > computation_window.ysize:
-                step = computation_window.ysize - yoffset
-            chunk = self._eval(yoffset, step)
-            total += numpy.sum(chunk)
+            for xoffset in range(0, computation_window.xsize, XSTEP):
+                ystep=YSTEP
+                if yoffset+ystep > computation_window.ysize:
+                    ystep = computation_window.ysize - yoffset
+                xstep=XSTEP
+                if xoffset+xstep > computation_window.xsize:
+                    xstep = computation_window.xsize - xoffset
+
+                chunk = self._eval(xoffset, yoffset, xstep, ystep)
+                total += numpy.sum(chunk)
         return total
 
     def save(self, destination_layer):
@@ -151,35 +153,40 @@ class LayerOperation(LayerMathMixin):
         destination_window = destination_layer.window
 
         for yoffset in range(0, computation_window.ysize, YSTEP):
-            step=YSTEP
-            if yoffset+step > computation_window.ysize:
-                step = computation_window.ysize - yoffset
-            line = self._eval(yoffset, step)
-            try:
-                band.WriteArray(
-                    line,
-                    destination_window.xoff,
-                    yoffset + destination_window.yoff,
-                )
-            except AttributeError:
-                # Likely that line is a constant value
-                if isinstance(line, (float, int)):
-                    constline = numpy.array([[line] * destination_window.xsize])
+            for xoffset in range(0, computation_window.ysize, XSTEP):
+                ystep=YSTEP
+                if yoffset+ystep > computation_window.ysize:
+                    ystep = computation_window.ysize - yoffset
+                xstep=XSTEP
+                if xoffset+xstep > computation_window.xsize:
+                    xstep = computation_window.xsize - xoffset
+
+                chunk = self._eval(xoffset, yoffset, xstep, ystep)
+                try:
                     band.WriteArray(
-                        constline,
-                        destination_window.xoff,
+                        chunk,
+                        xoffset + destination_window.xoff,
                         yoffset + destination_window.yoff,
                     )
-                else:
-                    raise
+                except AttributeError:
+                    # If we hit this, the layer probably returned a constant
+                    if isinstance(chunk, (float, int)):
+                        constchunk = numpy.full((ystep,xstep), chunk)
+                        band.WriteArray(
+                            constline,
+                            xoffset + destination_window.xoff,
+                            yoffset + destination_window.yoff,
+                        )
+                    else:
+                        raise
 
 
 class ShaderStyleOperation(LayerOperation):
 
-    def _eval(self, index, step):
-        lhs = self.lhs._eval(index, step)
+    def _eval(self, xoffset, yoffset, xstep, ystep):
+        lhs = self.lhs._eval(xoffset, yoffset, xstep, ystep)
         try:
-            rhs = self.rhs._eval(index, step)
+            rhs = self.rhs._eval(xoffset, yoffset, xstep, ystep)
         except AttributeError: # no rhs
             rhs = None
 
@@ -196,19 +203,19 @@ class ShaderStyleOperation(LayerOperation):
             result = numpy.empty_like(lhs)
 
         window = self.window
-        for yoffset in range(step):
-            for xoffset in range(window.xsize):
+        for y in range(ystep):
+            for x in range(xstep):
                 try:
-                    lhs_val = lhs[yoffset][xoffset]
+                    lhs_val = lhs[y][x]
                 except TypeError:
                     lhs_val = lhs
                 if rhs is not None:
                     try:
-                        rhs_val = rhs[yoffset][xoffset]
+                        rhs_val = rhs[y][x]
                     except TypeError:
                         rhs_val = rhs
-                    result[yoffset][xoffset] = self.operator(lhs_val, rhs_val)
+                    result[y][x] = self.operator(lhs_val, rhs_val)
                 else:
-                    result[yoffset][xoffset] = self.operator(lhs_val)
+                    result[y][x] = self.operator(lhs_val)
 
         return result

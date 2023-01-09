@@ -10,6 +10,7 @@ from osgeo import gdal, ogr
 from . import WSG_84_PROJECTION
 from .window import Area, Window
 from .operators import LayerMathMixin
+from .util import geometry_to_envelopes
 
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
@@ -339,7 +340,9 @@ class DynamicVectorRangeLayer(Layer):
         range_layer.ResetReading()
         feature = range_layer.GetNextFeature()
         while feature:
-            envelopes.append(feature.GetGeometryRef().GetEnvelope())
+            subenvs = geometry_to_envelopes(feature.GetGeometryRef())
+            envelopes += subenvs
+            # envelopes.append(feature.GetGeometryRef().GetEnvelope())
             feature = range_layer.GetNextFeature()
         if len(envelopes) == 0:
             raise ValueError(f'No geometry found for {where_filter}')
@@ -365,6 +368,21 @@ class DynamicVectorRangeLayer(Layer):
             ysize=ceil((self.area.bottom - self.area.top) / scale.ystep),
         )
 
+        self._subwindows = []
+        for x in envelopes:
+            area = Area(
+                left=floor(x[0]/abs_xstep)*abs_xstep,
+                top=ceil(x[3]/abs_ystep)*abs_ystep,
+                right=ceil(x[1]/abs_xstep)*abs_xstep,
+                bottom=floor(x[2]/abs_ystep)*abs_ystep,
+            )
+            self._subwindows.append(Window(
+                xoff=floor((area.left-self.area.left)/abs_xstep),
+                yoff=floor((self.area.top-area.top)/abs_ystep),
+                xsize=ceil((area.right - area.left) / scale.xstep),
+                ysize=ceil((area.bottom - area.top) / scale.ystep),
+            ))
+
     @property
     def projection(self) -> str:
         return self._projection
@@ -374,6 +392,26 @@ class DynamicVectorRangeLayer(Layer):
         return gdal.GDT_Byte
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
+
+        # overlap = False
+        # target_window = Window(
+        #     self.window.xoff + xoffset,
+        #     self.window.yoff + yoffset,
+        #     xsize,
+        #     ysize
+        # )
+        # for env_window in self._subwindows:
+        #     # print(env_window)
+        #     # assert False
+        #     try:
+        #         Window.find_intersection([env_window, target_window])
+        #     except ValueError:
+        #         continue
+        #     overlap = True
+        #     break
+        # if not overlap:
+        #     print("no")
+        #     return 0.0
 
         # I did try recycling this object to save allocation/dealloction, but in practice it
         # seemed to only make things slower (particularly as you need to zero the memory each time yourself)
