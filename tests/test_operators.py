@@ -339,3 +339,15 @@ def test_direct_layer_sum() -> None:
 
     expected = numpy.sum(data1)
     assert expected == actual
+
+def test_direct_layer_save_and_sum() -> None:
+    data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = Layer.empty_raster_layer_like(layer1)
+
+    actual_sum = layer1.save(result, and_sum=True)
+    actual_data = result.read_array(0, 0, 4, 2)
+    expected_sum = numpy.sum(data1)
+
+    assert (data1 == actual_data).all()
+    assert expected_sum == actual_sum

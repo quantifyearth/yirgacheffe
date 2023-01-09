@@ -63,8 +63,8 @@ class LayerMathMixin:
     def shader_apply(self, func, other=None):
         return ShaderStyleOperation(self, func, other)
 
-    def save(self, destination_layer):
-        return LayerOperation(self).save(destination_layer)
+    def save(self, destination_layer, and_sum=False):
+        return LayerOperation(self).save(destination_layer, and_sum)
 
     def sum(self):
         return LayerOperation(self).sum()
@@ -139,7 +139,12 @@ class LayerOperation(LayerMathMixin):
             total += numpy.sum(chunk)
         return total
 
-    def save(self, destination_layer):
+    def save(self, destination_layer, and_sum=False):
+        """
+        Calling save will write the output of the operation to the provied layer.
+        If you provide sum as true it will additionall compute the sum and return that.
+        """
+
         if destination_layer is None:
             raise ValueError("Layer is required")
         try:
@@ -150,28 +155,24 @@ class LayerOperation(LayerMathMixin):
         computation_window = self.window
         destination_window = destination_layer.window
 
+        total = 0.0
+
         for yoffset in range(0, computation_window.ysize, YSTEP):
             step=YSTEP
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            line = self._eval(yoffset, step)
-            try:
-                band.WriteArray(
-                    line,
-                    destination_window.xoff,
-                    yoffset + destination_window.yoff,
-                )
-            except AttributeError:
-                # Likely that line is a constant value
-                if isinstance(line, (float, int)):
-                    constline = numpy.array([[line] * destination_window.xsize])
-                    band.WriteArray(
-                        constline,
-                        destination_window.xoff,
-                        yoffset + destination_window.yoff,
-                    )
-                else:
-                    raise
+            chunk = self._eval(yoffset, step)
+            if isinstance(chunk, (float, int)):
+                chunk = numpy.full((step, destination_window.xsize), chunk)
+            band.WriteArray(
+                chunk,
+                destination_window.xoff,
+                yoffset + destination_window.yoff,
+            )
+            if and_sum:
+                total += numpy.sum(chunk)
+
+        return total if and_sum else None
 
 
 class ShaderStyleOperation(LayerOperation):
