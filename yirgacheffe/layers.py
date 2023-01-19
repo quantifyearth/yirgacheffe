@@ -1,5 +1,4 @@
 import math
-import sys
 from collections import namedtuple
 from math import ceil, floor
 from typing import Any, List, Optional, Tuple
@@ -10,13 +9,9 @@ from osgeo import gdal, ogr
 from . import WSG_84_PROJECTION
 from .window import Area, Window
 from .operators import LayerMathMixin
+from .rounding import almost_equal, round_up_pixels
 
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
-
-def _almost_equal(aval: float, bval: float) -> bool:
-    """Safe floating point equality check."""
-    return abs(aval - bval) < sys.float_info.epsilon
-
 
 class Layer(LayerMathMixin):
     """Layer provides a wrapper around a gdal dataset/band that also records offset state so that
@@ -48,8 +43,8 @@ class Layer(LayerMathMixin):
             filename = 'mem'
         dataset = driver.Create(
             filename,
-            ceil((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep),
-            ceil((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep),
+            round_up_pixels((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep, abs_xstep),
+            round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
             1,
             data_type,
             [] if filename == 'mem' else ['COMPRESS=LZW'],
@@ -177,15 +172,21 @@ class Layer(LayerMathMixin):
     def check_pixel_scale(self, scale: PixelScale) -> bool:
         our_scale = self.pixel_scale
         assert our_scale is not None
-        return _almost_equal(our_scale.xstep, scale.xstep) and \
-            _almost_equal(our_scale.ystep, scale.ystep)
+        return almost_equal(our_scale.xstep, scale.xstep) and \
+            almost_equal(our_scale.ystep, scale.ystep)
 
     def set_window_for_intersection(self, intersection: Area) -> None:
         new_window = Window(
             xoff=floor((intersection.left - self.area.left) / self._transform[1]),
             yoff=floor((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
-            xsize=ceil((intersection.right - intersection.left) / self._transform[1]),
-            ysize=ceil((intersection.top - intersection.bottom) / (self._transform[5] * -1.0)),
+            xsize=round_up_pixels(
+                (intersection.right - intersection.left) / self._transform[1],
+                self._transform[1]
+            ),
+            ysize=round_up_pixels(
+                (intersection.top - intersection.bottom) / (self._transform[5] * -1.0),
+                (self._transform[5] * -1.0)
+            ),
         )
         if (new_window.xoff < 0) or (new_window.yoff < 0):
             raise ValueError('Window has negative offset')
@@ -201,8 +202,14 @@ class Layer(LayerMathMixin):
         new_window = Window(
             xoff=floor((intersection.left - self.area.left) / self._transform[1]),
             yoff=floor((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
-            xsize=ceil((intersection.right - intersection.left) / self._transform[1]),
-            ysize=ceil((intersection.top - intersection.bottom) / (self._transform[5] * -1.0)),
+            xsize=round_up_pixels(
+                (intersection.right - intersection.left) / self._transform[1],
+                self._transform[1]
+            ),
+            ysize=round_up_pixels(
+                (intersection.top - intersection.bottom) / (self._transform[5] * -1.0),
+                (self._transform[5] * -1.0)
+            ),
         )
         if (new_window.xoff > 0) or (new_window.yoff > 0):
             raise ValueError('Window has positive offset')

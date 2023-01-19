@@ -1,6 +1,6 @@
 import pytest
 
-from helpers import gdal_dataset_of_region
+from helpers import gdal_dataset_of_region, gdal_empty_dataset_of_region
 from yirgacheffe.layers import Area, Layer, ConstantLayer, Window
 
 
@@ -99,3 +99,43 @@ def test_set_intersection_distinct() -> None:
     intersection = Area(-101.0, 1.0, -100.0, -1.0)
     with pytest.raises(ValueError):
         layer.set_window_for_intersection(intersection)
+
+def test_find_intersection_nearly_same() -> None:
+    # This testcase is based on a real instance we hit whereby
+    # the layers were effectively the same, and intended to be the same,
+    # but a rounding error of less than the floating point epsilon was in 
+    # one of the files.
+    #
+    # gdalinfo rounds the numbers, so it wasn't obvious, but inspecting the 
+    # GEOTiffs with tifffile (a pure tiff library) showed the error, and GDAL
+    # in python showed the error too.
+    #
+    # Yirgacheffe at the time blew up as it knew to ignore the difference
+    # when doing a comparison (thanks to layers.py::almost_equal(a,b)), but
+    # when you then multiplied this up by the area it rounded poorly.
+    layers = [
+        Layer(gdal_empty_dataset_of_region(
+            Area(left=-180.00082337073326, top=90.00041168536663, right=180.00082337073326, bottom=-90.00041168536663),
+            0.0008983152841195215
+        )),
+        Layer(gdal_empty_dataset_of_region(
+            Area(left=-180.00082337073326, top=90.00041168536661, right=180.00082337073326, bottom=-90.00041168536664),
+            0.0008983152841195216
+        )),
+        Layer(gdal_empty_dataset_of_region(
+            Area(left=-180, top=90.00041168536661, right=180, bottom=-90.00041168536664),
+            0.0008983152841195215
+        )),
+        Layer(gdal_empty_dataset_of_region(
+            Area(left=-3.6372785853999425, top=47.767016917771436, right=3.578888091932174, bottom=42.068104755317194),
+            0.0008983152841195215
+        ))
+    ]
+
+    intersection = Layer.find_intersection(layers)
+    assert intersection == layers[-1].area
+    for layer in layers:
+        layer.set_window_for_intersection(intersection)
+    for other in layers[1:]:
+        assert layers[0].window.xsize == other.window.xsize
+        assert layers[0].window.ysize == other.window.ysize

@@ -1,10 +1,10 @@
-from math import ceil
 from typing import Set, Optional, Tuple
 
 import numpy
 from osgeo import gdal, ogr
 
 from yirgacheffe.layers import Area, Layer
+from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe import WSG_84_PROJECTION
 
 def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[str]=None) -> gdal.Dataset:
@@ -15,8 +15,8 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[st
         filename = 'mem'
     dataset = driver.Create(
         filename,
-        ceil((area.right - area.left) / pixel_pitch),
-        ceil((area.top - area.bottom) / pixel_pitch),
+        round_up_pixels(((area.right - area.left) / pixel_pitch), pixel_pitch),
+        round_up_pixels(((area.top - area.bottom) / pixel_pitch), pixel_pitch),
         1,
         gdal.GDT_Byte,
         []
@@ -29,6 +29,21 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[st
     band = dataset.GetRasterBand(1)
     for yoffset in range(dataset.RasterYSize):
         band.WriteArray(numpy.array([[(yoffset % 256),] * dataset.RasterXSize]), 0, yoffset)
+    return dataset
+
+def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset:
+    dataset = gdal.GetDriverByName('mem').Create(
+        'mem',
+        round_up_pixels(((area.right - area.left) / pixel_pitch), pixel_pitch),
+        round_up_pixels(((area.top - area.bottom) / pixel_pitch), pixel_pitch),
+        0,
+        gdal.GDT_Byte,
+        []
+    )
+    dataset.SetGeoTransform([
+        area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0
+    ])
+    dataset.SetProjection(WSG_84_PROJECTION)
     return dataset
 
 def gdal_dataset_of_layer(layer: Layer, filename: Optional[str]=None) -> gdal.Dataset:
