@@ -33,7 +33,10 @@ def yirgacheffe_cuda_sum_single_layer(data: Layer):
 	raise NotImplementedError("tbd")
 
 def profile_single_layer():
-	tests = [('gdal_chunked', direct_gdal_sum_single_layer), ('basic       ', yirgacheffe_cpu_sum_single_layer)]
+	tests = [
+		('gdal_chunked', direct_gdal_sum_single_layer),
+		('basic', yirgacheffe_cpu_sum_single_layer)
+	]
 	if USE_CUDA:
 		tests.append(('cuda', yirgacheffe_cuda_sum_single_layer))
 
@@ -51,8 +54,6 @@ def profile_single_layer():
 			print(f'{test[0]}: run {i} took {p.total_tt} seconds')
 
 	p.sort_stats(pstats.SortKey.TIME).print_stats(20)
-
-
 
 def direct_gdal_sum_single_layer_and_const(data: Layer):
 	'''This is the direct gdal equivalent, using the usual gdal trick
@@ -76,7 +77,10 @@ def yirgacheffe_cuda_sum_single_layer_and_const(data: Layer):
 	raise NotImplementedError("tbd")
 
 def profile_single_layer_and_const():
-	tests = [('gdal_chunked', direct_gdal_sum_single_layer_and_const), ('basic       ', yirgacheffe_cpu_sum_single_layer_and_const)]
+	tests = [
+		('gdal_chunked', direct_gdal_sum_single_layer_and_const),
+		('basic', yirgacheffe_cpu_sum_single_layer_and_const)
+	]
 	if USE_CUDA:
 		tests.append(('cuda', yirgacheffe_cuda_sum_single_layer_and_const))
 
@@ -94,8 +98,6 @@ def profile_single_layer_and_const():
 			print(f'{test[0]}: run {i} took {p.total_tt} seconds')
 
 	p.sort_stats(pstats.SortKey.TIME).print_stats(20)
-
-
 
 if __name__ == "__main__":
 	profile_single_layer()
