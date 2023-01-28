@@ -148,7 +148,7 @@ class LayerOperation(LayerMathMixin):
         if destination_layer is None:
             raise ValueError("Layer is required")
         try:
-            band = destination_layer._dataset.GetRasterBand(1)
+            band = destination_layer._tiff._file.GetRasterBand(1)
         except AttributeError as exc:
             raise ValueError("Layer must be a raster backed layer") from exc
 

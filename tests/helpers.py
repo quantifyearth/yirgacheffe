@@ -6,8 +6,9 @@ from osgeo import gdal, ogr
 from yirgacheffe.layers import Area, Layer
 from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe import WSG_84_PROJECTION
+from yirgacheffe.tiff import GDALGeoTiff, _GeoTiff
 
-def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[str]=None) -> gdal.Dataset:
+def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[str]=None) -> _GeoTiff:
     if filename:
         driver = gdal.GetDriverByName('GTiff')
     else:
@@ -29,9 +30,9 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[st
     band = dataset.GetRasterBand(1)
     for yoffset in range(dataset.RasterYSize):
         band.WriteArray(numpy.array([[(yoffset % 256),] * dataset.RasterXSize]), 0, yoffset)
-    return dataset
+    return GDALGeoTiff.from_dataset(dataset)
 
-def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset:
+def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> _GeoTiff:
     dataset = gdal.GetDriverByName('mem').Create(
         'mem',
         round_up_pixels(((area.right - area.left) / pixel_pitch), pixel_pitch),
@@ -44,9 +45,9 @@ def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset
         area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0
     ])
     dataset.SetProjection(WSG_84_PROJECTION)
-    return dataset
+    return GDALGeoTiff.from_dataset(dataset)
 
-def gdal_dataset_of_layer(layer: Layer, filename: Optional[str]=None) -> gdal.Dataset:
+def gdal_dataset_of_layer(layer: Layer, filename: Optional[str]=None) -> _GeoTiff:
     if filename:
         driver = gdal.GetDriverByName('GTiff')
     else:
@@ -62,9 +63,9 @@ def gdal_dataset_of_layer(layer: Layer, filename: Optional[str]=None) -> gdal.Da
     )
     dataset.SetGeoTransform(layer.geo_transform)
     dataset.SetProjection(layer.projection)
-    return dataset
+    return GDALGeoTiff.from_dataset(dataset)
 
-def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: numpy.array) -> gdal.Dataset:
+def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: numpy.array) -> _GeoTiff:
     assert data.ndim == 2
     datatype = gdal.GDT_Byte
     if isinstance(data[0][0], float):
@@ -84,7 +85,7 @@ def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: numpy.array)
     band = dataset.GetRasterBand(1)
     for index, val in enumerate(data):
         band.WriteArray(numpy.array([list(val)]), 0, index)
-    return dataset
+    return GDALGeoTiff.from_dataset(dataset)
 
 def make_vectors_with_id(identifier: int, areas: Set[Area], filename: str) -> None:
     poly = ogr.Geometry(ogr.wkbPolygon)

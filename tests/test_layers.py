@@ -1,4 +1,5 @@
 import os
+import pickle
 import tempfile
 
 import h3
@@ -306,3 +307,29 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     # whilst we're here, check that we do have an empty border (i.e., does window for union do the right thing)
     assert np.sum(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2)) == 0.0
     assert np.sum(h3_layer.read_array(0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2)) == 0.0
+
+
+def test_pickle_layer() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        area = Area(-10, 10, 10, -10)
+        dataset = gdal_dataset_of_region(area, 0.02, filename=path)
+        del dataset
+        assert os.path.exists(path)
+
+        layer = Layer.layer_from_file(path)
+        assert layer.area == area
+        assert layer.pixel_scale == (0.02, -0.02)
+        assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+        assert layer.window == Window(0, 0, 1000, 1000)
+
+        data = pickle.dumps(layer)
+        new_layer = pickle.loads(data)
+
+        assert layer.area == new_layer.area
+        assert layer.pixel_scale == new_layer.pixel_scale
+        assert layer.geo_transform == new_layer.geo_transform
+        assert layer.window == new_layer.window
+
+        del layer
+        del new_layer

@@ -10,6 +10,7 @@ from . import WSG_84_PROJECTION
 from .window import Area, Window
 from .operators import LayerMathMixin
 from .rounding import almost_equal, round_up_pixels
+from .tiff import GDALGeoTiff, _GeoTiff
 
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
@@ -53,7 +54,8 @@ class Layer(LayerMathMixin):
             pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
         ])
         dataset.SetProjection(projection)
-        return Layer(dataset)
+        tiff = GDALGeoTiff.from_dataset(dataset)
+        return Layer(tiff)
 
     @staticmethod
     def empty_raster_layer_like(layer, filename: Optional[str]=None):
@@ -72,7 +74,8 @@ class Layer(LayerMathMixin):
         )
         dataset.SetGeoTransform(layer.geo_transform)
         dataset.SetProjection(layer.projection)
-        return Layer(dataset)
+        tiff = GDALGeoTiff.from_dataset(dataset)
+        return Layer(tiff)
 
     @staticmethod
     def find_intersection(layers: List) -> Area:
@@ -117,18 +120,15 @@ class Layer(LayerMathMixin):
 
     @classmethod
     def layer_from_file(cls, filename: str):
-        dataset = gdal.Open(filename, gdal.GA_ReadOnly)
-        if dataset is None:
-            raise FileNotFoundError(filename)
-        return cls(dataset, filename)
+        tiff = GDALGeoTiff(filename)
+        return cls(tiff, filename)
 
-    def __init__(self, dataset: gdal.Dataset, name: Optional[str] = None):
-        if not dataset:
-            raise ValueError("None is not a valid dataset")
-        self._dataset = dataset
-        self._transform = dataset.GetGeoTransform()
-        self._raster_xsize = dataset.RasterXSize
-        self._raster_ysize = dataset.RasterYSize
+    def __init__(self, tiff: _GeoTiff, name: Optional[str] = None):
+        if tiff is None:
+            raise ValueError("None is not a valid tiff")
+        self._tiff = tiff
+        self._transform = tiff.geo_transform
+        self._raster_xsize, self._raster_ysize = tiff.dimensions
         self._intersection: Optional[Area] = None
         self.name = name
 
@@ -144,8 +144,8 @@ class Layer(LayerMathMixin):
         self.window = Window(
             xoff=0,
             yoff=0,
-            xsize=dataset.RasterXSize,
-            ysize=dataset.RasterYSize,
+            xsize=self._raster_xsize,
+            ysize=self._raster_ysize,
         )
 
     @property
@@ -163,11 +163,11 @@ class Layer(LayerMathMixin):
 
     @property
     def projection(self) -> str:
-        return self._dataset.GetProjection()
+        return self._tiff.projection
 
     @property
     def datatype(self) -> int:
-        return self._dataset.GetRasterBand(1).DataType
+        return self._tiff.datatype
 
     def check_pixel_scale(self, scale: PixelScale) -> bool:
         our_scale = self.pixel_scale
@@ -190,7 +190,7 @@ class Layer(LayerMathMixin):
         )
         if (new_window.xoff < 0) or (new_window.yoff < 0):
             raise ValueError('Window has negative offset')
-        if self._dataset:
+        if self._tiff:
             if ((new_window.xoff + new_window.xsize) > self._raster_xsize) or \
                 ((new_window.yoff + new_window.ysize) > self._raster_ysize):
                 raise ValueError(f'Window is bigger than dataset: raster is {self._raster_xsize}x{self._raster_ysize}'\
@@ -213,7 +213,7 @@ class Layer(LayerMathMixin):
         )
         if (new_window.xoff > 0) or (new_window.yoff > 0):
             raise ValueError('Window has positive offset')
-        if self._dataset:
+        if self._tiff:
             if ((new_window.xsize - new_window.xoff) < self._raster_xsize) or \
                 ((new_window.ysize - new_window.yoff) < self._raster_ysize):
                 raise ValueError(f'Window is smaller than dataset: raster is {self._raster_xsize}x{self._raster_ysize}'\
@@ -226,8 +226,8 @@ class Layer(LayerMathMixin):
         self.window = Window(
             xoff=0,
             yoff=0,
-            xsize=self._dataset.RasterXSize,
-            ysize=self._dataset.RasterYSize,
+            xsize=self._raster_xsize,
+            ysize=self._raster_ysize,
         )
 
     def read_array(self, xoffset, yoffset, xsize, ysize) -> Any:
@@ -252,11 +252,11 @@ class Layer(LayerMathMixin):
 
         if target_window == intersection:
             # The target window is a subset of or equal to the source, so we can just ask for the data
-            data = self._dataset.GetRasterBand(1).ReadAsArray(*intersection.as_array_args)
+            data = self._tiff.read_array(*intersection.as_array_args)
             return data
         else:
             # We should read the intersection from the array, and the rest should be zeros
-            subset = self._dataset.GetRasterBand(1).ReadAsArray(*intersection.as_array_args)
+            subset = self._tiff.read_array(*intersection.as_array_args)
             data = numpy.pad(
                 subset,
                 (
@@ -321,7 +321,7 @@ class VectorRangeLayer(Layer):
         dataset.SetProjection(projection)
         dataset.SetGeoTransform([area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep])
         gdal.RasterizeLayer(dataset, [1], range_layer, burn_values=[1], options=["ALL_TOUCHED=TRUE"])
-        super().__init__(dataset)
+        super().__init__(GDALGeoTiff.from_dataset(dataset))
 
 
 class DynamicVectorRangeLayer(Layer):
@@ -363,7 +363,7 @@ class DynamicVectorRangeLayer(Layer):
         )
         self._transform = [self.area.left, scale.xstep, 0.0, self.area.top, 0.0, scale.ystep]
         self._projection = projection
-        self._dataset = None
+        self._tiff = None
         self._intersection = self.area
         self.window = Window(
             xoff=0,

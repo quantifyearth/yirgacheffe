@@ -55,7 +55,7 @@ class H3CellLayer(Layer):
 
         self._transform = [self.area.left, scale.xstep, 0.0, self.area.top, 0.0, scale.ystep]
         self._projection = projection
-        self._dataset = None
+        self._tiff = None
         self._intersection = self.area
         self.window = Window(
             xoff=0,
