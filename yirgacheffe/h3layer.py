@@ -85,7 +85,7 @@ class H3CellLayer(Layer):
     def read_array(self, xoffset, yoffset, xsize, ysize):
         # We have two paths: one for the common case where the hex cell doesn't cross 180˚ longitude,
         # and another case for where it does
-        max_width_projection = (self.area.right - self.area.left)
+        max_width_projection = self.area.right - self.area.left
         if max_width_projection < 180:
 
             target_window = Window(

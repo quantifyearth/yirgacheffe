@@ -31,3 +31,11 @@ Homepage = "https://github.com/carboncredits/yirgacheffe"
 
 [project.scripts]
 realpython = "reader.__main__:main"
+
+[[tool.mypy.overrides]]
+module = "osgeo.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "h3.*"
+ignore_missing_imports = true
