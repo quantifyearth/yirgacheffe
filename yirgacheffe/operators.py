@@ -2,7 +2,7 @@ import numpy
 
 from .window import Window
 
-YSTEP = 512
+YSTEP = 1
 
 class LayerConstant:
     def __init__(self, val):

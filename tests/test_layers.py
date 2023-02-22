@@ -4,6 +4,7 @@ import tempfile
 import h3
 import numpy as np
 import pytest
+from osgeo import gdal
 
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe import WSG_84_PROJECTION
@@ -306,3 +307,66 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     # whilst we're here, check that we do have an empty border (i.e., does window for union do the right thing)
     assert np.sum(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2)) == 0.0
     assert np.sum(h3_layer.read_array(0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2)) == 0.0
+
+def test_h3_layer_overlapped():
+    # This is based on a regression, where somehow I made tiles not tesselate properly
+    left, top = (121.26706, 19.45338)
+    right, bottom = (121.3, 19.4)
+    # right, bottom = (121.62494, 19.18478)
+    scale = PixelScale(0.000898315284120,-0.000898315284120)
+
+    cells = h3.polygon_to_cells(h3.Polygon([
+        (top, left),
+        (top, right),
+        (bottom, right),
+        (bottom, left),
+    ],), 7)
+
+    tiles = [
+        H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+    for cell_id in cells]
+
+    union = Layer.find_union(tiles)
+    union = union.grow(0.02)
+
+    scratch = Layer.empty_raster_layer(
+        union, 
+        scale,
+        gdal.GDT_Float64
+    )
+
+    # In scratch we should only have 0 or 1 values, but if there are any overlaps we should get 2s...    
+
+    print(len(tiles))
+    for tile in tiles:
+        print(tile.cell_id)
+        scratch.reset_window()
+        layers = [scratch, tile]
+        intersection = Layer.find_intersection(layers)
+        for layer in layers:
+            layer.set_window_for_intersection(intersection)
+            print(layer.window)
+        print()
+        result = scratch + tile
+        result.save(scratch)
+
+    def overlap_check(chunk):
+        # if we have rounding errors, then cells will overlap
+        # and we'll end up with values higher than 1.0 in the cell
+        # which would leave to double accounting
+        if np.sum(chunk > 1.5):
+            raise Exception
+        return chunk
+
+    scratch.reset_window()
+    output = Layer.empty_raster_layer_like(scratch, filename='/tmp/test.tif')
+    scratch.save(output)
+
+    calc = scratch.numpy_apply(overlap_check)
+    calc.save(scratch)
+
+def test_h3_layer_overlapped_2():
+
+    cells = ["874b93aaeffffff", "874b93a85ffffff", "874b93aa3ffffff", "874b93a84ffffff", "874b93a80ffffff"]
+
+    

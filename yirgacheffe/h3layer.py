@@ -5,6 +5,7 @@ import numpy as np
 from osgeo import gdal
 
 from .layers import Layer, PixelScale
+from .rounding import round_up_pixels
 from .window import Area, Window
 
 class H3CellLayer(Layer):
@@ -60,8 +61,8 @@ class H3CellLayer(Layer):
         self.window = Window(
             xoff=0,
             yoff=0,
-            xsize=ceil((self.area.right - self.area.left) / scale.xstep),
-            ysize=ceil((self.area.bottom - self.area.top) / scale.ystep),
+            xsize=round_up_pixels((self.area.right - self.area.left) / scale.xstep, abs_xstep),
+            ysize=round_up_pixels((self.area.bottom - self.area.top) / scale.ystep, abs_ystep),
         )
         self._raster_xsize = self.window.xsize
         self._raster_ysize = self.window.ysize
