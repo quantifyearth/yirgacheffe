@@ -1,7 +1,10 @@
 import pytest
+from osgeo import gdal
 
 from helpers import gdal_dataset_of_region, gdal_empty_dataset_of_region
-from yirgacheffe.layers import Area, Layer, ConstantLayer, Window
+from yirgacheffe.layers import Area, Layer, ConstantLayer, Window, PixelScale
+from yirgacheffe.h3layer import H3CellLayer
+from yirgacheffe import WSG_84_PROJECTION
 
 
 def test_find_intersection_empty_list() -> None:
@@ -103,10 +106,10 @@ def test_set_intersection_distinct() -> None:
 def test_find_intersection_nearly_same() -> None:
     # This testcase is based on a real instance we hit whereby
     # the layers were effectively the same, and intended to be the same,
-    # but a rounding error of less than the floating point epsilon was in 
+    # but a rounding error of less than the floating point epsilon was in
     # one of the files.
     #
-    # gdalinfo rounds the numbers, so it wasn't obvious, but inspecting the 
+    # gdalinfo rounds the numbers, so it wasn't obvious, but inspecting the
     # GEOTiffs with tifffile (a pure tiff library) showed the error, and GDAL
     # in python showed the error too.
     #
@@ -139,3 +142,49 @@ def test_find_intersection_nearly_same() -> None:
     for other in layers[1:]:
         assert layers[0].window.xsize == other.window.xsize
         assert layers[0].window.ysize == other.window.ysize
+
+def test_intersection_stability():
+    # This test uses h3 tiles as a lazy way to get some bounded regions,
+    # but the bug this test exercises is not h3 specific. This was another case of
+    # a rounding error that causes set_window_for_* methods to wobble depending on how far
+    # away from the top left thing where. adding round_down_pixels fixed this.
+    cells = ["874b93aaeffffff", "874b93a85ffffff", "874b93aa3ffffff", "874b93a84ffffff", "874b93a80ffffff"]
+    scale = PixelScale(0.000898315284120,-0.000898315284120)
+
+    tiles = [
+        H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+    for cell_id in cells]
+
+    # composing the same tiles within different areas should not cause them to
+    # wobble around
+    union = Layer.find_union(tiles)
+    superunion = union.grow(0.02)
+
+    scratch1 = Layer.empty_raster_layer(union, scale, gdal.GDT_Float64, name='s1')
+    scratch2 = Layer.empty_raster_layer(superunion, scale, gdal.GDT_Float64, name='s2')
+
+    relative_offsets = {}
+
+    for scratch in [scratch1, scratch2]:
+        offsets = []
+        first = None
+        for tile in tiles:
+            scratch.reset_window()
+            layers = [scratch, tile]
+            intersection = Layer.find_intersection(layers)
+
+            # We know the tile is a subset of the scratch region, so
+            # the intersection should just be that
+            assert intersection == tile.area
+
+            for layer in layers:
+                layer.set_window_for_intersection(intersection)
+
+            if first is None:
+                first = scratch.window
+            else:
+                offset = scratch.window.xoff - first.xoff, scratch.window.yoff - first.yoff
+                offsets.append(offset)
+        relative_offsets[scratch.name] = offsets
+
+    assert relative_offsets[scratch1.name] == relative_offsets[scratch2.name]

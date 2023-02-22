@@ -9,7 +9,7 @@ from osgeo import gdal, ogr
 from . import WSG_84_PROJECTION
 from .window import Area, Window
 from .operators import LayerMathMixin
-from .rounding import almost_equal, round_up_pixels
+from .rounding import almost_equal, round_up_pixels, round_down_pixels
 
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
@@ -24,7 +24,8 @@ class Layer(LayerMathMixin):
         scale: PixelScale,
         data_type: int,
         filename: Optional[str]=None,
-        projection: str=WSG_84_PROJECTION
+        projection: str=WSG_84_PROJECTION,
+        name: Optional[str]=None,
     ):
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
@@ -53,7 +54,7 @@ class Layer(LayerMathMixin):
             pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
         ])
         dataset.SetProjection(projection)
-        return Layer(dataset)
+        return Layer(dataset, name=name)
 
     @staticmethod
     def empty_raster_layer_like(layer, filename: Optional[str]=None):
@@ -177,8 +178,10 @@ class Layer(LayerMathMixin):
 
     def set_window_for_intersection(self, intersection: Area) -> None:
         new_window = Window(
-            xoff=floor((intersection.left - self.area.left) / self._transform[1]),
-            yoff=floor((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
+            xoff=round_down_pixels((intersection.left - self.area.left) / self._transform[1],
+                self._transform[1]),
+            yoff=round_down_pixels((self.area.top - intersection.top) / (self._transform[5] * -1.0),
+                self._transform[5] * -1.0),
             xsize=round_up_pixels(
                 (intersection.right - intersection.left) / self._transform[1],
                 self._transform[1]
@@ -200,8 +203,10 @@ class Layer(LayerMathMixin):
 
     def set_window_for_union(self, intersection: Area) -> None:
         new_window = Window(
-            xoff=floor((intersection.left - self.area.left) / self._transform[1]),
-            yoff=floor((self.area.top - intersection.top) / (self._transform[5] * -1.0)),
+            xoff=round_down_pixels((intersection.left - self.area.left) / self._transform[1],
+                self._transform[1]),
+            yoff=round_down_pixels((self.area.top - intersection.top) / (self._transform[5] * -1.0),
+                self._transform[5] * -1.0),
             xsize=round_up_pixels(
                 (intersection.right - intersection.left) / self._transform[1],
                 self._transform[1]

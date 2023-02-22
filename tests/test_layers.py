@@ -4,11 +4,13 @@ import tempfile
 import h3
 import numpy as np
 import pytest
+from osgeo import gdal
 
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe import WSG_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
+from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe.operators import ShaderStyleOperation
 
 
@@ -306,3 +308,73 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     # whilst we're here, check that we do have an empty border (i.e., does window for union do the right thing)
     assert np.sum(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2)) == 0.0
     assert np.sum(h3_layer.read_array(0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2)) == 0.0
+
+@pytest.mark.parametrize("initial_area",
+    [
+        Area(left=10.0, top=10.0, right=10.1, bottom=9.9),
+        Area(left=-10.0, top=10.0, right=-9.9, bottom=9.9),
+        Area(left=10.0, top=-10.0, right=10.1, bottom=-10.1),
+        Area(left=-10.0, top=-10.0, right=-9.9, bottom=-10.1),
+        Area(left=-0.1, top=0.1, right=0.1, bottom=-0.1),
+    ]
+)
+def test_empty_layers_are_pixel_aligned(initial_area):
+    scale = PixelScale(0.000898315284120,-0.000898315284120)
+
+    expanded_area = initial_area.grow(0.1)
+
+    initial_layer = Layer.empty_raster_layer(initial_area, scale, gdal.GDT_Float64)
+    print((initial_layer.area.right - initial_layer.area.left) / scale.xstep)
+
+    pixel_width = (initial_layer.area.right - initial_layer.area.left) / scale.xstep
+    assert round_up_pixels(pixel_width, scale.xstep) == initial_layer.window.xsize
+
+    expanded_layer = Layer.empty_raster_layer(expanded_area, scale, gdal.GDT_Float64)
+    pixel_width = (expanded_layer.area.right - expanded_layer.area.left) / scale.xstep
+    assert round_up_pixels(pixel_width, scale.xstep) == expanded_layer.window.xsize
+
+
+def test_h3_layer_overlapped():
+    # This is based on a regression, where somehow I made tiles not tesselate properly
+    left, top = (121.26706, 19.45338)
+    right, bottom = (121.62494, 19.18478)
+    scale = PixelScale(0.000898315284120,-0.000898315284120)
+
+    cells = h3.polygon_to_cells(h3.Polygon([
+        (top, left),
+        (top, right),
+        (bottom, right),
+        (bottom, left),
+    ],), 7)
+
+    tiles = [
+        H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+    for cell_id in cells]
+
+    union = Layer.find_union(tiles)
+    union = union.grow(0.02)
+
+    scratch = Layer.empty_raster_layer(union, scale, gdal.GDT_Float64)
+
+    # In scratch we should only have 0 or 1 values, but if there are any overlaps we should get 2s...
+
+    for tile in tiles:
+        scratch.reset_window()
+        layers = [scratch, tile]
+        intersection = Layer.find_intersection(layers)
+        for layer in layers:
+            layer.set_window_for_intersection(intersection)
+        result = scratch + tile
+        result.save(scratch)
+
+    def overlap_check(chunk):
+        # if we have rounding errors, then cells will overlap
+        # and we'll end up with values higher than 1.0 in the cell
+        # which would leave to double accounting
+        if np.sum(chunk > 1.5):
+            raise Exception
+        return chunk
+
+    scratch.reset_window()
+    calc = scratch.numpy_apply(overlap_check)
+    calc.save(scratch)

@@ -1,10 +1,25 @@
 import sys
 
-from collections import namedtuple
 from dataclasses import dataclass
 from typing import List
 
-Area = namedtuple('Area', ['left', 'top', 'right', 'bottom'])
+@dataclass
+class Area:
+    left: float
+    top: float
+    right: float
+    bottom: float
+
+    def __hash__(self):
+        return (self.left, self.top, self.right, self.bottom).__hash__()
+
+    def grow(self, offset: float):
+        return Area(
+            left=self.left - offset,
+            top=self.top + offset,
+            right=self.right + offset,
+            bottom=self.bottom - offset
+        )
 
 @dataclass
 class Window:

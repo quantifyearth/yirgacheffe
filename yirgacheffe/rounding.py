@@ -26,3 +26,12 @@ def round_up_pixels(value: float, pixelscale: float) -> int:
         return floored
     else:
         return math.ceil(value)
+
+def round_down_pixels(value: float, pixelscale: float) -> int:
+    ceiled = math.ceil(value)
+    diff = ceiled - value
+    degrees_diff = diff * pixelscale
+    if degrees_diff < MINIMAL_DEGREE_OF_INTEREST:
+        return ceiled
+    else:
+        return math.floor(value)
