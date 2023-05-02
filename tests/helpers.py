@@ -98,8 +98,11 @@ def make_vectors_with_id(identifier: int, areas: Set[Area], filename: str) -> No
         geometry.AddPoint(area.left, area.top)
         poly.AddGeometry(geometry)
 
+    srs = ogr.osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+
     package = ogr.GetDriverByName("GPKG").CreateDataSource(filename)
-    layer = package.CreateLayer("onlylayer", geom_type=ogr.wkbPolygon)
+    layer = package.CreateLayer("onlylayer", srs, geom_type=ogr.wkbPolygon)
     id_field = ogr.FieldDefn("id_no", ogr.OFTInteger)
     layer.CreateField(id_field)
 

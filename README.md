@@ -16,6 +16,8 @@ The motivation for Yirgacheffe layers is to make working with gdal data slightly
 For example, say we had three layers that overlapped and we wanted to know the
 
 ```python
+from yirgacheffe.layer import Layer, UniformAreaLayer
+
 elevation_layer = Layer.layer_from_file('elecation.tiff')
 area_layer = UniformAreaLayer('area.tiff')
 validity_layer = Layer.layer_from_file('validity.tiff')
@@ -38,7 +40,7 @@ result = Layer.empty_raster_layer(
 # Work out the area where the data is valid and over 3000ft
 def is_munro(data):
     return numpy.where(data > 3000.0, 0.0, 1.0)
-calc = validity_layer * area_layer * elevation_layer.apply(is_munro)
+calc = validity_layer * area_layer * elevation_layer.numpy_apply(is_munro)
 
 calc.save(result)
 ```
