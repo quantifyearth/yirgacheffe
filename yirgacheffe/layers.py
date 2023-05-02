@@ -26,6 +26,7 @@ class Layer(LayerMathMixin):
         filename: Optional[str]=None,
         projection: str=WSG_84_PROJECTION,
         name: Optional[str]=None,
+        compress: bool=False
     ):
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
@@ -48,7 +49,7 @@ class Layer(LayerMathMixin):
             round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
             1,
             data_type,
-            [] if filename == 'mem' else ['COMPRESS=LZW'],
+            [] if not compress else ['COMPRESS=LZW'],
         )
         dataset.SetGeoTransform([
             pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
