@@ -98,15 +98,17 @@ result = Layer.empty_raster_layer(
 ```
 
 
-### DynamicVectorRangeLayer
+### VectorLayer
 
-This layer will load vector data and rasterize it on demand as part of a calculation - becase it only rasterizes the data when needed, it is memory efficient.
+This layer will load vector data and rasterize it on demand as part of a calculation - because it only rasterizes the data when needed, it is memory efficient.
 
-Becuase it will be rasterized you need to specify the pixel scale and map projection to be used when rasterising the data, and the common way to do that is by using one of your other layers.
+Because it will be rasterized you need to specify the pixel scale and map projection to be used when rasterising the data, and the common way to do that is by using one of your other layers.
 
 ```python
-vector_layer = DynamicVectorRangeLayer('range.gpkg', 'id_no == 42', layer1.pixel_scale, layer1.projection)
+vector_layer = VectorLayer('range.gpkg', 'id_no == 42', layer1.pixel_scale, layer1.projection)
 ```
+
+This class was formerly called `DynamicVectorRangeLayer`, a name now deprecated.
 
 
 ### UniformAreaLayer
@@ -247,7 +249,7 @@ The alternative is to call `sum` which will give you a total:
 
 ```python
 area_layer = Layer.layer_from_file(...)
-mask_layer = DynamicVectorRangeLayer(...)
+mask_layer = VectorLayer(...)
 
 intersection = Layer.find_intersection([area_layer, mask_layer])
 area_layer.set_intersection_window(intersection)

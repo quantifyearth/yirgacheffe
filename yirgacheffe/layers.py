@@ -279,10 +279,10 @@ class Layer(LayerMathMixin):
             )
             return data
 
-class VectorRangeLayer(Layer):
+class RasteredVectorLayer(Layer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization
     up front like this is very expensive, so not recommended. Instead you should use
-    DynamicVectorRangeLayer."""
+    VectorLayer."""
 
     def __init__(self, range_vectors: str, where_filter: str, scale: PixelScale, projection: str):
         vectors = ogr.Open(range_vectors)
@@ -330,7 +330,11 @@ class VectorRangeLayer(Layer):
         super().__init__(dataset)
 
 
-class DynamicVectorRangeLayer(Layer):
+class VectorRangeLayer(RasteredVectorLayer):
+    """Deprecated older name for VectorLayer"""
+
+
+class VectorLayer(Layer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization occurs only
     when the data is fetched, so there is no explosive memeory cost, but fetching small units (e.g., one
     line at a time) can be quite slow, so recommended that you fetch reasonable chunks each time (or
@@ -411,6 +415,9 @@ class DynamicVectorRangeLayer(Layer):
         res = dataset.ReadAsArray(0, 0, xsize, ysize)
         return res
 
+
+class DynamicVectorRangeLayer(VectorLayer):
+    """Deprecated older name DynamicVectorLayer"""
 
 
 class UniformAreaLayer(Layer):

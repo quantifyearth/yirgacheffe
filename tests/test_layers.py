@@ -9,7 +9,7 @@ from osgeo import gdal
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe import WSG_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
-from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer
+from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer, RasteredVectorLayer, VectorLayer
 from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe.operators import ShaderStyleOperation
 
@@ -51,13 +51,14 @@ def test_open_file() -> None:
         assert layer.window == Window(0, 0, 1000, 1000)
         del layer
 
-def test_basic_vector_layer() -> None:
+@pytest.mark.parametrize("klass", [VectorRangeLayer, RasteredVectorLayer])
+def test_basic_vector_layer(klass) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        layer = klass(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
         assert layer.area == area
         assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 10)
@@ -72,15 +73,16 @@ def test_basic_vector_layer_no_filter_match() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with pytest.raises(ValueError):
-            _ = VectorRangeLayer(path, "id_no = 123", PixelScale(1.0, -1.0), "WGS 84")
+            _ = RasteredVectorLayer(path, "id_no = 123", PixelScale(1.0, -1.0), "WGS 84")
 
-def test_basic_dyanamic_vector_layer() -> None:
+@pytest.mark.parametrize("klass", [VectorLayer, DynamicVectorRangeLayer])
+def test_basic_dyanamic_vector_layer(klass) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        layer = klass(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
         assert layer.area == area
         assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 10)
@@ -95,7 +97,7 @@ def test_basic_dynamic_vector_layer_no_filter_match() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with pytest.raises(ValueError):
-            _ = DynamicVectorRangeLayer(path, "id_no = 123", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+            _ = VectorLayer(path, "id_no = 123", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
 
 def test_multi_area_vector() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -106,22 +108,22 @@ def test_multi_area_vector() -> None:
         }
         make_vectors_with_id(42, areas, path)
 
-        vector_layer = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
-        dynamic_layer = DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        rastered_layer = RasteredVectorLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        dynamic_layer = VectorLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
 
-        for layer in (dynamic_layer, vector_layer):
+        for layer in (dynamic_layer, rastered_layer):
             assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
             assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 20)
 
-        window = vector_layer.window
+        window = rastered_layer.window
         for yoffset in range(window.ysize):
-            vector_raster = vector_layer.read_array(0, yoffset, window.xsize, 1)
+            vector_raster = rastered_layer.read_array(0, yoffset, window.xsize, 1)
             dynamic_raster = dynamic_layer.read_array(0, yoffset, window.xsize, 1)
             assert vector_raster.shape == (1, window.xsize)
             assert (vector_raster == dynamic_raster).all()
 
-        del vector_layer
+        del rastered_layer
         del dynamic_layer
 
 
