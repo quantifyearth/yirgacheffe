@@ -105,7 +105,7 @@ This layer will load vector data and rasterize it on demand as part of a calcula
 Because it will be rasterized you need to specify the pixel scale and map projection to be used when rasterising the data, and the common way to do that is by using one of your other layers.
 
 ```python
-vector_layer = VectorLayer('range.gpkg', 'id_no == 42', layer1.pixel_scale, layer1.projection)
+vector_layer = VectorLayer.layer_from_file('range.gpkg', 'id_no == 42', layer1.pixel_scale, layer1.projection)
 ```
 
 This class was formerly called `DynamicVectorRangeLayer`, a name now deprecated.

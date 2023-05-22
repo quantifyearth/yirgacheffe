@@ -284,22 +284,30 @@ class RasteredVectorLayer(Layer):
     up front like this is very expensive, so not recommended. Instead you should use
     VectorLayer."""
 
-    def __init__(self, range_vectors: str, where_filter: str, scale: PixelScale, projection: str):
-        vectors = ogr.Open(range_vectors)
+    @classmethod
+    def layer_from_file(cls, filename: str, where_filter: Optional[str], scale: PixelScale, projection: str): # type: ignore
+        vectors = ogr.Open(filename)
         if vectors is None:
-            raise FileNotFoundError(range_vectors)
-        range_layer = vectors.GetLayer()
-        range_layer.SetAttributeFilter(where_filter)
+            raise FileNotFoundError(filename)
+        layer = vectors.GetLayer()
+        if where_filter is not None:
+            layer.SetAttributeFilter(where_filter)
+        return VectorLayer(layer, scale, projection)
+
+    def __init__(self, layer: ogr.Layer, scale: PixelScale, projection: str):
+        if layer is None:
+            raise ValueError('No layer provided')
+        self.layer = layer
 
         # work out region for mask
         envelopes = []
-        range_layer.ResetReading()
-        feature = range_layer.GetNextFeature()
+        layer.ResetReading()
+        feature = layer.GetNextFeature()
         while feature:
             envelopes.append(feature.GetGeometryRef().GetEnvelope())
-            feature = range_layer.GetNextFeature()
+            feature = layer.GetNextFeature()
         if len(envelopes) == 0:
-            raise ValueError(f'No geometry found for {where_filter}')
+            raise ValueError('No geometry found for')
 
         # Get the area, but scale it to the pixel resolution that we're using. Note that
         # the pixel scale GDAL uses can have -ve values, but those will mess up the
@@ -326,12 +334,21 @@ class RasteredVectorLayer(Layer):
 
         dataset.SetProjection(projection)
         dataset.SetGeoTransform([area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep])
-        gdal.RasterizeLayer(dataset, [1], range_layer, burn_values=[1], options=["ALL_TOUCHED=TRUE"])
+        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1], options=["ALL_TOUCHED=TRUE"])
         super().__init__(dataset)
 
 
 class VectorRangeLayer(RasteredVectorLayer):
     """Deprecated older name for VectorLayer"""
+
+    def __init__(self, range_vectors: str, where_filter: str, scale: PixelScale, projection: str):
+        vectors = ogr.Open(range_vectors)
+        if vectors is None:
+            raise FileNotFoundError(range_vectors)
+        layer = vectors.GetLayer()
+        if where_filter is not None:
+            layer.SetAttributeFilter(where_filter)
+        super().__init__(layer, scale, projection)
 
 
 class VectorLayer(Layer):
@@ -340,26 +357,31 @@ class VectorLayer(Layer):
     line at a time) can be quite slow, so recommended that you fetch reasonable chunks each time (or
     modify this class so that it chunks things internally)."""
 
-    def __init__(self, range_vectors: str, where_filter: str, scale: PixelScale, projection: str):
-
-        vectors = ogr.Open(range_vectors)
+    @classmethod
+    def layer_from_file(cls, filename: str, where_filter: Optional[str], scale: PixelScale, projection: str): # type: ignore
+        vectors = ogr.Open(filename)
         if vectors is None:
-            raise FileNotFoundError(range_vectors)
-        self.vectors = vectors
+            raise FileNotFoundError(filename)
+        layer = vectors.GetLayer()
+        if where_filter is not None:
+            layer.SetAttributeFilter(where_filter)
+        return VectorLayer(layer, scale, projection)
 
-        range_layer = vectors.GetLayer()
-        range_layer.SetAttributeFilter(where_filter)
-        self.range_layer = range_layer
+
+    def __init__(self, layer: ogr.Layer, scale: PixelScale, projection: str):
+        if layer is None:
+            raise ValueError('No layer provided')
+        self.layer = layer
 
         # work out region for mask
         envelopes = []
-        range_layer.ResetReading()
-        feature = range_layer.GetNextFeature()
+        layer.ResetReading()
+        feature = layer.GetNextFeature()
         while feature:
             envelopes.append(feature.GetGeometryRef().GetEnvelope())
-            feature = range_layer.GetNextFeature()
+            feature = layer.GetNextFeature()
         if len(envelopes) == 0:
-            raise ValueError(f'No geometry found for {where_filter}')
+            raise ValueError('No geometry found')
 
         # Get the area, but scale it to the pixel resolution that we're using. Note that
         # the pixel scale GDAL uses can have -ve values, but those will mess up the
@@ -410,7 +432,7 @@ class VectorLayer(Layer):
             self._intersection.left + (xoffset * self._transform[1]), self._transform[1], 0.0,
             self._intersection.top + (yoffset * self._transform[5]), 0.0, self._transform[5]
         ])
-        gdal.RasterizeLayer(dataset, [1], self.range_layer, burn_values=[1], options=["ALL_TOUCHED=TRUE"])
+        gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[1], options=["ALL_TOUCHED=TRUE"])
 
         res = dataset.ReadAsArray(0, 0, xsize, ysize)
         return res
@@ -418,6 +440,15 @@ class VectorLayer(Layer):
 
 class DynamicVectorRangeLayer(VectorLayer):
     """Deprecated older name DynamicVectorLayer"""
+
+    def __init__(self, range_vectors: str, where_filter: str, scale: PixelScale, projection: str):
+        vectors = ogr.Open(range_vectors)
+        if vectors is None:
+            raise FileNotFoundError(range_vectors)
+        layer = vectors.GetLayer()
+        if where_filter is not None:
+            layer.SetAttributeFilter(where_filter)
+        super().__init__(layer, scale, projection)
 
 
 class UniformAreaLayer(Layer):

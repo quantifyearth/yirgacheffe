@@ -51,14 +51,27 @@ def test_open_file() -> None:
         assert layer.window == Window(0, 0, 1000, 1000)
         del layer
 
-@pytest.mark.parametrize("klass", [VectorRangeLayer, RasteredVectorLayer])
-def test_basic_vector_layer(klass) -> None:
+def test_rastered_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = klass(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        layer = RasteredVectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        assert layer.area == area
+        assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+        assert layer.window == Window(0, 0, 20, 10)
+        assert layer.projection == WSG_84_PROJECTION
+
+        del layer
+
+def test_old_rastered_vector_layer() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        area = Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        layer = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
         assert layer.area == area
         assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 10)
@@ -73,22 +86,35 @@ def test_basic_vector_layer_no_filter_match() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with pytest.raises(ValueError):
-            _ = RasteredVectorLayer(path, "id_no = 123", PixelScale(1.0, -1.0), "WGS 84")
+            _ = RasteredVectorLayer.layer_from_file(path, "id_no = 123", PixelScale(1.0, -1.0), "WGS 84")
 
-@pytest.mark.parametrize("klass", [VectorLayer, DynamicVectorRangeLayer])
-def test_basic_dyanamic_vector_layer(klass) -> None:
+def test_basic_dyanamic_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = klass(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        layer = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
         assert layer.area == area
         assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 10)
         assert layer.projection == WSG_84_PROJECTION
 
         del layer
+
+def test_old_dyanamic_vector_layer() -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            path = os.path.join(tempdir, "test.gpkg")
+            area = Area(-10.0, 10.0, 10.0, 0.0)
+            make_vectors_with_id(42, {area}, path)
+
+            layer = DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+            assert layer.area == area
+            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.window == Window(0, 0, 20, 10)
+            assert layer.projection == WSG_84_PROJECTION
+
+            del layer
 
 def test_basic_dynamic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -97,7 +123,7 @@ def test_basic_dynamic_vector_layer_no_filter_match() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with pytest.raises(ValueError):
-            _ = VectorLayer(path, "id_no = 123", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+            _ = VectorLayer.layer_from_file(path, "id_no = 123", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
 
 def test_multi_area_vector() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -108,8 +134,8 @@ def test_multi_area_vector() -> None:
         }
         make_vectors_with_id(42, areas, path)
 
-        rastered_layer = RasteredVectorLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
-        dynamic_layer = VectorLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        rastered_layer = RasteredVectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+        dynamic_layer = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
 
         for layer in (dynamic_layer, rastered_layer):
             assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
