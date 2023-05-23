@@ -406,3 +406,38 @@ def test_h3_layer_overlapped():
     scratch.reset_window()
     calc = scratch.numpy_apply(overlap_check)
     calc.save(scratch)
+
+def test_empty_layer_from_vector():
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        area = Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        source = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
+
+        empty = Layer.empty_raster_layer_like(source)
+        assert empty.pixel_scale == source.pixel_scale
+        assert empty.projection == source.projection
+        assert empty.window == source.window
+
+def test_empty_layer_from_raster():
+    source =  Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    empty = Layer.empty_raster_layer_like(source)
+    assert empty.pixel_scale == source.pixel_scale
+    assert empty.projection == source.projection
+    assert empty.window == source.window
+
+def test_empty_layer_from_raster_with_window():
+    source =  Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    original_window = source.window
+
+    source.set_window_for_intersection(Area(-1, 1, 1, -1))
+    assert source.window < original_window
+
+    empty = Layer.empty_raster_layer_like(source)
+    assert empty.pixel_scale == source.pixel_scale
+    assert empty.projection == source.projection
+    assert empty.window.xoff == 0
+    assert empty.window.yoff == 0
+    assert empty.window.xsize == source.window.xsize
+    assert empty.window.ysize == source.window.ysize

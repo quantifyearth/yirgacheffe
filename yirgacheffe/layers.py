@@ -66,8 +66,8 @@ class Layer(LayerMathMixin):
             filename = 'mem'
         dataset = driver.Create(
             filename,
-            layer._raster_xsize,
-            layer._raster_ysize,
+            layer.window.xsize,
+            layer.window.ysize,
             1,
             layer.datatype,
             [] if filename == 'mem' else ['COMPRESS=LZW'],
