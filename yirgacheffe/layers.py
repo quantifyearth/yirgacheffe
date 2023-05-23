@@ -292,7 +292,13 @@ class RasteredVectorLayer(Layer):
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
-        return VectorLayer(layer, scale, projection)
+        vector_layer = RasteredVectorLayer(layer, scale, projection)
+
+        # this is a gross hack, but unless you hold open the original file, you'll get
+        # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
+        # the original object being around
+        vector_layer._original = vectors
+        return vector_layer
 
     def __init__(self, layer: ogr.Layer, scale: PixelScale, projection: str):
         if layer is None:
@@ -365,7 +371,13 @@ class VectorLayer(Layer):
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
-        return VectorLayer(layer, scale, projection)
+        vector_layer = VectorLayer(layer, scale, projection)
+
+        # this is a gross hack, but unless you hold open the original file, you'll get
+        # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
+        # the original object being around
+        vector_layer._original = vectors
+        return vector_layer
 
 
     def __init__(self, layer: ogr.Layer, scale: PixelScale, projection: str):
