@@ -58,7 +58,7 @@ class Layer(LayerMathMixin):
         return Layer(dataset, name=name)
 
     @staticmethod
-    def empty_raster_layer_like(layer, filename: Optional[str]=None):
+    def empty_raster_layer_like(layer, filename: Optional[str]=None, datatype: Optional[int]=None):
         if filename:
             driver = gdal.GetDriverByName('GTiff')
         else:
@@ -69,7 +69,7 @@ class Layer(LayerMathMixin):
             layer.window.xsize,
             layer.window.ysize,
             1,
-            layer.datatype,
+            datatype if datatype is not None else layer.datatype,
             [] if filename == 'mem' else ['COMPRESS=LZW'],
         )
         dataset.SetGeoTransform(layer.geo_transform)

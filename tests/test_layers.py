@@ -426,6 +426,16 @@ def test_empty_layer_from_raster():
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
     assert empty.window == source.window
+    assert empty.datatype == source.datatype
+
+def test_empty_layer_from_raster_new_datatype():
+    source =  Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    assert source.datatype == gdal.GDT_Byte
+    empty = Layer.empty_raster_layer_like(source, datatype=gdal.GDT_Float64)
+    assert empty.pixel_scale == source.pixel_scale
+    assert empty.projection == source.projection
+    assert empty.window == source.window
+    assert empty.datatype == gdal.GDT_Float64
 
 def test_empty_layer_from_raster_with_window():
     source =  Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
