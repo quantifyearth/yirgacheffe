@@ -15,6 +15,9 @@ PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
 
 class YirgacheffeLayer(LayerMathMixin):
+    """The common base class for the different layer types. Most still inheret from RasterLayer as deep down
+    they end up as pixels, but this is a start to make other layers that don't need to rasterize not have
+    to carry all that baggage."""
 
     @staticmethod
     def find_intersection(layers: List) -> Area:
@@ -135,8 +138,37 @@ class YirgacheffeLayer(LayerMathMixin):
             ysize=self._dataset.RasterYSize,
         )
 
+    def offset_window_by_pixels(self, offset: int):
+        """Grows (if pixels is positive) or shrinks (if pixels is negative) the window for the layer."""
+        if offset == 0:
+            return
 
-class Layer(YirgacheffeLayer):
+        if offset < 0:
+            if (offset * -2 >= self.window.xsize) or (offset * -2 >= self.window.ysize):
+                raise ValueError(f"Can not shrink window by {offset}, would make size 0 or fewer pixels.")
+
+        new_window = Window(
+            xoff=self.window.xoff - offset,
+            yoff=self.window.yoff - offset,
+            xsize=self.window.xsize + (2 * offset),
+            ysize=self.window.ysize + (2 * offset),
+        )
+        # we store the new intersection to be consistent with the set_window_for_... methods
+        # Note we can't assume that we weren't already on an intersection when making the offset!
+        scale = self.pixel_scale
+        new_left = self.area.left + (new_window.xoff * scale.xstep)
+        new_top = self.area.top + (new_window.yoff * scale.ystep)
+        intersection = Area(
+            left=new_left,
+            top=new_top,
+            right=new_left + (new_window.xsize * scale.xstep),
+            bottom=new_top + (new_window.ysize * scale.ystep)
+        )
+        self.window = new_window
+        self._intersection = intersection
+
+
+class RasterLayer(YirgacheffeLayer):
     """Layer provides a wrapper around a gdal dataset/band that also records offset state so that
     we can work with maps over different geographic regions but work withing a particular frame
     of reference."""
@@ -284,11 +316,11 @@ class Layer(YirgacheffeLayer):
             return data
 
 
-class RasterLayer(Layer):
+class Layer(RasterLayer):
     """A place holder for now, at some point I want to replace Layer with RasterLayer."""
 
 
-class RasteredVectorLayer(Layer):
+class RasteredVectorLayer(RasterLayer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization
     up front like this is very expensive, so not recommended. Instead you should use
     VectorLayer."""
@@ -366,7 +398,7 @@ class VectorRangeLayer(RasteredVectorLayer):
         super().__init__(layer, scale, projection)
 
 
-class VectorLayer(Layer):
+class VectorLayer(RasterLayer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization occurs only
     when the data is fetched, so there is no explosive memeory cost, but fetching small units (e.g., one
     line at a time) can be quite slow, so recommended that you fetch reasonable chunks each time (or
@@ -472,7 +504,7 @@ class DynamicVectorRangeLayer(VectorLayer):
         super().__init__(layer, scale, projection)
 
 
-class UniformAreaLayer(Layer):
+class UniformAreaLayer(RasterLayer):
     """If you have a pixel area map where all the row entries are identical, then you
     can speed up the AoH calculations by simplifying that to a 1 pixel wide map and then
     synthesizing the rest of the data at calc time, as decompressing the large compressed
@@ -543,7 +575,7 @@ class UniformAreaLayer(Layer):
         return self.databand[offset:offset + ysize]
 
 
-class ConstantLayer(Layer):
+class ConstantLayer(YirgacheffeLayer):
     """This is a layer that will return the identity value - can be used when an input layer is
     missing (e.g., area) without having the calculation full of branches."""
     def __init__(self, value): # pylint: disable=W0231

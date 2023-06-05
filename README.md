@@ -72,7 +72,7 @@ Yirgacheffe is work in progress, so things planned but not supported currently:
 
 ## Layer types
 
-### Layer
+### RasterLayer
 
 This is your basic GDAL raster layer, which you load from a geotiff.
 

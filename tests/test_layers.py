@@ -461,3 +461,46 @@ def test_empty_layer_from_raster_with_window():
     assert empty.window.yoff == 0
     assert empty.window.xsize == source.window.xsize
     assert empty.window.ysize == source.window.ysize
+
+def test_layer_with_positive_offset():
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    assert source.area == Area(-10, 10, 10, -10)
+    assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
+
+    source.offset_window_by_pixels(5)
+    assert source._intersection == Area(-10 - (5 * 0.02), 10 + (5 * 0.02), 10 + (5 * 0.02), -10 - (5 * 0.02))
+    assert source.window == Window(-5, -5, int(20 / 0.02) + 10, int(20 / 0.02) + 10)
+
+def test_layer_with_zero_offset():
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    assert source.area == Area(-10, 10, 10, -10)
+    assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
+
+    source.offset_window_by_pixels(0)
+    assert source.area == Area(-10, 10, 10, -10)
+    assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
+
+def test_layer_with_negative_offset():
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    assert source.area == Area(-10, 10, 10, -10)
+    assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
+
+    source.offset_window_by_pixels(-5)
+    assert source._intersection == Area(-10 + (5 * 0.02), 10 - (5 * 0.02), 10 - (5 * 0.02), -10 + (5 * 0.02))
+    assert source.window == Window(5, 5, int(20 / 0.02) - 10, int(20 / 0.02) - 10)
+
+def test_layer_with_excessive_negative_offset():
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    with pytest.raises(ValueError):
+        source.offset_window_by_pixels(-9999)
+
+def test_layer_offsets_accumulate():
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    assert source.area == Area(-10, 10, 10, -10)
+    assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
+
+    source.offset_window_by_pixels(5)
+    source.offset_window_by_pixels(-5)
+
+    assert source._intersection == Area(-10, 10, 10, -10)
+    assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
