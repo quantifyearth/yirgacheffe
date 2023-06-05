@@ -18,18 +18,18 @@ For example, say we had three layers that overlapped and we wanted to know the
 ```python
 from yirgacheffe.layer import Layer, UniformAreaLayer
 
-elevation_layer = Layer.layer_from_file('elecation.tiff')
+elevation_layer = RasterLayer.layer_from_file('elecation.tiff')
 area_layer = UniformAreaLayer('area.tiff')
-validity_layer = Layer.layer_from_file('validity.tiff')
+validity_layer = RasterLayer.layer_from_file('validity.tiff')
 
 # Work out the common subsection of all these and apply it to the layers
-intersection = Layer.find_intersection(elecation_layer, area_layer, validity_layer)
+intersection = RasterLayer.find_intersection(elecation_layer, area_layer, validity_layer)
 elevation_layer.set_window_for_intersection(intersection)
 area_layer.set_window_for_intersection(intersection)
 validity_layer.set_window_for_intersection(intersection)
 
 # Create a layer that is just the size of the intersection to store the results
-result = Layer.empty_raster_layer(
+result = RasterLayer.empty_raster_layer(
     intersection,
     area_layer.pixel_scale,
     area_layer.datatype,
@@ -48,7 +48,7 @@ calc.save(result)
 If you want the union then you can simply swap do:
 
 ```python
-intersection = Layer.find_union(elecation_layer, area_layer, validity_layer)
+intersection = RasterLayer.find_union(elecation_layer, area_layer, validity_layer)
 elevation_layer.set_window_for_union(intersection)
 area_layer.set_window_for_union(intersection)
 validity_layer.set_window_for_union(intersection)
@@ -77,19 +77,19 @@ Yirgacheffe is work in progress, so things planned but not supported currently:
 This is your basic GDAL raster layer, which you load from a geotiff.
 
 ```python
-layer1 = Layer.layer_from_file('test1.tif')
+layer1 = RasterLayer.layer_from_file('test1.tif')
 ```
 
 You can also create empty layers ready for you to store results, either by taking the dimensions from an existing layer. In both these cases you can either provide a filename to which the data will be written, or if you do not provide a filename then the layer will only exist in memory - this will be more efficient if the layer is being used for intermediary results.
 
 ```python
-result = Layer.empty_raster_layer_like(layer1, "results.tiff")
+result = RasterLayer.empty_raster_layer_like(layer1, "results.tiff")
 ```
 
 Or you can specify the geographic area directly:
 
 ```python
-result = Layer.empty_raster_layer(
+result = RasterLayer.empty_raster_layer(
     Area(left=-10.0, top=10.0, right=-5.0, bottom=5.0),
     PixelScale(0.005,-0.005),
     gdal.GDT_Float64,
@@ -160,9 +160,9 @@ Once you have two layers, you can perform numberical analysis on them similar to
 Pixel-wise addition, subtraction, multiplication or division, either between arrays, or with constants:
 
 ```python
-layer1 = Layer.layer_from_file('test1.tif')
-layer2 = Layer.layer_from_file('test2.tif')
-result = Layer.empty_raster_layer_like(layer1, 'result.tif')
+layer1 = RasterLayer.layer_from_file('test1.tif')
+layer2 = RasterLayer.layer_from_file('test2.tif')
+result = RasterLayer.empty_raster_layer_like(layer1, 'result.tif')
 
 calc = layer1 + layer2
 
@@ -172,8 +172,8 @@ calculation.save(result)
 or
 
 ```python
-layer1 = Layer.layer_from_file('test1.tif')
-result = Layer.empty_raster_layer_like(layer1, 'result.tif')
+layer1 = RasterLayer.layer_from_file('test1.tif')
+result = RasterLayer.empty_raster_layer_like(layer1, 'result.tif')
 
 calc = layer1 * 42.0
 
@@ -185,8 +185,8 @@ calc.save(result)
 Pixel-wise raising to a constant power:
 
 ```python
-layer1 = Layer.layer_from_file('test1.tif')
-result = Layer.empty_raster_layer_like(layer1, 'result.tif')
+layer1 = RasterLayer.layer_from_file('test1.tif')
+result = RasterLayer.empty_raster_layer_like(layer1, 'result.tif')
 
 calc = layer1 ** 0.65
 
@@ -204,8 +204,8 @@ Firstly the numpy version looks like this:
 def is_over_ten(input_array):
     return numpy.where(input_array > 10.0, 0.0, 1.0)
 
-layer1 = Layer.layer_from_file('test1.tif')
-result = Layer.empty_raster_layer_like(layer1, 'result.tif')
+layer1 = RasterLayer.layer_from_file('test1.tif')
+result = RasterLayer.empty_raster_layer_like(layer1, 'result.tif')
 
 calc = layer1.numpy_apply(is_over_ten)
 
@@ -218,9 +218,9 @@ or
 def simple_add(first_array, second_array):
     return first_array + second_array
 
-layer1 = Layer.layer_from_file('test1.tif')
-layer2 = Layer.layer_from_file('test2.tif')
-result = Layer.empty_raster_layer_like(layer1, 'result.tif')
+layer1 = RasterLayer.layer_from_file('test1.tif')
+layer2 = RasterLayer.layer_from_file('test2.tif')
+result = RasterLayer.empty_raster_layer_like(layer1, 'result.tif')
 
 calc = layer1.numpy_apply(simple_add, layer2)
 
@@ -233,8 +233,8 @@ If you want to do something specific on the pixel level, then you can also do th
 def is_over_ten(input_pixel):
     return 1.0 if input_pixel > 10 else 0.0
 
-layer1 = Layer.layer_from_file('test1.tif')
-result = Layer.empty_raster_layer_like(layer1, 'result.tif')
+layer1 = RasterLayer.layer_from_file('test1.tif')
+result = RasterLayer.empty_raster_layer_like(layer1, 'result.tif')
 
 calc = layer1.shader_apply(is_over_ten)
 
@@ -248,10 +248,10 @@ There are two ways to store the result of a computation. In all the above exampl
 The alternative is to call `sum` which will give you a total:
 
 ```python
-area_layer = Layer.layer_from_file(...)
+area_layer = RasterLayer.layer_from_file(...)
 mask_layer = VectorLayer(...)
 
-intersection = Layer.find_intersection([area_layer, mask_layer])
+intersection = RasterLayer.find_intersection([area_layer, mask_layer])
 area_layer.set_intersection_window(intersection)
 mask_layer.set_intersection_window(intersection)
 

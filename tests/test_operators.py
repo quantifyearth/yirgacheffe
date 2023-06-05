@@ -2,15 +2,15 @@ import numpy
 import pytest
 
 from helpers import gdal_dataset_with_data
-from yirgacheffe.layers import Layer, ConstantLayer
+from yirgacheffe.layers import RasterLayer, ConstantLayer
 
 def test_add_byte_layers() -> None:
     data1 = numpy.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     data2 = numpy.array([[10, 20, 30, 40], [50, 60, 70, 80]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1 + layer2
     comp.save(result)
@@ -24,9 +24,9 @@ def test_sub_byte_layers() -> None:
     data1 = numpy.array([[10, 20, 30, 40], [50, 60, 70, 80]])
     data2 = numpy.array([[1, 2, 3, 4], [5, 6, 7, 8]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1 - layer2
     comp.save(result)
@@ -40,9 +40,9 @@ def test_add_float_layers() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     data2 = numpy.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1 + layer2
     comp.save(result)
@@ -56,9 +56,9 @@ def test_sub_float_layers() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     data2 = numpy.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1 - layer2
     comp.save(result)
@@ -72,9 +72,9 @@ def test_mult_float_layers() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     data2 = numpy.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1 * layer2
     comp.save(result)
@@ -86,8 +86,8 @@ def test_mult_float_layers() -> None:
 
 def test_mult_float_layer_by_const() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1 * 2.5
     comp.save(result)
@@ -99,8 +99,8 @@ def test_mult_float_layer_by_const() -> None:
 
 def test_div_float_layer_by_const() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1 / 2.5
     comp.save(result)
@@ -112,8 +112,8 @@ def test_div_float_layer_by_const() -> None:
 
 def test_power_float_layer_by_const() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1 ** 2.5
     comp.save(result)
@@ -125,8 +125,8 @@ def test_power_float_layer_by_const() -> None:
 
 def test_simple_unary_numpy_apply() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     def simple_add(chunk):
         return chunk + 1.0
@@ -141,8 +141,8 @@ def test_simple_unary_numpy_apply() -> None:
 
 def test_isin_unary_numpy_apply() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     def simple_add(chunk):
         return numpy.isin(chunk, [2.0, 3.0])
@@ -161,9 +161,9 @@ def test_simple_binary_numpy_apply() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     data2 = numpy.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     def simple_add(chunk1, chunk2):
         return chunk1 + chunk2
@@ -178,8 +178,8 @@ def test_simple_binary_numpy_apply() -> None:
 
 def test_simple_unary_shader_apply() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     def simple_add(pixel):
         return pixel + 1.0
@@ -196,9 +196,9 @@ def test_simple_binary_shader_apply() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     data2 = numpy.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     def simple_add(pixel1, pixel2):
         return pixel1 + pixel2
@@ -223,8 +223,8 @@ def test_simple_binary_shader_apply() -> None:
 )
 def test_comparison_float_layer_by_const(operator) -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = operator(layer1, 3.0)
     comp.save(result)
@@ -236,7 +236,7 @@ def test_comparison_float_layer_by_const(operator) -> None:
 
 def test_sum_layer() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
 
     # a no-op just to get us into an operator
     comp = layer1 + 0.0
@@ -248,12 +248,12 @@ def test_sum_layer() -> None:
 
 def test_constant_layer_result_rhs() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     const_layer = ConstantLayer(1.0)
-    result = Layer.empty_raster_layer_like(layer1)
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     layers = [layer1, const_layer, result]
-    intersection = Layer.find_intersection(layers)
+    intersection = RasterLayer.find_intersection(layers)
     for layer in layers:
         layer.set_window_for_intersection(intersection)
 
@@ -268,11 +268,11 @@ def test_constant_layer_result_rhs() -> None:
 
 def test_constant_layer_result_lhs() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     const_layer = ConstantLayer(1.0)
-    result = Layer.empty_raster_layer_like(layer1)
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
-    intersection = Layer.find_intersection([layer1, const_layer])
+    intersection = RasterLayer.find_intersection([layer1, const_layer])
     const_layer.set_window_for_intersection(intersection)
     layer1.set_window_for_intersection(intersection)
 
@@ -287,9 +287,9 @@ def test_constant_layer_result_lhs() -> None:
 
 def test_shader_apply_constant_lhs() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     const_layer = ConstantLayer(1.0)
-    result = Layer.empty_raster_layer_like(layer1)
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     def simple_add(pixel1, pixel2):
         return pixel1 + pixel2
@@ -304,15 +304,15 @@ def test_shader_apply_constant_lhs() -> None:
 
 def test_shader_apply_constant_rhs() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     const_layer = ConstantLayer(1.0)
-    result = Layer.empty_raster_layer_like(layer1)
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     def simple_add(pixel1, pixel2):
         return pixel1 + pixel2
 
     comp = layer1.shader_apply(simple_add, const_layer)
-    result = Layer.empty_raster_layer_like(layer1)
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp.save(result)
 
@@ -323,8 +323,8 @@ def test_shader_apply_constant_rhs() -> None:
 
 def test_direct_layer_save() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     layer1.save(result)
     actual = result.read_array(0, 0, 4, 2)
@@ -333,7 +333,7 @@ def test_direct_layer_save() -> None:
 
 def test_direct_layer_sum() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
 
     actual = layer1.sum()
 
@@ -342,8 +342,8 @@ def test_direct_layer_sum() -> None:
 
 def test_direct_layer_save_and_sum() -> None:
     data1 = numpy.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     actual_sum = layer1.save(result, and_sum=True)
     actual_data = result.read_array(0, 0, 4, 2)

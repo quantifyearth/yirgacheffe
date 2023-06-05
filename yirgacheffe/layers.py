@@ -13,68 +13,8 @@ from .rounding import almost_equal, round_up_pixels, round_down_pixels
 
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
-class Layer(LayerMathMixin):
-    """Layer provides a wrapper around a gdal dataset/band that also records offset state so that
-    we can work with maps over different geographic regions but work withing a particular frame
-    of reference."""
 
-    @staticmethod
-    def empty_raster_layer(
-        area: Area,
-        scale: PixelScale,
-        data_type: int,
-        filename: Optional[str]=None,
-        projection: str=WSG_84_PROJECTION,
-        name: Optional[str]=None,
-        compress: bool=False
-    ):
-        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
-
-        # We treat the provided area as aspirational, and we need to align it to pixel boundaries
-        pixel_friendly_area = Area(
-            left=math.floor(area.left / abs_xstep) * abs_xstep,
-            right=math.ceil(area.right / abs_xstep) * abs_xstep,
-            top=math.ceil(area.top / abs_ystep) * abs_ystep,
-            bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
-        )
-
-        if filename:
-            driver = gdal.GetDriverByName('GTiff')
-        else:
-            driver = gdal.GetDriverByName('mem')
-            filename = 'mem'
-        dataset = driver.Create(
-            filename,
-            round_up_pixels((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep, abs_xstep),
-            round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
-            1,
-            data_type,
-            [] if not compress else ['COMPRESS=LZW'],
-        )
-        dataset.SetGeoTransform([
-            pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
-        ])
-        dataset.SetProjection(projection)
-        return Layer(dataset, name=name)
-
-    @staticmethod
-    def empty_raster_layer_like(layer, filename: Optional[str]=None, datatype: Optional[int]=None):
-        if filename:
-            driver = gdal.GetDriverByName('GTiff')
-        else:
-            driver = gdal.GetDriverByName('mem')
-            filename = 'mem'
-        dataset = driver.Create(
-            filename,
-            layer.window.xsize,
-            layer.window.ysize,
-            1,
-            datatype if datatype is not None else layer.datatype,
-            [] if filename == 'mem' else ['COMPRESS=LZW'],
-        )
-        dataset.SetGeoTransform(layer.geo_transform)
-        dataset.SetProjection(layer.projection)
-        return Layer(dataset)
+class YirgacheffeLayer(LayerMathMixin):
 
     @staticmethod
     def find_intersection(layers: List) -> Area:
@@ -117,39 +57,6 @@ class Layer(LayerMathMixin):
             bottom=min(x.area.bottom for x in layers)
         )
 
-    @classmethod
-    def layer_from_file(cls, filename: str):
-        dataset = gdal.Open(filename, gdal.GA_ReadOnly)
-        if dataset is None:
-            raise FileNotFoundError(filename)
-        return cls(dataset, filename)
-
-    def __init__(self, dataset: gdal.Dataset, name: Optional[str] = None):
-        if not dataset:
-            raise ValueError("None is not a valid dataset")
-        self._dataset = dataset
-        self._transform = dataset.GetGeoTransform()
-        self._raster_xsize = dataset.RasterXSize
-        self._raster_ysize = dataset.RasterYSize
-        self._intersection: Optional[Area] = None
-        self.name = name
-
-        # Global position of the layer
-        self.area = Area(
-            left=self._transform[0],
-            top=self._transform[3],
-            right=self._transform[0] + (self._raster_xsize * self._transform[1]),
-            bottom=self._transform[3] + (self._raster_ysize * self._transform[5]),
-        )
-
-        # default window to full layer
-        self.window = Window(
-            xoff=0,
-            yoff=0,
-            xsize=dataset.RasterXSize,
-            ysize=dataset.RasterYSize,
-        )
-
     @property
     def geo_transform(self) -> Tuple[float, float, float, float, float, float]:
         if self._intersection:
@@ -162,14 +69,6 @@ class Layer(LayerMathMixin):
     @property
     def pixel_scale(self) -> Optional[PixelScale]:
         return PixelScale(self._transform[1], self._transform[5])
-
-    @property
-    def projection(self) -> str:
-        return self._dataset.GetProjection()
-
-    @property
-    def datatype(self) -> int:
-        return self._dataset.GetRasterBand(1).DataType
 
     def check_pixel_scale(self, scale: PixelScale) -> bool:
         our_scale = self.pixel_scale
@@ -236,6 +135,111 @@ class Layer(LayerMathMixin):
             ysize=self._dataset.RasterYSize,
         )
 
+
+class Layer(YirgacheffeLayer):
+    """Layer provides a wrapper around a gdal dataset/band that also records offset state so that
+    we can work with maps over different geographic regions but work withing a particular frame
+    of reference."""
+
+    @staticmethod
+    def empty_raster_layer(
+        area: Area,
+        scale: PixelScale,
+        data_type: int,
+        filename: Optional[str]=None,
+        projection: str=WSG_84_PROJECTION,
+        name: Optional[str]=None,
+        compress: bool=False
+    ):
+        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+
+        # We treat the provided area as aspirational, and we need to align it to pixel boundaries
+        pixel_friendly_area = Area(
+            left=math.floor(area.left / abs_xstep) * abs_xstep,
+            right=math.ceil(area.right / abs_xstep) * abs_xstep,
+            top=math.ceil(area.top / abs_ystep) * abs_ystep,
+            bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
+        )
+
+        if filename:
+            driver = gdal.GetDriverByName('GTiff')
+        else:
+            driver = gdal.GetDriverByName('mem')
+            filename = 'mem'
+        dataset = driver.Create(
+            filename,
+            round_up_pixels((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep, abs_xstep),
+            round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
+            1,
+            data_type,
+            [] if not compress else ['COMPRESS=LZW'],
+        )
+        dataset.SetGeoTransform([
+            pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
+        ])
+        dataset.SetProjection(projection)
+        return Layer(dataset, name=name)
+
+    @staticmethod
+    def empty_raster_layer_like(layer, filename: Optional[str]=None, datatype: Optional[int]=None):
+        if filename:
+            driver = gdal.GetDriverByName('GTiff')
+        else:
+            driver = gdal.GetDriverByName('mem')
+            filename = 'mem'
+        dataset = driver.Create(
+            filename,
+            layer.window.xsize,
+            layer.window.ysize,
+            1,
+            datatype if datatype is not None else layer.datatype,
+            [] if filename == 'mem' else ['COMPRESS=LZW'],
+        )
+        dataset.SetGeoTransform(layer.geo_transform)
+        dataset.SetProjection(layer.projection)
+        return Layer(dataset)
+
+    @classmethod
+    def layer_from_file(cls, filename: str):
+        dataset = gdal.Open(filename, gdal.GA_ReadOnly)
+        if dataset is None:
+            raise FileNotFoundError(filename)
+        return cls(dataset, filename)
+
+    def __init__(self, dataset: gdal.Dataset, name: Optional[str] = None):
+        if not dataset:
+            raise ValueError("None is not a valid dataset")
+        self._dataset = dataset
+        self._transform = dataset.GetGeoTransform()
+        self._raster_xsize = dataset.RasterXSize
+        self._raster_ysize = dataset.RasterYSize
+        self._intersection: Optional[Area] = None
+        self.name = name
+
+        # Global position of the layer
+        self.area = Area(
+            left=self._transform[0],
+            top=self._transform[3],
+            right=self._transform[0] + (self._raster_xsize * self._transform[1]),
+            bottom=self._transform[3] + (self._raster_ysize * self._transform[5]),
+        )
+
+        # default window to full layer
+        self.window = Window(
+            xoff=0,
+            yoff=0,
+            xsize=dataset.RasterXSize,
+            ysize=dataset.RasterYSize,
+        )
+
+    @property
+    def projection(self) -> str:
+        return self._dataset.GetProjection()
+
+    @property
+    def datatype(self) -> int:
+        return self._dataset.GetRasterBand(1).DataType
+
     def read_array(self, xoffset, yoffset, xsize, ysize) -> Any:
         # if we're dealing with an intersection, we can just read the data directly,
         # otherwise we need to read the data into another array with suitable padding
@@ -278,6 +282,11 @@ class Layer(LayerMathMixin):
                 'constant'
             )
             return data
+
+
+class RasterLayer(Layer):
+    """A place holder for now, at some point I want to replace Layer with RasterLayer."""
+
 
 class RasteredVectorLayer(Layer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization

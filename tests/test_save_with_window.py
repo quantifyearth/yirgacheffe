@@ -1,18 +1,18 @@
 import numpy
 
 from helpers import gdal_dataset_with_data
-from yirgacheffe.layers import Layer
+from yirgacheffe.layers import RasterLayer
 
 def test_add_byte_layers_with_union() -> None:
     data1 = numpy.array([[1, 2, 3, 4,], [5, 6, 7, 8,], [9, 10, 11, 12,], [13, 14, 15, 16,]])
     data2 = numpy.array([[10, 20,], [50, 60,]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
-    layer2 = Layer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     layers = [layer1, layer2, result]
-    window = Layer.find_union(layers)
+    window = RasterLayer.find_union(layers)
     for layer in layers:
         layer.set_window_for_union(window)
 
@@ -29,12 +29,12 @@ def test_add_byte_layers_with_intersection_with_max_save_raster() -> None:
     data1 = numpy.array([[1, 2, 3, 4,], [5, 6, 7, 8,], [9, 10, 11, 12,], [13, 14, 15, 16,]])
     data2 = numpy.array([[10, 20,], [50, 60,]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
-    layer2 = Layer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
-    result = Layer.empty_raster_layer_like(layer1)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
 
     layers = [layer1, layer2, result]
-    window = Layer.find_intersection(layers)
+    window = RasterLayer.find_intersection(layers)
     for layer in layers:
         layer.set_window_for_intersection(window)
 
@@ -51,12 +51,12 @@ def test_add_byte_layers_with_intersection_with_min_save_raster() -> None:
     data1 = numpy.array([[1, 2, 3, 4,], [5, 6, 7, 8,], [9, 10, 11, 12,], [13, 14, 15, 16,]])
     data2 = numpy.array([[10, 20,], [50, 60,]])
 
-    layer1 = Layer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
-    layer2 = Layer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
-    result = Layer.empty_raster_layer_like(layer2)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
+    result = RasterLayer.empty_raster_layer_like(layer2)
     layers = [layer1, layer2, result]
 
-    window = Layer.find_intersection(layers)
+    window = RasterLayer.find_intersection(layers)
     for layer in layers:
         layer.set_window_for_intersection(window)
 

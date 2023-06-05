@@ -9,7 +9,7 @@ from osgeo import gdal
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe import WSG_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
-from yirgacheffe.layers import Area, Layer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer, RasteredVectorLayer, VectorLayer
+from yirgacheffe.layers import Area, RasterLayer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer, RasteredVectorLayer, VectorLayer
 from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe.operators import ShaderStyleOperation
 
@@ -21,6 +21,16 @@ from yirgacheffe.operators import ShaderStyleOperation
 
 def test_make_basic_layer() -> None:
     area = Area(-10, 10, 10, -10)
+    layer = RasterLayer(gdal_dataset_of_region(area, 0.02))
+    assert layer.area == area
+    assert layer.pixel_scale == (0.02, -0.02)
+    assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+    assert layer.window == Window(0, 0, 1000, 1000)
+
+def test_make_basic_layer_old_name() -> None:
+    from yirgacheffe.layers import Layer
+
+    area = Area(-10, 10, 10, -10)
     layer = Layer(gdal_dataset_of_region(area, 0.02))
     assert layer.area == area
     assert layer.pixel_scale == (0.02, -0.02)
@@ -31,11 +41,11 @@ def test_layer_from_null() -> None:
     # Seems a petty test, but gdal doesn't throw exceptions
     # so you often get None datasets if you're not careful
     with pytest.raises(ValueError):
-        Layer(None)
+        _ = RasterLayer(None)
 
 def test_layer_from_nonexistent_file() -> None:
     with pytest.raises(FileNotFoundError):
-        Layer.layer_from_file("this_file_does_not_exist.tif")
+        _ = RasterLayer.layer_from_file("this_file_does_not_exist.tif")
 
 def test_open_file() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -44,7 +54,7 @@ def test_open_file() -> None:
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
         del dataset
         assert os.path.exists(path)
-        layer = Layer.layer_from_file(path)
+        layer = RasterLayer.layer_from_file(path)
         assert layer.area == area
         assert layer.pixel_scale == (0.02, -0.02)
         assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
@@ -351,13 +361,13 @@ def test_empty_layers_are_pixel_aligned(initial_area):
 
     expanded_area = initial_area.grow(0.1)
 
-    initial_layer = Layer.empty_raster_layer(initial_area, scale, gdal.GDT_Float64)
+    initial_layer = RasterLayer.empty_raster_layer(initial_area, scale, gdal.GDT_Float64)
     print((initial_layer.area.right - initial_layer.area.left) / scale.xstep)
 
     pixel_width = (initial_layer.area.right - initial_layer.area.left) / scale.xstep
     assert round_up_pixels(pixel_width, scale.xstep) == initial_layer.window.xsize
 
-    expanded_layer = Layer.empty_raster_layer(expanded_area, scale, gdal.GDT_Float64)
+    expanded_layer = RasterLayer.empty_raster_layer(expanded_area, scale, gdal.GDT_Float64)
     pixel_width = (expanded_layer.area.right - expanded_layer.area.left) / scale.xstep
     assert round_up_pixels(pixel_width, scale.xstep) == expanded_layer.window.xsize
 
@@ -379,17 +389,17 @@ def test_h3_layer_overlapped():
         H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
     for cell_id in cells]
 
-    union = Layer.find_union(tiles)
+    union = RasterLayer.find_union(tiles)
     union = union.grow(0.02)
 
-    scratch = Layer.empty_raster_layer(union, scale, gdal.GDT_Float64)
+    scratch = RasterLayer.empty_raster_layer(union, scale, gdal.GDT_Float64)
 
     # In scratch we should only have 0 or 1 values, but if there are any overlaps we should get 2s...
 
     for tile in tiles:
         scratch.reset_window()
         layers = [scratch, tile]
-        intersection = Layer.find_intersection(layers)
+        intersection = RasterLayer.find_intersection(layers)
         for layer in layers:
             layer.set_window_for_intersection(intersection)
         result = scratch + tile
@@ -415,36 +425,36 @@ def test_empty_layer_from_vector():
 
         source = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WSG_84_PROJECTION)
 
-        empty = Layer.empty_raster_layer_like(source)
+        empty = RasterLayer.empty_raster_layer_like(source)
         assert empty.pixel_scale == source.pixel_scale
         assert empty.projection == source.projection
         assert empty.window == source.window
 
 def test_empty_layer_from_raster():
-    source =  Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
-    empty = Layer.empty_raster_layer_like(source)
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    empty = RasterLayer.empty_raster_layer_like(source)
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
     assert empty.window == source.window
     assert empty.datatype == source.datatype
 
 def test_empty_layer_from_raster_new_datatype():
-    source =  Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     assert source.datatype == gdal.GDT_Byte
-    empty = Layer.empty_raster_layer_like(source, datatype=gdal.GDT_Float64)
+    empty = RasterLayer.empty_raster_layer_like(source, datatype=gdal.GDT_Float64)
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
     assert empty.window == source.window
     assert empty.datatype == gdal.GDT_Float64
 
 def test_empty_layer_from_raster_with_window():
-    source =  Layer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     original_window = source.window
 
     source.set_window_for_intersection(Area(-1, 1, 1, -1))
     assert source.window < original_window
 
-    empty = Layer.empty_raster_layer_like(source)
+    empty = RasterLayer.empty_raster_layer_like(source)
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
     assert empty.window.xoff == 0
