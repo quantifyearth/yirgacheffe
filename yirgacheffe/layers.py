@@ -177,11 +177,11 @@ class RasterLayer(YirgacheffeLayer):
     def empty_raster_layer(
         area: Area,
         scale: PixelScale,
-        data_type: int,
+        datatype: int,
         filename: Optional[str]=None,
         projection: str=WSG_84_PROJECTION,
         name: Optional[str]=None,
-        compress: bool=False
+        compress: bool=True
     ):
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
@@ -203,7 +203,7 @@ class RasterLayer(YirgacheffeLayer):
             round_up_pixels((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep, abs_xstep),
             round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
             1,
-            data_type,
+            datatype,
             [] if not compress else ['COMPRESS=LZW'],
         )
         dataset.SetGeoTransform([
@@ -213,7 +213,25 @@ class RasterLayer(YirgacheffeLayer):
         return Layer(dataset, name=name)
 
     @staticmethod
-    def empty_raster_layer_like(layer, filename: Optional[str]=None, datatype: Optional[int]=None):
+    def empty_raster_layer_like(
+        layer: YirgacheffeLayer,
+        filename: Optional[str]=None,
+        area: Optional[Area]=None,
+        datatype: Optional[int]=None,
+        compress: bool=True
+    ):
+        width = layer.window.xsize
+        height = layer.window.ysize
+        geo_transform = layer.geo_transform
+        if area is not None:
+            scale = layer.pixel_scale
+            abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+            width = round_up_pixels((area.right - area.left) / abs_xstep, abs_xstep)
+            height = round_up_pixels((area.top - area.bottom) / abs_ystep, abs_ystep)
+            geo_transform = [
+                area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep
+            ]
+
         if filename:
             driver = gdal.GetDriverByName('GTiff')
         else:
@@ -221,13 +239,13 @@ class RasterLayer(YirgacheffeLayer):
             filename = 'mem'
         dataset = driver.Create(
             filename,
-            layer.window.xsize,
-            layer.window.ysize,
+            width,
+            height,
             1,
             datatype if datatype is not None else layer.datatype,
-            [] if filename == 'mem' else ['COMPRESS=LZW'],
+            [] if not compress else ['COMPRESS=LZW'],
         )
-        dataset.SetGeoTransform(layer.geo_transform)
+        dataset.SetGeoTransform(geo_transform)
         dataset.SetProjection(layer.projection)
         return Layer(dataset)
 
