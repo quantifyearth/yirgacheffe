@@ -423,7 +423,7 @@ class VectorLayer(RasterLayer):
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
-        vector_layer = VectorLayer(layer, scale, projection)
+        vector_layer = VectorLayer(layer, scale, projection, name=filename)
 
         # this is a gross hack, but unless you hold open the original file, you'll get
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
@@ -432,10 +432,11 @@ class VectorLayer(RasterLayer):
         return vector_layer
 
 
-    def __init__(self, layer: ogr.Layer, scale: PixelScale, projection: str):
+    def __init__(self, layer: ogr.Layer, scale: PixelScale, projection: str, name: Optional[str] = None):
         if layer is None:
             raise ValueError('No layer provided')
         self.layer = layer
+        self.name = name
 
         # work out region for mask
         envelopes = []
