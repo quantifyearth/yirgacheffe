@@ -155,6 +155,9 @@ class LayerOperation(LayerMathMixin):
         computation_window = self.window
         destination_window = destination_layer.window
 
+        if (computation_window.xsize != destination_window.xsize) or (computation_window.ysize != destination_window.ysize):
+            raise ValueError("Destination raster window size does not match input raster window size.")
+
         total = 0.0
 
         for yoffset in range(0, computation_window.ysize, YSTEP):

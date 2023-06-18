@@ -1,7 +1,9 @@
 import sys
-
+from collections import namedtuple
 from dataclasses import dataclass
 from typing import List
+
+PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
 @dataclass
 class Area:

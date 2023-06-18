@@ -1,12 +1,15 @@
 import math
 import sys
+from typing import List, Optional
+
+from .window import PixelScale
 
 def almost_equal(aval: float, bval: float) -> bool:
     """Safe floating point equality check."""
     return abs(aval - bval) < sys.float_info.epsilon
 
 # As per https://xkcd.com/2170/, we need to stop caring about floating point
-# accurracy at some point as it becomes problematic.
+# accuracy at some point as it becomes problematic.
 # The value here is 1 meter, given that geo data that we've been working with
 # is accurate to 100 meter, but if you need to worry about the biodiversity
 # of a virus in a petri dish this assumption may not work for you.
@@ -35,3 +38,20 @@ def round_down_pixels(value: float, pixelscale: float) -> int:
         return ceiled
     else:
         return math.floor(value)
+
+def are_pixel_scales_equal_enough(pixel_scales: List[Optional[PixelScale]]) -> bool:
+    # some layers (e.g., constant layers) have no scale, and always work, so filter
+    # them out first
+    pixel_scales = [x for x in pixel_scales if x is not None]
+
+    try:
+        first = pixel_scales[0]
+    except IndexError:
+        # empty list is close enough to itself
+        return True
+
+    for other in pixel_scales[1:]:
+        if (abs(first.xstep - other.xstep) > MINIMAL_DEGREE_OF_INTEREST) or \
+                (abs(first.ystep - other.ystep) > MINIMAL_DEGREE_OF_INTEREST):
+            return False
+    return True

@@ -1,5 +1,4 @@
 import math
-from collections import namedtuple
 from math import ceil, floor
 from typing import Any, List, Optional, Tuple
 
@@ -7,11 +6,9 @@ import numpy
 from osgeo import gdal, ogr
 
 from . import WSG_84_PROJECTION
-from .window import Area, Window
+from .window import Area, PixelScale, Window
 from .operators import LayerMathMixin
-from .rounding import almost_equal, round_up_pixels, round_down_pixels
-
-PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
+from .rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
 
 
 class YirgacheffeLayer(LayerMathMixin):
@@ -25,11 +22,9 @@ class YirgacheffeLayer(LayerMathMixin):
             raise ValueError("Expected list of layers")
 
         # This only makes sense (currently) if all layers
-        # have the same pixel pitch
-        scale = layers[0].pixel_scale
-        for layer in layers[1:]:
-            if not layer.check_pixel_scale(scale):
-                raise ValueError("Not all layers are at the same pixel scale")
+        # have the same pixel pitch (modulo desired accuracy)
+        if not are_pixel_scales_equal_enough([x.pixel_scale for x in layers]):
+            raise ValueError("Not all layers are at the same pixel scale")
 
         intersection = Area(
             left=max(x.area.left for x in layers),
@@ -47,11 +42,9 @@ class YirgacheffeLayer(LayerMathMixin):
             raise ValueError("Expected list of layers")
 
         # This only makes sense (currently) if all layers
-        # have the same pixel pitch
-        scale = layers[0].pixel_scale
-        for layer in layers[1:]:
-            if not layer.check_pixel_scale(scale):
-                raise ValueError("Not all layers are at the same pixel scale")
+        # have the same pixel pitch (modulo desired accuracy)
+        if not are_pixel_scales_equal_enough([x.pixel_scale for x in layers]):
+            raise ValueError("Not all layers are at the same pixel scale")
 
         return Area(
             left=min(x.area.left for x in layers),

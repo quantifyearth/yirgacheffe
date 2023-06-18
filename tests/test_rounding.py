@@ -1,8 +1,10 @@
 import sys
+from typing import List
 
 import pytest
 
-from yirgacheffe.rounding import almost_equal, round_up_pixels, round_down_pixels
+from yirgacheffe.window import PixelScale
+from yirgacheffe.rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels, MINIMAL_DEGREE_OF_INTEREST
 
 @pytest.mark.parametrize("lval,rval,expected",
     [
@@ -25,7 +27,7 @@ def test_almost_equal(lval, rval, expected):
         (8032.999999999999, 0.0008983152841195215, 8033), # actual seen value
     ]
 )
-def test_pixel_rounding(pixels: float, scale: float, expected: int):
+def test_pixel_rounding(pixels: float, scale: float, expected: int) -> None:
     assert round_up_pixels(pixels, scale) == expected
 
 @pytest.mark.parametrize("pixels,scale,expected",
@@ -36,5 +38,50 @@ def test_pixel_rounding(pixels: float, scale: float, expected: int):
         (55.000000000001, 0.0008983152841195215, 55),   # actual seen value
     ]
 )
-def test_pixel_rounding(pixels: float, scale: float, expected: int):
+def test_pixel_rounding(pixels: float, scale: float, expected: int) -> None:
     assert round_down_pixels(pixels, scale) == expected
+
+@pytest.mark.parametrize("pixel_scales,expected",
+    [
+        (
+            [],
+            True
+        ),
+        (
+            [
+                PixelScale(0.1, 0.1),
+            ],
+            True
+        ),
+        (
+            [
+                PixelScale(0.1, 0.1),
+                None,
+            ],
+            True
+        ),
+        (
+            [
+                PixelScale(0.1, 0.1),
+                PixelScale(0.1, 0.1),
+            ],
+            True
+        ),
+        (
+            [
+                PixelScale(0.1, 0.1),
+                PixelScale(0.1 + (MINIMAL_DEGREE_OF_INTEREST / 2), 0.1 + (MINIMAL_DEGREE_OF_INTEREST / 2)),
+            ],
+            True
+        ),
+        (
+            [
+                PixelScale(0.1, 0.1),
+                PixelScale(0.1 + (MINIMAL_DEGREE_OF_INTEREST * 2), 0.1 + (MINIMAL_DEGREE_OF_INTEREST * 2)),
+            ],
+            False
+        ),
+    ]
+)
+def test_pixel_scale_comparison(pixel_scales: List[PixelScale], expected: bool) -> None:
+    assert are_pixel_scales_equal_enough(pixel_scales) == expected
