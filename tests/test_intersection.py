@@ -2,7 +2,8 @@ import pytest
 from osgeo import gdal
 
 from helpers import gdal_dataset_of_region, gdal_empty_dataset_of_region
-from yirgacheffe.layers import Area, RasterLayer, ConstantLayer, Window, PixelScale
+from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe import WSG_84_PROJECTION
 

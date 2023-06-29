@@ -1,7 +1,8 @@
 import pytest
 
 from helpers import gdal_dataset_of_region
-from yirgacheffe.layers import Area, RasterLayer, ConstantLayer, Window
+from yirgacheffe.window import Area, Window
+from yirgacheffe.layers import ConstantLayer, RasterLayer
 
 
 def test_find_union_empty_list() -> None:

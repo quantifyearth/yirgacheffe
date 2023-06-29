@@ -3,7 +3,8 @@ from typing import Set, Optional, Tuple
 import numpy
 from osgeo import gdal, ogr
 
-from yirgacheffe.layers import Area, Layer
+from yirgacheffe.window import Area
+from yirgacheffe.layers import YirgacheffeLayer
 from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe import WSG_84_PROJECTION
 
@@ -46,7 +47,7 @@ def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset
     dataset.SetProjection(WSG_84_PROJECTION)
     return dataset
 
-def gdal_dataset_of_layer(layer: Layer, filename: Optional[str]=None) -> gdal.Dataset:
+def gdal_dataset_of_layer(layer: YirgacheffeLayer, filename: Optional[str]=None) -> gdal.Dataset:
     if filename:
         driver = gdal.GetDriverByName('GTiff')
     else:

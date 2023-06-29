@@ -9,7 +9,8 @@ from osgeo import gdal
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe import WSG_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
-from yirgacheffe.layers import Area, RasterLayer, PixelScale, Window, VectorRangeLayer, DynamicVectorRangeLayer, RasteredVectorLayer, VectorLayer
+from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe.layers import RasterLayer, VectorRangeLayer, DynamicVectorRangeLayer, RasteredVectorLayer, VectorLayer
 from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe.operators import ShaderStyleOperation
 
