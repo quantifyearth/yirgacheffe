@@ -5,10 +5,10 @@ from typing import Any, List, Optional, Tuple
 import numpy
 from osgeo import gdal, ogr
 
-from . import WSG_84_PROJECTION
-from .window import Area, PixelScale, Window
-from .operators import LayerMathMixin
-from .rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
+from .. import WSG_84_PROJECTION
+from ..window import Area, PixelScale, Window
+from ..operators import LayerMathMixin
+from ..rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
 
 
 class YirgacheffeLayer(LayerMathMixin):
