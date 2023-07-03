@@ -32,6 +32,8 @@ class RasteredVectorLayer(RasterLayer):
             raise ValueError('No layer provided')
         self.layer = layer
 
+        self._original = None
+
         # work out region for mask
         envelopes = []
         layer.ResetReading()
@@ -99,6 +101,8 @@ class VectorLayer(RasterLayer):
             raise ValueError('No layer provided')
         self.layer = layer
         self.name = name
+
+        self._original = None
 
         # work out region for mask
         envelopes = []

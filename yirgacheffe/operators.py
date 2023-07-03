@@ -187,7 +187,7 @@ class ShaderStyleOperation(LayerOperation):
         except AttributeError: # no rhs
             rhs = None
 
-        # Costant results make this a bit messier. Might in future
+        # Constant results make this a bit messier. Might in future
         # be nicer to promote them to arrays sooner?
         if isinstance(lhs, (int, float)):
             if rhs is None:
