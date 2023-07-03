@@ -1,5 +1,5 @@
 from math import ceil, floor
-from typing import Optional
+from typing import Optional, Union
 
 from osgeo import gdal, ogr
 
@@ -12,14 +12,21 @@ class RasteredVectorLayer(RasterLayer):
     VectorLayer."""
 
     @classmethod
-    def layer_from_file(cls, filename: str, where_filter: Optional[str], scale: PixelScale, projection: str): # type: ignore
+    def layer_from_file(
+        cls,
+        filename: str,
+        where_filter: Optional[str],
+        scale: PixelScale,
+        projection: str,
+        burn_value: Union[int,float,str] = 1,
+    ):
         vectors = ogr.Open(filename)
         if vectors is None:
             raise FileNotFoundError(filename)
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
-        vector_layer = RasteredVectorLayer(layer, scale, projection)
+        vector_layer = RasteredVectorLayer(layer, scale, projection, burn_value=burn_value)
 
         # this is a gross hack, but unless you hold open the original file, you'll get
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
@@ -27,7 +34,13 @@ class RasteredVectorLayer(RasterLayer):
         vector_layer._original = vectors
         return vector_layer
 
-    def __init__(self, layer: ogr.Layer, scale: PixelScale, projection: str):
+    def __init__(
+        self,
+        layer: ogr.Layer,
+        scale: PixelScale,
+        projection: str,
+        burn_value: Union[int,float,str] = 1,
+    ):
         if layer is None:
             raise ValueError('No layer provided')
         self.layer = layer
@@ -69,7 +82,12 @@ class RasteredVectorLayer(RasterLayer):
 
         dataset.SetProjection(projection)
         dataset.SetGeoTransform([area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep])
-        gdal.RasterizeLayer(dataset, [1], layer, burn_values=[1], options=["ALL_TOUCHED=TRUE"])
+        if isinstance(burn_value, (int, float)):
+            gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[burn_value], options=["ALL_TOUCHED=TRUE"])
+        elif isinstance(burn_value, str):
+            gdal.RasterizeLayer(dataset, [1], self.layer, options=[f"ATTRIBUTE={burn_value}", "ALL_TOUCHED=TRUE"])
+        else:
+            raise ValueError("Burn value for layer should be number or field name")
         super().__init__(dataset)
 
 
@@ -80,14 +98,27 @@ class VectorLayer(RasterLayer):
     modify this class so that it chunks things internally)."""
 
     @classmethod
-    def layer_from_file(cls, filename: str, where_filter: Optional[str], scale: PixelScale, projection: str): # type: ignore
+    def layer_from_file(
+        cls,
+        filename: str,
+        where_filter: Optional[str],
+        scale: PixelScale,
+        projection: str,
+        burn_value: Union[int,float,str] = 1,
+    ):
         vectors = ogr.Open(filename)
         if vectors is None:
             raise FileNotFoundError(filename)
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
-        vector_layer = VectorLayer(layer, scale, projection, name=filename)
+        vector_layer = VectorLayer(
+            layer,
+            scale,
+            projection,
+            name=filename,
+            burn_value=burn_value,
+        )
 
         # this is a gross hack, but unless you hold open the original file, you'll get
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
@@ -96,11 +127,22 @@ class VectorLayer(RasterLayer):
         return vector_layer
 
 
-    def __init__(self, layer: ogr.Layer, scale: PixelScale, projection: str, name: Optional[str] = None):
+    def __init__(
+        self,
+        layer: ogr.Layer,
+        scale: PixelScale,
+        projection: str,
+        name: Optional[str] = None,
+        burn_value: Union[int,float,str] = 1,
+    ):
         if layer is None:
             raise ValueError('No layer provided')
         self.layer = layer
         self.name = name
+
+        # If the burn value is a number, use it directly, if it's a string
+        # then assume it is a column name in the dataset
+        self.burn_value = burn_value
 
         self._original = None
 
@@ -144,7 +186,6 @@ class VectorLayer(RasterLayer):
         return gdal.GDT_Byte
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
-
         # I did try recycling this object to save allocation/dealloction, but in practice it
         # seemed to only make things slower (particularly as you need to zero the memory each time yourself)
         dataset = gdal.GetDriverByName('mem').Create(
@@ -163,7 +204,12 @@ class VectorLayer(RasterLayer):
             self._intersection.left + (xoffset * self._transform[1]), self._transform[1], 0.0,
             self._intersection.top + (yoffset * self._transform[5]), 0.0, self._transform[5]
         ])
-        gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[1], options=["ALL_TOUCHED=TRUE"])
+        if isinstance(self.burn_value, (int, float)):
+            gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[self.burn_value], options=["ALL_TOUCHED=TRUE"])
+        elif isinstance(self.burn_value, str):
+            gdal.RasterizeLayer(dataset, [1], self.layer, options=[f"ATTRIBUTE={self.burn_value}", "ALL_TOUCHED=TRUE"])
+        else:
+            raise ValueError("Burn value for layer should be number or field name")
 
         res = dataset.ReadAsArray(0, 0, xsize, ysize)
         return res
