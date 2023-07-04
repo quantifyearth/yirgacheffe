@@ -191,10 +191,10 @@ class VectorLayer(YirgacheffeLayer):
 
         dataset.SetProjection(self._projection)
         dataset.SetGeoTransform([
-            self._intersection.left + (xoffset * self._pixel_scale.xstep),
+            self._active_area.left + (xoffset * self._pixel_scale.xstep),
             self._pixel_scale.xstep,
             0.0,
-            self._intersection.top + (yoffset * self._pixel_scale.ystep),
+            self._active_area.top + (yoffset * self._pixel_scale.ystep),
             0.0,
             self._pixel_scale.ystep
         ])

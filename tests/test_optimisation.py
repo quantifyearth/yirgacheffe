@@ -15,8 +15,8 @@ class NaiveH3CellLayer(H3CellLayer):
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
         res = np.zeros((ysize, xsize), dtype=float)
-        start_x = self._intersection.left + (xoffset * self._pixel_scale.xstep)
-        start_y = self._intersection.top + (yoffset * self._pixel_scale.ystep)
+        start_x = self._active_area.left + (xoffset * self._pixel_scale.xstep)
+        start_y = self._active_area.top + (yoffset * self._pixel_scale.ystep)
         for ypixel in range(ysize):
             lat = start_y + (ypixel * self._pixel_scale.ystep)
             for xpixel in range(xsize):

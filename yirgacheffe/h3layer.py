@@ -102,8 +102,8 @@ class H3CellLayer(YirgacheffeLayer):
 
             subset = np.zeros((intersection.ysize, intersection.xsize), dtype=float)
 
-            start_x = self._intersection.left + ((intersection.xoff - self.window.xoff) * self._pixel_scale.xstep)
-            start_y = self._intersection.top + ((intersection.yoff - self.window.yoff) * self._pixel_scale.ystep)
+            start_x = self._active_area.left + ((intersection.xoff - self.window.xoff) * self._pixel_scale.xstep)
+            start_y = self._active_area.top + ((intersection.yoff - self.window.yoff) * self._pixel_scale.ystep)
 
             for ypixel in range(intersection.ysize):
                 # The latlng_to_cell is quite expensive, so ideally we want to avoid
@@ -182,16 +182,16 @@ class H3CellLayer(YirgacheffeLayer):
             max_width = ceil(max_width_projection / self._pixel_scale.xstep)
 
             for ypixel in range(yoffset, yoffset + ysize):
-                lat = self._intersection.top + (ypixel * self._pixel_scale.ystep)
+                lat = self._active_area.top + (ypixel * self._pixel_scale.ystep)
 
                 for xpixel in range(xoffset, min(xoffset + xsize, max_width)):
-                    lng = self._intersection.left + (xpixel * self._pixel_scale.xstep)
+                    lng = self._active_area.left + (xpixel * self._pixel_scale.xstep)
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
                         res[ypixel - yoffset][xpixel - xoffset] = 1.0
 
                 for xpixel in range(xoffset + xsize - 1, xoffset + xsize - max_width, -1):
-                    lng = self._intersection.left + (xpixel * self._pixel_scale.xstep)
+                    lng = self._active_area.left + (xpixel * self._pixel_scale.xstep)
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
                         res[ypixel - yoffset][xpixel - xoffset] = 1.0

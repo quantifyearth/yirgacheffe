@@ -1,5 +1,5 @@
 
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from ..operators import LayerMathMixin
 from ..rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
@@ -16,8 +16,8 @@ class YirgacheffeLayer(LayerMathMixin):
         projection: str
     ):
         self._pixel_scale = pixel_scale
-        self._area = area
-        self._intersection = area
+        self._underlying_area = area
+        self._active_area = area
         self._projection = projection
 
         self.reset_window()
@@ -32,7 +32,7 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def area(self) -> Area:
-        return self._area
+        return self._active_area
 
     @property
     def window(self) -> Window:
@@ -49,10 +49,10 @@ class YirgacheffeLayer(LayerMathMixin):
             raise ValueError("Not all layers are at the same pixel scale")
 
         intersection = Area(
-            left=max(x.area.left for x in layers),
-            top=min(x.area.top for x in layers),
-            right=min(x.area.right for x in layers),
-            bottom=max(x.area.bottom for x in layers)
+            left=max(x._underlying_area.left for x in layers),
+            top=min(x._underlying_area.top for x in layers),
+            right=min(x._underlying_area.right for x in layers),
+            bottom=max(x._underlying_area.bottom for x in layers)
         )
         if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
             raise ValueError('No intersection possible')
@@ -69,24 +69,19 @@ class YirgacheffeLayer(LayerMathMixin):
             raise ValueError("Not all layers are at the same pixel scale")
 
         return Area(
-            left=min(x.area.left for x in layers),
-            top=max(x.area.top for x in layers),
-            right=max(x.area.right for x in layers),
-            bottom=min(x.area.bottom for x in layers)
+            left=min(x._underlying_area.left for x in layers),
+            top=max(x._underlying_area.top for x in layers),
+            right=max(x._underlying_area.right for x in layers),
+            bottom=min(x._underlying_area.bottom for x in layers)
         )
 
     @property
     def geo_transform(self) -> Tuple[float, float, float, float, float, float]:
         if self._pixel_scale is None:
             raise ValueError("No geo transform for layers without explicit pixel scale")
-        if self._intersection:
-            return (
-                self._intersection.left, self._pixel_scale.xstep,
-                0.0, self._intersection.top, 0.0, self._pixel_scale.ystep
-            )
         return (
-            self._area.left, self._pixel_scale.xstep, 0.0,
-            self._area.top, 0.0, self._pixel_scale.ystep
+            self._active_area.left, self._pixel_scale.xstep,
+            0.0, self._active_area.top, 0.0, self._pixel_scale.ystep
         )
 
     def check_pixel_scale(self, scale: PixelScale) -> bool:
@@ -96,21 +91,21 @@ class YirgacheffeLayer(LayerMathMixin):
         return almost_equal(our_scale.xstep, scale.xstep) and \
             almost_equal(our_scale.ystep, scale.ystep)
 
-    def set_window_for_intersection(self, intersection: Area) -> None:
+    def set_window_for_intersection(self, new_area: Area) -> None:
         if self._pixel_scale is None:
             raise ValueError("Can not set Window without explicit pixel scale")
 
         new_window = Window(
-            xoff=round_down_pixels((intersection.left - self.area.left) / self._pixel_scale.xstep,
+            xoff=round_down_pixels((new_area.left - self._underlying_area.left) / self._pixel_scale.xstep,
                 self._pixel_scale.xstep),
-            yoff=round_down_pixels((self.area.top - intersection.top) / (self._pixel_scale.ystep * -1.0),
+            yoff=round_down_pixels((self._underlying_area.top - new_area.top) / (self._pixel_scale.ystep * -1.0),
                 self._pixel_scale.ystep * -1.0),
             xsize=round_up_pixels(
-                (intersection.right - intersection.left) / self._pixel_scale.xstep,
+                (new_area.right - new_area.left) / self._pixel_scale.xstep,
                 self._pixel_scale.xstep
             ),
             ysize=round_up_pixels(
-                (intersection.top - intersection.bottom) / (self._pixel_scale.ystep * -1.0),
+                (new_area.top - new_area.bottom) / (self._pixel_scale.ystep * -1.0),
                 (self._pixel_scale.ystep * -1.0)
             ),
         )
@@ -125,23 +120,23 @@ class YirgacheffeLayer(LayerMathMixin):
         except AttributeError:
             pass
         self._window = new_window
-        self._intersection = intersection
+        self._active_area = new_area
 
-    def set_window_for_union(self, intersection: Area) -> None:
+    def set_window_for_union(self, new_area: Area) -> None:
         if self._pixel_scale is None:
             raise ValueError("Can not set Window without explicit pixel scale")
 
         new_window = Window(
-            xoff=round_down_pixels((intersection.left - self.area.left) / self._pixel_scale.xstep,
+            xoff=round_down_pixels((new_area.left - self._underlying_area.left) / self._pixel_scale.xstep,
                 self._pixel_scale.xstep),
-            yoff=round_down_pixels((self.area.top - intersection.top) / (self._pixel_scale.ystep * -1.0),
+            yoff=round_down_pixels((self._underlying_area.top - new_area.top) / (self._pixel_scale.ystep * -1.0),
                 self._pixel_scale.ystep * -1.0),
             xsize=round_up_pixels(
-                (intersection.right - intersection.left) / self._pixel_scale.xstep,
+                (new_area.right - new_area.left) / self._pixel_scale.xstep,
                 self._pixel_scale.xstep
             ),
             ysize=round_up_pixels(
-                (intersection.top - intersection.bottom) / (self._pixel_scale.ystep * -1.0),
+                (new_area.top - new_area.bottom) / (self._pixel_scale.ystep * -1.0),
                 (self._pixel_scale.ystep * -1.0)
             ),
         )
@@ -156,10 +151,10 @@ class YirgacheffeLayer(LayerMathMixin):
         except AttributeError:
             pass
         self._window = new_window
-        self._intersection = intersection
+        self._active_area = new_area
 
     def reset_window(self):
-        self._intersection = self.area
+        self._active_area = self._underlying_area
         if self._pixel_scale:
             abs_xstep, abs_ystep = abs(self._pixel_scale.xstep), abs(self._pixel_scale.ystep)
             self._window = Window(
@@ -184,19 +179,23 @@ class YirgacheffeLayer(LayerMathMixin):
             xsize=self.window.xsize + (2 * offset),
             ysize=self.window.ysize + (2 * offset),
         )
-        # we store the new intersection to be consistent with the set_window_for_... methods
-        # Note we can't assume that we weren't already on an intersection when making the offset!
         scale = self.pixel_scale
         if scale is None:
             raise ValueError("Can not offset Window without explicit pixel scale")
 
-        new_left = self.area.left + (new_window.xoff * scale.xstep)
-        new_top = self.area.top + (new_window.yoff * scale.ystep)
-        intersection = Area(
+        # Note we can't assume that we weren't already on an intersection when making the offset!
+        # But remember that window is always relative to underlying area, and new_window
+        # here is based off the existing window
+        new_left = self._underlying_area.left + (new_window.xoff * scale.xstep)
+        new_top = self._underlying_area.top + (new_window.yoff * scale.ystep)
+        new_area = Area(
             left=new_left,
             top=new_top,
             right=new_left + (new_window.xsize * scale.xstep),
             bottom=new_top + (new_window.ysize * scale.ystep)
         )
         self._window = new_window
-        self._intersection = intersection
+        self._active_area = new_area
+
+    def read_array(self, _x: int, _y: int, _xsize: int, _ysize: int) -> Any:
+        raise NotImplementedError("Must be overridden by subclass")

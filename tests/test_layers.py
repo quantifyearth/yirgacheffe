@@ -480,7 +480,7 @@ def test_layer_with_positive_offset():
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
 
     source.offset_window_by_pixels(5)
-    assert source._intersection == Area(-10 - (5 * 0.02), 10 + (5 * 0.02), 10 + (5 * 0.02), -10 - (5 * 0.02))
+    assert source._active_area == Area(-10 - (5 * 0.02), 10 + (5 * 0.02), 10 + (5 * 0.02), -10 - (5 * 0.02))
     assert source.window == Window(-5, -5, int(20 / 0.02) + 10, int(20 / 0.02) + 10)
 
 def test_layer_with_zero_offset():
@@ -498,7 +498,7 @@ def test_layer_with_negative_offset():
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
 
     source.offset_window_by_pixels(-5)
-    assert source._intersection == Area(-10 + (5 * 0.02), 10 - (5 * 0.02), 10 - (5 * 0.02), -10 + (5 * 0.02))
+    assert source._active_area == Area(-10 + (5 * 0.02), 10 - (5 * 0.02), 10 - (5 * 0.02), -10 + (5 * 0.02))
     assert source.window == Window(5, 5, int(20 / 0.02) - 10, int(20 / 0.02) - 10)
 
 def test_layer_with_excessive_negative_offset():
@@ -514,7 +514,7 @@ def test_layer_offsets_accumulate():
     source.offset_window_by_pixels(5)
     source.offset_window_by_pixels(-5)
 
-    assert source._intersection == Area(-10, 10, 10, -10)
+    assert source._active_area == Area(-10, 10, 10, -10)
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
 
 @pytest.mark.parametrize(
