@@ -119,17 +119,15 @@ class RasterLayer(YirgacheffeLayer):
             dataset.GetProjection()
         )
 
+        # The constructor works out the window from the area
+        # so sanity check that the calculated window matches the
+        # dataset's dimensions
+        assert self.window == Window(0, 0, dataset.RasterXSize, dataset.RasterYSize)
+
         self._dataset = dataset
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
         self.name = name
-        # default window to full layer
-        self.window = Window(
-            xoff=0,
-            yoff=0,
-            xsize=dataset.RasterXSize,
-            ysize=dataset.RasterYSize,
-        )
 
     @property
     def datatype(self) -> int:

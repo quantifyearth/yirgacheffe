@@ -55,7 +55,7 @@ class H3CellLayer(YirgacheffeLayer):
             )
 
         super().__init__(area, scale, projection)
-        self.window = Window(
+        self._window = Window(
             xoff=0,
             yoff=0,
             xsize=round_up_pixels((area.right - area.left) / scale.xstep, abs_xstep),

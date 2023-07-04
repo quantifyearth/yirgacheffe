@@ -10,11 +10,17 @@ class YirgacheffeLayer(LayerMathMixin):
     they end up as pixels, but this is a start to make other layers that don't need to rasterize not have
     to carry all that baggage."""
 
-    def __init__(self, area: Area, pixel_scale: Optional[PixelScale], projection: str):
+    def __init__(self,
+        area: Area,
+        pixel_scale: Optional[PixelScale],
+        projection: str
+    ):
         self._pixel_scale = pixel_scale
         self._area = area
         self._intersection = area
         self._projection = projection
+
+        self.reset_window()
 
     @property
     def projection(self) -> str:
@@ -27,6 +33,10 @@ class YirgacheffeLayer(LayerMathMixin):
     @property
     def area(self) -> Area:
         return self._area
+
+    @property
+    def window(self) -> Window:
+        return self._window
 
     @staticmethod
     def find_intersection(layers: List) -> Area:
@@ -114,7 +124,7 @@ class YirgacheffeLayer(LayerMathMixin):
                     f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
         except AttributeError:
             pass
-        self.window = new_window
+        self._window = new_window
         self._intersection = intersection
 
     def set_window_for_union(self, intersection: Area) -> None:
@@ -145,17 +155,19 @@ class YirgacheffeLayer(LayerMathMixin):
                     f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
         except AttributeError:
             pass
-        self.window = new_window
+        self._window = new_window
         self._intersection = intersection
 
     def reset_window(self):
-        self._intersection = None
-        self.window = Window(
-            xoff=0,
-            yoff=0,
-            xsize=self._dataset.RasterXSize,
-            ysize=self._dataset.RasterYSize,
-        )
+        self._intersection = self.area
+        if self._pixel_scale:
+            abs_xstep, abs_ystep = abs(self._pixel_scale.xstep), abs(self._pixel_scale.ystep)
+            self._window = Window(
+                xoff=0,
+                yoff=0,
+                xsize=round_up_pixels((self.area.right - self.area.left) / self._pixel_scale.xstep, abs_xstep),
+                ysize=round_up_pixels((self.area.bottom - self.area.top) / self._pixel_scale.ystep, abs_ystep),
+            )
 
     def offset_window_by_pixels(self, offset: int):
         """Grows (if pixels is positive) or shrinks (if pixels is negative) the window for the layer."""
@@ -186,5 +198,5 @@ class YirgacheffeLayer(LayerMathMixin):
             right=new_left + (new_window.xsize * scale.xstep),
             bottom=new_top + (new_window.ysize * scale.ystep)
         )
-        self.window = new_window
+        self._window = new_window
         self._intersection = intersection

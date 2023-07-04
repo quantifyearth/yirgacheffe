@@ -170,12 +170,6 @@ class VectorLayer(YirgacheffeLayer):
 
         super().__init__(area, scale, projection)
 
-        self.window = Window(
-            xoff=0,
-            yoff=0,
-            xsize=ceil((self.area.right - self.area.left) / scale.xstep),
-            ysize=ceil((self.area.bottom - self.area.top) / scale.ystep),
-        )
 
     @property
     def datatype(self) -> int:

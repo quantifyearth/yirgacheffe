@@ -63,7 +63,7 @@ class UniformAreaLayer(RasterLayer):
         super().__init__(dataset, name)
 
         transform = dataset.GetGeoTransform()
-        self.window = Window(
+        self._window = Window(
             xoff=0,
             yoff=0,
             xsize=360 / transform[1],
