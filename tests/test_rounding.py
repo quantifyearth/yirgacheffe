@@ -4,7 +4,8 @@ from typing import List
 import pytest
 
 from yirgacheffe.window import PixelScale
-from yirgacheffe.rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels, MINIMAL_DEGREE_OF_INTEREST
+from yirgacheffe.rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels,\
+    round_down_pixels, MINIMAL_DEGREE_OF_INTEREST
 
 @pytest.mark.parametrize("lval,rval,expected",
     [
