@@ -4,6 +4,7 @@ from typing import Optional, Union
 from osgeo import gdal, ogr
 
 from ..window import Area, PixelScale, Window
+from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 
 class RasteredVectorLayer(RasterLayer):
@@ -91,7 +92,7 @@ class RasteredVectorLayer(RasterLayer):
         super().__init__(dataset)
 
 
-class VectorLayer(RasterLayer):
+class VectorLayer(YirgacheffeLayer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization occurs only
     when the data is fetched, so there is no explosive memeory cost, but fetching small units (e.g., one
     line at a time) can be quite slow, so recommended that you fetch reasonable chunks each time (or
@@ -160,26 +161,21 @@ class VectorLayer(RasterLayer):
         # the pixel scale GDAL uses can have -ve values, but those will mess up the
         # ceil/floor math, so we use absolute versions when trying to round.
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
-        self.area = Area(
+        area = Area(
             left=floor(min(x[0] for x in envelopes) / abs_xstep) * abs_xstep,
             top=ceil(max(x[3] for x in envelopes) / abs_ystep) * abs_ystep,
             right=ceil(max(x[1] for x in envelopes) / abs_xstep) * abs_xstep,
             bottom=floor(min(x[2] for x in envelopes) / abs_ystep) * abs_ystep,
         )
-        self._transform = [self.area.left, scale.xstep, 0.0, self.area.top, 0.0, scale.ystep]
-        self._projection = projection
-        self._dataset = None
-        self._intersection = self.area
+
+        super().__init__(area, scale, projection)
+
         self.window = Window(
             xoff=0,
             yoff=0,
             xsize=ceil((self.area.right - self.area.left) / scale.xstep),
             ysize=ceil((self.area.bottom - self.area.top) / scale.ystep),
         )
-
-    @property
-    def projection(self) -> str:
-        return self._projection
 
     @property
     def datatype(self) -> int:
@@ -201,8 +197,12 @@ class VectorLayer(RasterLayer):
 
         dataset.SetProjection(self._projection)
         dataset.SetGeoTransform([
-            self._intersection.left + (xoffset * self._transform[1]), self._transform[1], 0.0,
-            self._intersection.top + (yoffset * self._transform[5]), 0.0, self._transform[5]
+            self._intersection.left + (xoffset * self._pixel_scale.xstep),
+            self._pixel_scale.xstep,
+            0.0,
+            self._intersection.top + (yoffset * self._pixel_scale.ystep),
+            0.0,
+            self._pixel_scale.ystep
         ])
         if isinstance(self.burn_value, (int, float)):
             gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[self.burn_value], options=["ALL_TOUCHED=TRUE"])

@@ -15,12 +15,12 @@ class NaiveH3CellLayer(H3CellLayer):
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
         res = np.zeros((ysize, xsize), dtype=float)
-        start_x = self._intersection.left + (xoffset * self._transform[1])
-        start_y = self._intersection.top + (yoffset * self._transform[5])
+        start_x = self._intersection.left + (xoffset * self._pixel_scale.xstep)
+        start_y = self._intersection.top + (yoffset * self._pixel_scale.ystep)
         for ypixel in range(ysize):
-            lat = start_y + (ypixel * self._transform[5])
+            lat = start_y + (ypixel * self._pixel_scale.ystep)
             for xpixel in range(xsize):
-                lng = start_x + (xpixel * self._transform[1])
+                lng = start_x + (xpixel * self._pixel_scale.xstep)
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:
                     res[ypixel][xpixel] = 1.0

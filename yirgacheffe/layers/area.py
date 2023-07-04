@@ -70,7 +70,7 @@ class UniformAreaLayer(RasterLayer):
             ysize=dataset.RasterYSize,
         )
         self._raster_xsize = self.window.xsize
-        self.area = Area(-180, self.area.top, 180, self.area.bottom)
+        self._area = Area(-180, self.area.top, 180, self.area.bottom)
 
     def read_array(self, xoffset, yoffset, _xsize, ysize) -> Any:
         offset = self.window.yoff + yoffset

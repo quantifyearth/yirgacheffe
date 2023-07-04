@@ -4,11 +4,11 @@ import h3
 import numpy as np
 from osgeo import gdal
 
-from .layers import Layer, PixelScale
+from .layers import YirgacheffeLayer
 from .rounding import round_up_pixels
-from .window import Area, Window
+from .window import Area, PixelScale, Window
 
-class H3CellLayer(Layer):
+class H3CellLayer(YirgacheffeLayer):
 
     def __init__(self, cell_id: str, scale: PixelScale, projection: str):
         if not h3.is_valid_cell(cell_id):
@@ -19,7 +19,7 @@ class H3CellLayer(Layer):
         self.cell_boundary = h3.cell_to_boundary(cell_id)
 
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
-        self.area = Area(
+        area = Area(
             left=(floor(min(x[1] for x in self.cell_boundary) / abs_xstep) * abs_xstep),
             top=(ceil(max(x[0] for x in self.cell_boundary) / abs_ystep) * abs_ystep),
             right=(ceil(max(x[1] for x in self.cell_boundary) / abs_xstep) * abs_xstep),
@@ -33,36 +33,33 @@ class H3CellLayer(Layer):
         # Due to time constraints, and that most geospatial data we are working with stops before the poles
         # I'm going to explicitly not handle the poles right now, where you get different distortions from
         # at the 180 line:
-        if not self.area.bottom < self.centre[0] < self.area.top:
+        if not area.bottom < self.centre[0] < area.top:
             raise NotImplementedError("Distortion at poles not currently handled")
 
         # For wrap around due to hitting the longitunal wrap, we currently just do the naive thing and
         # project a band for the full width of the projection. I have a plan to fix this, as I'd like layers
         # to have sublayers, allowing us to handle vector layers more efficiently, but curently we have a
         # deadline, and given how infrequently we hit this case, doing the naive thing for now is sufficient
-        if (abs(self.area.left - self.area.right)) > 180.0:
+        if (abs(area.left - area.right)) > 180.0:
             left = (-180.0 / abs_xstep) * abs_xstep
             if left < -180.0:
                 left += abs_xstep
             right = (180.0 / abs_xstep) * abs_xstep
             if right > 180.0:
                 right -= abs_xstep
-            self.area = Area(
+            area = Area(
                 left=left,
                 right=right,
-                top=self.area.top,
-                bottom=self.area.bottom,
+                top=area.top,
+                bottom=area.bottom,
             )
 
-        self._transform = [self.area.left, scale.xstep, 0.0, self.area.top, 0.0, scale.ystep]
-        self._projection = projection
-        self._dataset = None
-        self._intersection = self.area
+        super().__init__(area, scale, projection)
         self.window = Window(
             xoff=0,
             yoff=0,
-            xsize=round_up_pixels((self.area.right - self.area.left) / scale.xstep, abs_xstep),
-            ysize=round_up_pixels((self.area.bottom - self.area.top) / scale.ystep, abs_ystep),
+            xsize=round_up_pixels((area.right - area.left) / scale.xstep, abs_xstep),
+            ysize=round_up_pixels((area.bottom - area.top) / scale.ystep, abs_ystep),
         )
         self._raster_xsize = self.window.xsize
         self._raster_ysize = self.window.ysize
@@ -75,9 +72,6 @@ class H3CellLayer(Layer):
             (sorted_lats[1] / abs_ystep) * abs_ystep,
         )
 
-    @property
-    def projection(self) -> str:
-        return self._projection
 
     @property
     def datatype(self) -> int:
@@ -108,8 +102,8 @@ class H3CellLayer(Layer):
 
             subset = np.zeros((intersection.ysize, intersection.xsize), dtype=float)
 
-            start_x = self._intersection.left + ((intersection.xoff - self.window.xoff) * self._transform[1])
-            start_y = self._intersection.top + ((intersection.yoff - self.window.yoff) * self._transform[5])
+            start_x = self._intersection.left + ((intersection.xoff - self.window.xoff) * self._pixel_scale.xstep)
+            start_y = self._intersection.top + ((intersection.yoff - self.window.yoff) * self._pixel_scale.ystep)
 
             for ypixel in range(intersection.ysize):
                 # The latlng_to_cell is quite expensive, so ideally we want to avoid
@@ -133,7 +127,7 @@ class H3CellLayer(Layer):
                 # only a tiny number of cells that have convex edges, so in future it'd be
                 # interesting to see if we can infer when that is.
 
-                lat = start_y + (ypixel * self._transform[5])
+                lat = start_y + (ypixel * self._pixel_scale.ystep)
 
                 if self._raster_safe_bounds[0] < lat < self._raster_safe_bounds[1]:
                     # In "safe" zone, try to be clever
@@ -141,14 +135,14 @@ class H3CellLayer(Layer):
                     right_most = -1
 
                     for xpixel in range(intersection.xsize):
-                        lng = start_x + (xpixel * self._transform[1])
+                        lng = start_x + (xpixel * self._pixel_scale.xstep)
                         this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                         if this_cell == self.cell_id:
                             left_most = xpixel
                             break
 
                     for xpixel in range(intersection.xsize - 1, left_most - 1, -1):
-                        lng = start_x + (xpixel * self._transform[1])
+                        lng = start_x + (xpixel * self._pixel_scale.xstep)
                         this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                         if this_cell == self.cell_id:
                             right_most = xpixel
@@ -159,7 +153,7 @@ class H3CellLayer(Layer):
                 else:
                     # Not in safe zone, be diligent.
                     for xpixel in range(intersection.xsize):
-                        lng = start_x + (xpixel * self._transform[1])
+                        lng = start_x + (xpixel * self._pixel_scale.xstep)
                         this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                         if this_cell == self.cell_id:
                             subset[ypixel][xpixel] = 1.0
@@ -185,19 +179,19 @@ class H3CellLayer(Layer):
             left = min(x[1] for x in self.cell_boundary if x[1] > 0.0)
             right = max(x[1] for x in self.cell_boundary if x[1] < 0.0) + 360.0
             max_width_projection = right - left
-            max_width = ceil(max_width_projection / self._transform[1])
+            max_width = ceil(max_width_projection / self._pixel_scale.xstep)
 
             for ypixel in range(yoffset, yoffset + ysize):
-                lat = self._intersection.top + (ypixel * self._transform[5])
+                lat = self._intersection.top + (ypixel * self._pixel_scale.ystep)
 
                 for xpixel in range(xoffset, min(xoffset + xsize, max_width)):
-                    lng = self._intersection.left + (xpixel * self._transform[1])
+                    lng = self._intersection.left + (xpixel * self._pixel_scale.xstep)
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
                         res[ypixel - yoffset][xpixel - xoffset] = 1.0
 
                 for xpixel in range(xoffset + xsize - 1, xoffset + xsize - max_width, -1):
-                    lng = self._intersection.left + (xpixel * self._transform[1])
+                    lng = self._intersection.left + (xpixel * self._pixel_scale.xstep)
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
                         res[ypixel - yoffset][xpixel - xoffset] = 1.0

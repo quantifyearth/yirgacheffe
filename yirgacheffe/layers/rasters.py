@@ -67,12 +67,14 @@ class RasterLayer(YirgacheffeLayer):
         geo_transform = layer.geo_transform
         if area is not None:
             scale = layer.pixel_scale
+            if scale is None:
+                raise ValueError("Can not work out area without explicit pixel scale")
             abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
             width = round_up_pixels((area.right - area.left) / abs_xstep, abs_xstep)
             height = round_up_pixels((area.top - area.bottom) / abs_ystep, abs_ystep)
-            geo_transform = [
+            geo_transform = (
                 area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep
-            ]
+            )
 
         if filename:
             driver = gdal.GetDriverByName('GTiff')
@@ -101,21 +103,26 @@ class RasterLayer(YirgacheffeLayer):
     def __init__(self, dataset: gdal.Dataset, name: Optional[str] = None):
         if not dataset:
             raise ValueError("None is not a valid dataset")
-        self._dataset = dataset
-        self._transform = dataset.GetGeoTransform()
-        self._raster_xsize = dataset.RasterXSize
-        self._raster_ysize = dataset.RasterYSize
-        self._intersection: Optional[Area] = None
-        self.name = name
 
-        # Global position of the layer
-        self.area = Area(
-            left=self._transform[0],
-            top=self._transform[3],
-            right=self._transform[0] + (self._raster_xsize * self._transform[1]),
-            bottom=self._transform[3] + (self._raster_ysize * self._transform[5]),
+        transform = dataset.GetGeoTransform()
+        scale = PixelScale(transform[1], transform[5])
+        area = Area(
+            left=transform[0],
+            top=transform[3],
+            right=transform[0] + (dataset.RasterXSize * scale.xstep),
+            bottom=transform[3] + (dataset.RasterYSize * scale.ystep),
         )
 
+        super().__init__(
+            area,
+            scale,
+            dataset.GetProjection()
+        )
+
+        self._dataset = dataset
+        self._raster_xsize = dataset.RasterXSize
+        self._raster_ysize = dataset.RasterYSize
+        self.name = name
         # default window to full layer
         self.window = Window(
             xoff=0,
@@ -123,10 +130,6 @@ class RasterLayer(YirgacheffeLayer):
             xsize=dataset.RasterXSize,
             ysize=dataset.RasterYSize,
         )
-
-    @property
-    def projection(self) -> str:
-        return self._dataset.GetProjection()
 
     @property
     def datatype(self) -> int:

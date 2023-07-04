@@ -42,15 +42,15 @@ def round_down_pixels(value: float, pixelscale: float) -> int:
 def are_pixel_scales_equal_enough(pixel_scales: List[Optional[PixelScale]]) -> bool:
     # some layers (e.g., constant layers) have no scale, and always work, so filter
     # them out first
-    pixel_scales = [x for x in pixel_scales if x is not None]
+    cleaned_pixel_scales: List[PixelScale] = [x for x in pixel_scales if x is not None]
 
     try:
-        first = pixel_scales[0]
+        first = cleaned_pixel_scales[0]
     except IndexError:
         # empty list is close enough to itself
         return True
 
-    for other in pixel_scales[1:]:
+    for other in cleaned_pixel_scales[1:]:
         if (abs(first.xstep - other.xstep) > MINIMAL_DEGREE_OF_INTEREST) or \
                 (abs(first.ystep - other.ystep) > MINIMAL_DEGREE_OF_INTEREST):
             return False

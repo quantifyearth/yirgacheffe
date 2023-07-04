@@ -10,6 +10,24 @@ class YirgacheffeLayer(LayerMathMixin):
     they end up as pixels, but this is a start to make other layers that don't need to rasterize not have
     to carry all that baggage."""
 
+    def __init__(self, area: Area, pixel_scale: Optional[PixelScale], projection: str):
+        self._pixel_scale = pixel_scale
+        self._area = area
+        self._intersection = area
+        self._projection = projection
+
+    @property
+    def projection(self) -> str:
+        return self._projection
+
+    @property
+    def pixel_scale(self) -> Optional[PixelScale]:
+        return self._pixel_scale
+
+    @property
+    def area(self) -> Area:
+        return self._area
+
     @staticmethod
     def find_intersection(layers: List) -> Area:
         if not layers:
@@ -49,70 +67,84 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def geo_transform(self) -> Tuple[float, float, float, float, float, float]:
+        if self._pixel_scale is None:
+            raise ValueError("No geo transform for layers without explicit pixel scale")
         if self._intersection:
             return (
-                self._intersection.left, self._transform[1],
-                0.0, self._intersection.top, 0.0, self._transform[5]
+                self._intersection.left, self._pixel_scale.xstep,
+                0.0, self._intersection.top, 0.0, self._pixel_scale.ystep
             )
-        return self._transform
-
-    @property
-    def pixel_scale(self) -> Optional[PixelScale]:
-        return PixelScale(self._transform[1], self._transform[5])
+        return (
+            self._area.left, self._pixel_scale.xstep, 0.0,
+            self._area.top, 0.0, self._pixel_scale.ystep
+        )
 
     def check_pixel_scale(self, scale: PixelScale) -> bool:
         our_scale = self.pixel_scale
-        assert our_scale is not None
+        if our_scale is None:
+            raise ValueError("No check for layers without explicit pixel scale")
         return almost_equal(our_scale.xstep, scale.xstep) and \
             almost_equal(our_scale.ystep, scale.ystep)
 
     def set_window_for_intersection(self, intersection: Area) -> None:
+        if self._pixel_scale is None:
+            raise ValueError("Can not set Window without explicit pixel scale")
+
         new_window = Window(
-            xoff=round_down_pixels((intersection.left - self.area.left) / self._transform[1],
-                self._transform[1]),
-            yoff=round_down_pixels((self.area.top - intersection.top) / (self._transform[5] * -1.0),
-                self._transform[5] * -1.0),
+            xoff=round_down_pixels((intersection.left - self.area.left) / self._pixel_scale.xstep,
+                self._pixel_scale.xstep),
+            yoff=round_down_pixels((self.area.top - intersection.top) / (self._pixel_scale.ystep * -1.0),
+                self._pixel_scale.ystep * -1.0),
             xsize=round_up_pixels(
-                (intersection.right - intersection.left) / self._transform[1],
-                self._transform[1]
+                (intersection.right - intersection.left) / self._pixel_scale.xstep,
+                self._pixel_scale.xstep
             ),
             ysize=round_up_pixels(
-                (intersection.top - intersection.bottom) / (self._transform[5] * -1.0),
-                (self._transform[5] * -1.0)
+                (intersection.top - intersection.bottom) / (self._pixel_scale.ystep * -1.0),
+                (self._pixel_scale.ystep * -1.0)
             ),
         )
         if (new_window.xoff < 0) or (new_window.yoff < 0):
             raise ValueError('Window has negative offset')
-        if self._dataset:
+        # If there is an underlying raster for this layer, do a sanity check
+        try:
             if ((new_window.xoff + new_window.xsize) > self._raster_xsize) or \
                 ((new_window.yoff + new_window.ysize) > self._raster_ysize):
                 raise ValueError(f'Window is bigger than dataset: raster is {self._raster_xsize}x{self._raster_ysize}'\
                     f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
+        except AttributeError:
+            pass
         self.window = new_window
         self._intersection = intersection
 
     def set_window_for_union(self, intersection: Area) -> None:
+        if self._pixel_scale is None:
+            raise ValueError("Can not set Window without explicit pixel scale")
+
         new_window = Window(
-            xoff=round_down_pixels((intersection.left - self.area.left) / self._transform[1],
-                self._transform[1]),
-            yoff=round_down_pixels((self.area.top - intersection.top) / (self._transform[5] * -1.0),
-                self._transform[5] * -1.0),
+            xoff=round_down_pixels((intersection.left - self.area.left) / self._pixel_scale.xstep,
+                self._pixel_scale.xstep),
+            yoff=round_down_pixels((self.area.top - intersection.top) / (self._pixel_scale.ystep * -1.0),
+                self._pixel_scale.ystep * -1.0),
             xsize=round_up_pixels(
-                (intersection.right - intersection.left) / self._transform[1],
-                self._transform[1]
+                (intersection.right - intersection.left) / self._pixel_scale.xstep,
+                self._pixel_scale.xstep
             ),
             ysize=round_up_pixels(
-                (intersection.top - intersection.bottom) / (self._transform[5] * -1.0),
-                (self._transform[5] * -1.0)
+                (intersection.top - intersection.bottom) / (self._pixel_scale.ystep * -1.0),
+                (self._pixel_scale.ystep * -1.0)
             ),
         )
         if (new_window.xoff > 0) or (new_window.yoff > 0):
             raise ValueError('Window has positive offset')
-        if self._dataset:
+        # If there is an underlying raster for this layer, do a sanity check
+        try:
             if ((new_window.xsize - new_window.xoff) < self._raster_xsize) or \
                 ((new_window.ysize - new_window.yoff) < self._raster_ysize):
                 raise ValueError(f'Window is smaller than dataset: raster is {self._raster_xsize}x{self._raster_ysize}'\
                     f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
+        except AttributeError:
+            pass
         self.window = new_window
         self._intersection = intersection
 
@@ -143,6 +175,9 @@ class YirgacheffeLayer(LayerMathMixin):
         # we store the new intersection to be consistent with the set_window_for_... methods
         # Note we can't assume that we weren't already on an intersection when making the offset!
         scale = self.pixel_scale
+        if scale is None:
+            raise ValueError("Can not offset Window without explicit pixel scale")
+
         new_left = self.area.left + (new_window.xoff * scale.xstep)
         new_top = self.area.top + (new_window.yoff * scale.ystep)
         intersection = Area(
