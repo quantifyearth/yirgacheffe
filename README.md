@@ -150,6 +150,15 @@ Becuase it will be rasterized you need to specify the pixel scale and map projec
 hex_cell_layer = H3CellLayer('88972eac11fffff', layer1.pixel_scale, layer1.projection)
 ```
 
+### GroupLayer
+
+You can combine several layers into one virtual layer to save you worrying about how to merge them if you don't want to manually add the layers together. Useful when you have tile sets for example. Any area not covered by a layer in the group will return zeros.
+
+```python
+tile1 = RasterLayer.layer_from_file('tile_N10_E10.tif')
+tile2 = RasterLayer.layer_from_file('tile_N20_E10.tif')
+all_tiles = GroupLayer([tile1, tile2])
+```
 
 ## Supported operations on layers
 

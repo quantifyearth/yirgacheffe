@@ -6,6 +6,7 @@ from .rasters import RasterLayer
 from .vectors import RasteredVectorLayer, VectorLayer
 from .area import UniformAreaLayer
 from .constant import ConstantLayer
+from .group import GroupLayer
 
 
 class Layer(RasterLayer):
