@@ -65,5 +65,4 @@ class GroupLayer(YirgacheffeLayer):
             except ValueError:
                 continue
 
-        print(result)
         return result
