@@ -44,9 +44,9 @@ class GroupLayer(YirgacheffeLayer):
             # Normally this is hidden with set_window_for_...
             adjusted_layer_window = Window(
                 layer.window.xoff + \
-                    round_down_pixels(((layer.area.left - self.area.left) / scale.xstep), abs(scale.xstep)),
+                    round_down_pixels(((layer.area.left - self._underlying_area.left) / scale.xstep), abs(scale.xstep)),
                 layer.window.yoff + \
-                    round_down_pixels(((layer.area.top - self.area.top) / scale.ystep), abs(scale.ystep)),
+                    round_down_pixels(((layer.area.top - self._underlying_area.top) / scale.ystep), abs(scale.ystep)),
                 layer.window.xsize,
                 layer.window.ysize,
             )
@@ -58,9 +58,11 @@ class GroupLayer(YirgacheffeLayer):
                     intersection.xsize,
                     intersection.ysize
                 )
+                result_x_offset = (intersection.xoff - xoffset) - self.window.xoff
+                result_y_offset = (intersection.yoff - yoffset) - self.window.yoff
                 result[
-                    intersection.yoff - yoffset:(intersection.yoff - yoffset) + intersection.ysize,
-                    intersection.xoff - xoffset:(intersection.xoff - xoffset) + intersection.xsize
+                    result_y_offset:result_y_offset + intersection.ysize,
+                    result_x_offset:result_x_offset + intersection.xsize
                 ] = data
             except ValueError:
                 continue

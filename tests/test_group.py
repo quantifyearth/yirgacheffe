@@ -1,3 +1,4 @@
+import math
 import os
 import tempfile
 
@@ -87,3 +88,36 @@ def test_overlapping_vector_layers():
         assert group.area == Area(-10, 10, 20, -10)
         assert group.window == Window(0, 0, 150, 100)
         assert group.sum() == vector1.sum() + (vector2.sum() / 2)
+
+def test_with_window_adjust():
+    with tempfile.TemporaryDirectory() as tempdir:
+        layers = []
+        for i in range(1, 11):
+            path = os.path.join(tempdir, f"{i}.gpkg")
+            area = Area(i, 10, i+1, -10)
+            make_vectors_with_id(i, {area}, path)
+            vector = VectorLayer.layer_from_file(path, None, PixelScale(0.1, -0.1), WSG_84_PROJECTION, burn_value="id_no")
+            layers.append(vector)
+
+        group = GroupLayer(layers)
+        assert group.area == Area(1, 10, 11, -10)
+        assert group.window == Window(0, 0, 100, 200)
+
+        # Test before we apply a window
+        row = group.read_array(0, 0, 100, 1)[0]
+        for i in range(len(row)):
+            assert row[i] == math.ceil((i + 1) / 10.0)
+
+        # Test also for manual offsets that we get expected result
+        for i in range(0, 10):
+            row = group.read_array(i * 10, 0, 10, 1)[0]
+            assert (row == (i + 1)).all()
+
+        # now apply a window over each zone and check we
+        # get what we expect
+        for i in range(1, 11):
+            group.reset_window()
+            area = Area(i, 10, i+1, -10)
+            group.set_window_for_intersection(area)
+            row = group.read_array(0, 0, 10, 1)
+            assert (row == i).all()
