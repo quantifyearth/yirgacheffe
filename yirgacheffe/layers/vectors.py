@@ -20,7 +20,7 @@ class RasteredVectorLayer(RasterLayer):
         scale: PixelScale,
         projection: str,
         burn_value: Union[int,float,str] = 1,
-    ):
+    ): # pylint: disable=W0221
         vectors = ogr.Open(filename)
         if vectors is None:
             raise FileNotFoundError(filename)

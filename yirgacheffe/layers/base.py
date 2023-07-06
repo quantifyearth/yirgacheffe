@@ -19,6 +19,7 @@ class YirgacheffeLayer(LayerMathMixin):
         self._underlying_area = area
         self._active_area = area
         self._projection = projection
+        self._window: Optional[Window] = None
 
         self.reset_window()
 
@@ -36,6 +37,8 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def window(self) -> Window:
+        if self._window is None:
+            raise AttributeError("Layer has no window")
         return self._window
 
     @staticmethod

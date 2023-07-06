@@ -105,8 +105,11 @@ class RasterLayer(YirgacheffeLayer):
         algorithm: int=gdal.GRA_NearestNeighbour,
     ) -> RasterLayerT:
         source_dataset = source._dataset
-        x_scale = source.pixel_scale.xstep / new_pixel_scale.xstep
-        y_scale = source.pixel_scale.ystep / new_pixel_scale.ystep
+        old_pixel_scale = source.pixel_scale
+        assert old_pixel_scale
+
+        x_scale = old_pixel_scale.xstep / new_pixel_scale.xstep
+        y_scale = old_pixel_scale.ystep / new_pixel_scale.ystep
         new_width = round_up_pixels(source_dataset.RasterXSize * x_scale,
             abs(new_pixel_scale.xstep))
         new_height = round_up_pixels(source_dataset.RasterYSize * y_scale,
