@@ -42,6 +42,7 @@ class RasterLayer(YirgacheffeLayer):
         else:
             driver = gdal.GetDriverByName('mem')
             filename = 'mem'
+            compress = False
         dataset = driver.Create(
             filename,
             round_up_pixels((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep, abs_xstep),
@@ -83,6 +84,7 @@ class RasterLayer(YirgacheffeLayer):
         else:
             driver = gdal.GetDriverByName('mem')
             filename = 'mem'
+            compress = False
         dataset = driver.Create(
             filename,
             width,
@@ -126,6 +128,7 @@ class RasterLayer(YirgacheffeLayer):
         else:
             driver = gdal.GetDriverByName('mem')
             filename = 'mem'
+            compress = False
         dataset = driver.Create(
             filename,
             new_width,
