@@ -63,7 +63,7 @@ If you have set either the intersection window or union window on a layer and yo
 
 Yirgacheffe is work in progress, so things planned but not supported currently:
 
-* Pixel scale adjustment - all raster layers must be provided at the same pixel scale currently
+* Dynamic pixel scale adjustment - all raster layers must be provided at the same pixel scale currently
 * A fold operation
 * CUPY support
 * Dispatching work across multiple CPUs
@@ -95,6 +95,13 @@ result = RasterLayer.empty_raster_layer(
     gdal.GDT_Float64,
     "results.tiff"
 )
+```
+
+You can also create a new layer that is a scaled version of an existing layer:
+
+```python
+source = RasterLayer.layer_from_file('test1.tif')
+scaled = RasterLayer.scaled_raster_from_raster(source, PixelScale(0.0001, -0.0001), 'scaled.tif')
 ```
 
 

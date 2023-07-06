@@ -166,3 +166,36 @@ def test_layer_offsets_accumulate():
 
     assert source._active_area == Area(-10, 10, 10, -10)
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
+
+def test_scale_up():
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.2))
+    assert source.area == Area(-10, 10, 10, -10)
+    assert source.window == Window(0, 0, 20 / 0.2, 20 / 0.2)
+
+    new_pixel_scale = PixelScale(0.1, -0.1)
+    scaled = RasterLayer.scaled_raster_from_raster(
+        source,
+        new_pixel_scale
+    )
+    assert scaled.area == Area(-10, 10, 10, -10)
+    assert scaled.window == Window(0, 0, 20 / 0.1, 20 / 0.1)
+    assert scaled.sum() == source.sum() * 4
+
+def test_scale_down():
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.2))
+    assert source.area == Area(-10, 10, 10, -10)
+    assert source.window == Window(0, 0, 20 / 0.2, 20 / 0.2)
+
+    new_pixel_scale = PixelScale(0.5, -0.5)
+    scaled = RasterLayer.scaled_raster_from_raster(
+        source,
+        new_pixel_scale
+    )
+    assert scaled.area == Area(-10, 10, 10, -10)
+    assert scaled.window == Window(0, 0, 20 / 0.5, 20 / 0.5)
+    print(scaled.sum())
+    print(source.sum())
+    print(scaled.sum() / source.sum())
+    # because we're dropping pixels, it's not easy to do this comparison
+    # but at least make sure its less
+    assert scaled.sum() < source.sum()

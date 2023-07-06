@@ -80,8 +80,8 @@ class YirgacheffeLayer(LayerMathMixin):
         if self._pixel_scale is None:
             raise ValueError("No geo transform for layers without explicit pixel scale")
         return (
-            self._active_area.left, self._pixel_scale.xstep,
-            0.0, self._active_area.top, 0.0, self._pixel_scale.ystep
+            self._active_area.left, self._pixel_scale.xstep, 0.0,
+            self._active_area.top, 0.0, self._pixel_scale.ystep
         )
 
     def check_pixel_scale(self, scale: PixelScale) -> bool:

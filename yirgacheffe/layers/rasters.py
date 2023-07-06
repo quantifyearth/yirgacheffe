@@ -1,5 +1,5 @@
 import math
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 import numpy
 from osgeo import gdal
@@ -9,6 +9,8 @@ from ..window import Area, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
 
+# Still to early to require Python 3.11 :/
+RasterLayerT = TypeVar("RasterLayerT", bound="RasterLayer")
 
 class RasterLayer(YirgacheffeLayer):
     """Layer provides a wrapper around a gdal dataset/band that also records offset state so that
@@ -24,7 +26,7 @@ class RasterLayer(YirgacheffeLayer):
         projection: str=WSG_84_PROJECTION,
         name: Optional[str]=None,
         compress: bool=True
-    ):
+    ) -> RasterLayerT:
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
         # We treat the provided area as aspirational, and we need to align it to pixel boundaries
@@ -61,7 +63,7 @@ class RasterLayer(YirgacheffeLayer):
         area: Optional[Area]=None,
         datatype: Optional[int]=None,
         compress: bool=True
-    ):
+    ) -> RasterLayerT:
         width = layer.window.xsize
         height = layer.window.ysize
         geo_transform = layer.geo_transform
@@ -94,7 +96,54 @@ class RasterLayer(YirgacheffeLayer):
         return RasterLayer(dataset)
 
     @classmethod
-    def layer_from_file(cls, filename: str):
+    def scaled_raster_from_raster(
+        cls,
+        source: RasterLayerT,
+        new_pixel_scale: PixelScale,
+        filename: Optional[str]=None,
+        compress: bool=True,
+        algorithm: int=gdal.GRA_NearestNeighbour,
+    ) -> RasterLayerT:
+        source_dataset = source._dataset
+        x_scale = source.pixel_scale.xstep / new_pixel_scale.xstep
+        y_scale = source.pixel_scale.ystep / new_pixel_scale.ystep
+        new_width = round_up_pixels(source_dataset.RasterXSize * x_scale,
+            abs(new_pixel_scale.xstep))
+        new_height = round_up_pixels(source_dataset.RasterYSize * y_scale,
+            abs(new_pixel_scale.ystep))
+
+        # in yirgacheffe we like to have things aligned to the pixel_scale, so work
+        # out new top left corner
+        new_left = math.floor((source.area.left / new_pixel_scale.xstep)) * new_pixel_scale.xstep
+        new_top = math.ceil((source.area.top / new_pixel_scale.ystep)) * new_pixel_scale.ystep
+
+        # now build a target dataset
+        if filename:
+            driver = gdal.GetDriverByName('GTiff')
+        else:
+            driver = gdal.GetDriverByName('mem')
+            filename = 'mem'
+        dataset = driver.Create(
+            filename,
+            new_width,
+            new_height,
+            1,
+            source.datatype,
+            [] if not compress else ['COMPRESS=LZW'],
+        )
+        dataset.SetGeoTransform((
+            new_left, new_pixel_scale.xstep, 0.0,
+            new_top, 0.0, new_pixel_scale.ystep
+        ))
+        dataset.SetProjection(source_dataset.GetProjection())
+
+        # now use gdal to do the reprojection
+        gdal.ReprojectImage(source_dataset, dataset, eResampleAlg=algorithm)
+
+        return RasterLayer(dataset)
+
+    @classmethod
+    def layer_from_file(cls, filename: str) -> RasterLayerT:
         dataset = gdal.Open(filename, gdal.GA_ReadOnly)
         if dataset is None:
             raise FileNotFoundError(filename)
