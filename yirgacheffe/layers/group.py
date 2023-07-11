@@ -1,3 +1,4 @@
+import copy
 from typing import Any, List
 
 import numpy as np
@@ -23,7 +24,11 @@ class GroupLayer(YirgacheffeLayer):
         union = YirgacheffeLayer.find_union(layers)
         super().__init__(union, layers[0].pixel_scale, layers[0].projection)
 
-        self.layers = layers
+        # We store them in reverse order so that from the user's perspective
+        # the first layer in the list will be the most important in terms
+        # over overlapping.
+        self.layers = copy.copy(layers)
+        self.layers.reverse()
 
     def read_array(self, xoffset: int, yoffset: int, xsize: int, ysize: int) -> Any:
         # Do a naive implementation to start with, and we can improve on

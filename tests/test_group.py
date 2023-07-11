@@ -81,7 +81,7 @@ def test_overlapping_vector_layers():
 
         path2 = os.path.join(tempdir, "test2.gpkg")
         area2 = Area(-0.0, 10.0, 20.0, -10.0)
-        make_vectors_with_id(42, {area2}, path2)
+        make_vectors_with_id(24, {area2}, path2)
         vector2 = VectorLayer.layer_from_file(path2, None, PixelScale(0.2, -0.2), WSG_84_PROJECTION)
 
         group = GroupLayer([vector1, vector2])

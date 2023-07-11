@@ -167,9 +167,11 @@ tile2 = RasterLayer.layer_from_file('tile_N20_E10.tif')
 all_tiles = GroupLayer([tile1, tile2])
 ```
 
+If you provide tiles that overlap then they will be rendered in reverse one, so in the above example if tile1 and tile2 overlap, then in that region you'd get the data from tile1.
+
 ## Supported operations on layers
 
-Once you have two layers, you can perform numberical analysis on them similar to how numpy works:
+Once you have two layers, you can perform numerical analysis on them similar to how numpy works:
 
 ### Add, subtract, multiple, divide
 
