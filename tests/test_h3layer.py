@@ -4,9 +4,8 @@ import pytest
 from osgeo import gdal
 
 from yirgacheffe import WSG_84_PROJECTION
-from yirgacheffe.layers import RasterLayer
+from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, PixelScale
-from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.operators import ShaderStyleOperation
 
 @pytest.mark.parametrize(

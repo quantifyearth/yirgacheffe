@@ -7,6 +7,7 @@ from .vectors import RasteredVectorLayer, VectorLayer
 from .area import UniformAreaLayer
 from .constant import ConstantLayer
 from .group import GroupLayer
+from .h3layer import H3CellLayer
 
 
 class Layer(RasterLayer):
