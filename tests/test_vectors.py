@@ -2,6 +2,7 @@ import os
 import tempfile
 
 import pytest
+from osgeo import gdal
 
 from helpers import make_vectors_with_mutlile_ids, make_vectors_with_id
 from yirgacheffe import WSG_84_PROJECTION
@@ -230,3 +231,42 @@ def test_vector_layers_with_field_value(klass) -> None:
         total = layer.sum()
         assert total == (((layer.window.xsize * layer.window.ysize) / 4) * 42) + \
             (((layer.window.xsize * layer.window.ysize) / 4) * 43)
+
+@pytest.mark.parametrize(
+    "value,datatype",
+    [
+        (1, gdal.GDT_Byte),
+        (42, gdal.GDT_Byte),
+        (1, gdal.GDT_Int16),
+        (42, gdal.GDT_Int16),
+        (1024, gdal.GDT_Int16),
+        (1.0, gdal.GDT_Float32),
+        (0.5, gdal.GDT_Float32),
+        (1.0, gdal.GDT_Float64),
+    ]
+)
+def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        areas = {
+            (Area(-10.0, 10.0, 10.0, -10.0), value),
+        }
+        make_vectors_with_mutlile_ids(areas, path)
+
+        layer = VectorLayer.layer_from_file(
+            path,
+            None,
+            PixelScale(1.0, -1.0),
+            WSG_84_PROJECTION,
+            datatype=datatype,
+            burn_value="id_no"
+        )
+
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.window == Window(0, 0, 20, 20)
+
+        # The default burn value is 1, so check that if we sum the area
+        # we get half and half, but then multiplied by burn value
+        total = layer.sum()
+        assert total == (layer.window.xsize * layer.window.ysize) * value

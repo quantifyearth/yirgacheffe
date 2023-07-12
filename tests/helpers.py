@@ -121,7 +121,13 @@ def make_vectors_with_mutlile_ids(areas: Set[Tuple[Area,int]], filename: str) ->
 
     package = ogr.GetDriverByName("GPKG").CreateDataSource(filename)
     layer = package.CreateLayer("onlylayer", srs, geom_type=ogr.wkbPolygon)
-    id_field = ogr.FieldDefn("id_no", ogr.OFTInteger)
+    field_type = ogr.OFTInteger
+    try:
+        if isinstance(list(areas)[0][1], float):
+            field_type = ogr.OFTReal
+    except IndexError:
+        pass
+    id_field = ogr.FieldDefn("id_no", field_type)
     layer.CreateField(id_field)
     feature_definition = layer.GetLayerDefn()
 

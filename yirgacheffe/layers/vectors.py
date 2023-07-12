@@ -105,6 +105,7 @@ class VectorLayer(YirgacheffeLayer):
         where_filter: Optional[str],
         scale: PixelScale,
         projection: str,
+        datatype: int = gdal.GDT_Byte,
         burn_value: Union[int,float,str] = 1,
     ):
         vectors = ogr.Open(filename)
@@ -113,11 +114,13 @@ class VectorLayer(YirgacheffeLayer):
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
+
         vector_layer = VectorLayer(
             layer,
             scale,
             projection,
             name=filename,
+            datatype=datatype,
             burn_value=burn_value,
         )
 
@@ -127,19 +130,21 @@ class VectorLayer(YirgacheffeLayer):
         vector_layer._original = vectors
         return vector_layer
 
-
     def __init__(
         self,
         layer: ogr.Layer,
         scale: PixelScale,
         projection: str,
         name: Optional[str] = None,
+        datatype: int = gdal.GDT_Byte,
         burn_value: Union[int,float,str] = 1,
     ):
         if layer is None:
             raise ValueError('No layer provided')
         self.layer = layer
         self.name = name
+
+        self._datatype = datatype
 
         # If the burn value is a number, use it directly, if it's a string
         # then assume it is a column name in the dataset
@@ -173,7 +178,7 @@ class VectorLayer(YirgacheffeLayer):
 
     @property
     def datatype(self) -> int:
-        return gdal.GDT_Byte
+        return self._datatype
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
         # I did try recycling this object to save allocation/dealloction, but in practice it
@@ -183,7 +188,7 @@ class VectorLayer(YirgacheffeLayer):
             xsize,
             ysize,
             1,
-            gdal.GDT_Byte,
+            self.datatype,
             []
         )
         if not dataset:
