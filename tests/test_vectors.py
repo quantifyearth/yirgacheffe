@@ -145,6 +145,7 @@ def test_vector_layers_with_default_burn_value(klass) -> None:
         assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
+        assert layer.datatype == gdal.GDT_Byte
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half
@@ -211,6 +212,32 @@ def test_vector_layers_with_default_burn_value_and_filter(klass) -> None:
         RasteredVectorLayer
     ]
 )
+def test_vector_layers_with_invalid_burn_value(klass) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        areas = {
+            (Area(-10.0, 10.0, 0.0, 0.0), 42),
+            (Area(0.0, 0.0, 10, -10), 43)
+        }
+        make_vectors_with_mutlile_ids(areas, path)
+
+        with pytest.raises(ValueError):
+            _ = klass.layer_from_file(
+                path,
+                None,
+                PixelScale(1.0, -1.0),
+                WSG_84_PROJECTION,
+                burn_value="this_is_wrong"
+            )
+
+
+@pytest.mark.parametrize(
+    "klass",
+    [
+        VectorLayer,
+        RasteredVectorLayer
+    ]
+)
 def test_vector_layers_with_field_value(klass) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
@@ -231,6 +258,44 @@ def test_vector_layers_with_field_value(klass) -> None:
         total = layer.sum()
         assert total == (((layer.window.xsize * layer.window.ysize) / 4) * 42) + \
             (((layer.window.xsize * layer.window.ysize) / 4) * 43)
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (1, gdal.GDT_Byte),
+        (42, gdal.GDT_Byte),
+        (-1, gdal.GDT_Int16),
+        (1024, gdal.GDT_UInt16),
+        (1024*1024, gdal.GDT_UInt32),
+        (-1024*1024, gdal.GDT_Int32),
+        (1.0, gdal.GDT_Float64),
+    ]
+)
+def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        areas = {
+            (Area(-10.0, 10.0, 10.0, -10.0), value),
+        }
+        make_vectors_with_mutlile_ids(areas, path)
+
+        layer = VectorLayer.layer_from_file(
+            path,
+            None,
+            PixelScale(1.0, -1.0),
+            WSG_84_PROJECTION,
+            burn_value=value
+        )
+
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.datatype == expected
+
+        # The default burn value is 1, so check that if we sum the area
+        # we get half and half, but then multiplied by burn value
+        total = layer.sum()
+        assert total == (layer.window.xsize * layer.window.ysize) * value
 
 @pytest.mark.parametrize(
     "value,datatype",
@@ -265,6 +330,40 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
         assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
+
+        # The default burn value is 1, so check that if we sum the area
+        # we get half and half, but then multiplied by burn value
+        total = layer.sum()
+        assert total == (layer.window.xsize * layer.window.ysize) * value
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (1, gdal.GDT_Int64),
+        (1.0, gdal.GDT_Float64),
+    ]
+)
+def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        areas = {
+            (Area(-10.0, 10.0, 10.0, -10.0), value),
+        }
+        make_vectors_with_mutlile_ids(areas, path)
+
+        layer = VectorLayer.layer_from_file(
+            path,
+            None,
+            PixelScale(1.0, -1.0),
+            WSG_84_PROJECTION,
+            burn_value="id_no"
+        )
+
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.datatype == expected
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value

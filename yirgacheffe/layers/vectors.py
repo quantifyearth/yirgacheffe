@@ -1,11 +1,53 @@
 from math import ceil, floor
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from osgeo import gdal, ogr
 
 from ..window import Area, PixelScale, Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
+
+def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> int: # pylint: disable=R0911
+    if isinstance(burn_value, str):
+        # burn value is field name, so validate it
+        index = layer.FindFieldIndex(burn_value, True)
+        if index < 0:
+            raise ValueError("Burn value not found as field")
+        # if the user hasn't specified, pick datatype from
+        # fiend definition.
+        definition = layer.GetLayerDefn()
+        field = definition.GetFieldDefn(index)
+        typename = field.GetTypeName()
+        if typename == "Integer":
+            return gdal.GDT_Int64
+        elif typename == "Real":
+            return gdal.GDT_Float64
+        else:
+            raise ValueError(f"Can't set datatype {typename} for burn value {burn_value}")
+    elif isinstance(burn_value, int):
+        if 0 <= burn_value <= 255:
+            return gdal.GDT_Byte
+        else:
+            unsigned = burn_value > 0
+            if unsigned:
+                if burn_value < (pow(2, 16)):
+                    return gdal.GDT_UInt16
+                elif burn_value < (pow(2, 32)):
+                    return gdal.GDT_UInt32
+                else:
+                    return gdal.GDT_UInt64
+            else:
+                if abs(burn_value) < (pow(2, 15)):
+                    return gdal.GDT_Int16
+                elif abs(burn_value) < (pow(2, 31)):
+                    return gdal.GDT_Int32
+                else:
+                    return gdal.GDT_Int64
+    elif isinstance(burn_value, float):
+        return gdal.GDT_Float64
+    else:
+        raise ValueError(f"data type of burn value {burn_value} not supported")
+
 
 class RasteredVectorLayer(RasterLayer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization
@@ -19,6 +61,7 @@ class RasteredVectorLayer(RasterLayer):
         where_filter: Optional[str],
         scale: PixelScale,
         projection: str,
+        datatype: Optional[int] = None,
         burn_value: Union[int,float,str] = 1,
     ): # pylint: disable=W0221
         vectors = ogr.Open(filename)
@@ -27,7 +70,18 @@ class RasteredVectorLayer(RasterLayer):
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
-        vector_layer = RasteredVectorLayer(layer, scale, projection, burn_value=burn_value)
+
+        estimated_datatype = _validate_burn_value(burn_value, layer)
+        if datatype is None:
+            datatype = estimated_datatype
+
+        vector_layer = RasteredVectorLayer(
+            layer,
+            scale,
+            projection,
+            datatype=datatype,
+            burn_value=burn_value
+        )
 
         # this is a gross hack, but unless you hold open the original file, you'll get
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
@@ -40,6 +94,7 @@ class RasteredVectorLayer(RasterLayer):
         layer: ogr.Layer,
         scale: PixelScale,
         projection: str,
+        datatype: int = gdal.GDT_Byte,
         burn_value: Union[int,float,str] = 1,
     ):
         if layer is None:
@@ -75,7 +130,7 @@ class RasteredVectorLayer(RasterLayer):
             round((area.right - area.left) / abs_xstep),
             round((area.top - area.bottom) / abs_ystep),
             1,
-            gdal.GDT_Byte,
+            datatype,
             []
         )
         if not dataset:
@@ -105,7 +160,7 @@ class VectorLayer(YirgacheffeLayer):
         where_filter: Optional[str],
         scale: PixelScale,
         projection: str,
-        datatype: int = gdal.GDT_Byte,
+        datatype: Optional[int] = None,
         burn_value: Union[int,float,str] = 1,
     ):
         vectors = ogr.Open(filename)
@@ -114,6 +169,10 @@ class VectorLayer(YirgacheffeLayer):
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
+
+        estimated_datatype = _validate_burn_value(burn_value, layer)
+        if datatype is None:
+            datatype = estimated_datatype
 
         vector_layer = VectorLayer(
             layer,
