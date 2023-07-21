@@ -5,7 +5,7 @@ from helpers import gdal_dataset_of_region, gdal_empty_dataset_of_region
 from yirgacheffe.window import Area, PixelScale, Window
 from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe.h3layer import H3CellLayer
-from yirgacheffe import WSG_84_PROJECTION
+from yirgacheffe import WGS_84_PROJECTION
 
 
 def test_find_intersection_empty_list() -> None:
@@ -153,7 +153,7 @@ def test_intersection_stability():
     scale = PixelScale(0.000898315284120,-0.000898315284120)
 
     tiles = [
-        H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+        H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
     for cell_id in cells]
 
     # composing the same tiles within different areas should not cause them to

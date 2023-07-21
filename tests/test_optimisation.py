@@ -3,7 +3,7 @@ import h3
 import numpy as np
 import pytest
 
-from yirgacheffe import WSG_84_PROJECTION
+from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.layers import PixelScale, ConstantLayer, RasterLayer
 from yirgacheffe.window import Area
@@ -144,7 +144,7 @@ def test_cells_dont_overlap(cell_id):
 
     cluster = h3.grid_disk(cell_id, 1)
     scale = PixelScale(0.000898315284120,-0.000898315284120)
-    layers = [H3CellLayer(x, scale, WSG_84_PROJECTION) for x in cluster]
+    layers = [H3CellLayer(x, scale, WGS_84_PROJECTION) for x in cluster]
 
     union = RasterLayer.find_union(layers)
     for layer in layers:

@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from osgeo import gdal
 
-from yirgacheffe import WSG_84_PROJECTION
+from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, PixelScale
 from yirgacheffe.operators import ShaderStyleOperation
@@ -17,9 +17,9 @@ from yirgacheffe.operators import ShaderStyleOperation
 )
 def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
     if is_valid:
-        layer = H3CellLayer(cell_id, PixelScale(0.001, -0.001), WSG_84_PROJECTION)
+        layer = H3CellLayer(cell_id, PixelScale(0.001, -0.001), WGS_84_PROJECTION)
         assert layer.zoom == expected_zoom
-        assert layer.projection == WSG_84_PROJECTION
+        assert layer.projection == WGS_84_PROJECTION
 
         # without getting too deep, we'd expect a mix of zeros and ones in the data
         window = layer.window
@@ -32,7 +32,7 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
 
     else:
         with pytest.raises(ValueError):
-            _ = H3CellLayer(cell_id, PixelScale(0.001, -0.001), WSG_84_PROJECTION)
+            _ = H3CellLayer(cell_id, PixelScale(0.001, -0.001), WGS_84_PROJECTION)
 
 @pytest.mark.parametrize(
     "lat,lng",
@@ -49,7 +49,7 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
 def test_h3_layer_magnifications(lat: float, lng: float) -> None:
     for zoom in range(6, 10):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
-        h3_layer = H3CellLayer(cell_id, PixelScale(0.000898315284120,-0.000898315284120), WSG_84_PROJECTION)
+        h3_layer = H3CellLayer(cell_id, PixelScale(0.000898315284120,-0.000898315284120), WGS_84_PROJECTION)
 
         on_cell_count = h3_layer.sum()
         total_count = ShaderStyleOperation(h3_layer, lambda _: 1).sum()
@@ -73,7 +73,7 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
     for zoom in range(6, 10):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         scale = PixelScale(0.000898315284120,-0.000898315284120)
-        h3_layer = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+        h3_layer = H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
 
         on_cell_count = h3_layer.sum()
         assert on_cell_count > 0.0
@@ -114,7 +114,7 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
     for zoom in range(6, 8):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         scale = PixelScale(0.000898315284120,-0.000898315284120)
-        h3_layer = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+        h3_layer = H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
 
         on_cell_count = h3_layer.sum()
         assert on_cell_count > 0.0
@@ -150,7 +150,7 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
 def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     cell_id = h3.latlng_to_cell(lat, lng, 3)
     scale = PixelScale(0.01, -0.01)
-    h3_layer = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+    h3_layer = H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
 
     # Just sanity check this test has caught a cell that wraps the entire planet and is testing
     # what we think it is testing:
@@ -163,7 +163,7 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     # check they are all of a similarish size - we had a bug early on where we'd
     # mistakenly invert the area for the band, counting all the cells across the planet
     for cell_id in h3.grid_ring(cell_id, 1):
-        neighbour = H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+        neighbour = H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
         neighbour_area = neighbour.sum()
         # We're happy if they're within 10% for now
         assert abs((neighbour_area - area) / area) < 0.1
@@ -206,7 +206,7 @@ def test_h3_layer_overlapped():
     ],), 7)
 
     tiles = [
-        H3CellLayer(cell_id, scale, WSG_84_PROJECTION)
+        H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
     for cell_id in cells]
 
     union = RasterLayer.find_union(tiles)

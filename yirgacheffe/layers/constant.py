@@ -4,7 +4,7 @@ from osgeo import gdal
 
 from ..window import Area, PixelScale, Window
 from .base import YirgacheffeLayer
-from .. import WSG_84_PROJECTION
+from .. import WGS_84_PROJECTION
 
 
 class ConstantLayer(YirgacheffeLayer):
@@ -17,7 +17,7 @@ class ConstantLayer(YirgacheffeLayer):
             right = 180.0,
             bottom = -90.0
         )
-        super().__init__(area, None, WSG_84_PROJECTION)
+        super().__init__(area, None, WGS_84_PROJECTION)
         self.value = value
 
     @property

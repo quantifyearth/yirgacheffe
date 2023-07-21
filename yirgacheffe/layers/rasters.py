@@ -4,7 +4,7 @@ from typing import Any, Optional, TypeVar
 import numpy
 from osgeo import gdal
 
-from .. import WSG_84_PROJECTION
+from .. import WGS_84_PROJECTION
 from ..window import Area, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
@@ -23,7 +23,7 @@ class RasterLayer(YirgacheffeLayer):
         scale: PixelScale,
         datatype: int,
         filename: Optional[str]=None,
-        projection: str=WSG_84_PROJECTION,
+        projection: str=WGS_84_PROJECTION,
         name: Optional[str]=None,
         compress: bool=True
     ) -> RasterLayerT:

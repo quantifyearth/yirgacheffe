@@ -5,7 +5,7 @@ import tempfile
 import pytest
 
 from helpers import gdal_dataset_of_region, make_vectors_with_id
-from yirgacheffe import WSG_84_PROJECTION
+from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import GroupLayer, RasterLayer, VectorLayer
 from yirgacheffe.window import Area, PixelScale, Window
 
@@ -62,7 +62,7 @@ def test_single_vector_layer_in_group():
         area = Area(-10.0, 10.0, 10.0, -10.0)
         make_vectors_with_id(42, {area}, path)
 
-        vector1 = VectorLayer.layer_from_file(path, None, PixelScale(0.2, -0.2), WSG_84_PROJECTION)
+        vector1 = VectorLayer.layer_from_file(path, None, PixelScale(0.2, -0.2), WGS_84_PROJECTION)
         assert vector1.area == area
         assert vector1.window == Window(0, 0, 100, 100)
         assert vector1.sum() == (vector1.window.xsize * vector1.window.ysize)
@@ -77,12 +77,12 @@ def test_overlapping_vector_layers():
         path1 = os.path.join(tempdir, "test1.gpkg")
         area1 = Area(-10.0, 10.0, 10.0, -10.0)
         make_vectors_with_id(42, {area1}, path1)
-        vector1 = VectorLayer.layer_from_file(path1, None, PixelScale(0.2, -0.2), WSG_84_PROJECTION)
+        vector1 = VectorLayer.layer_from_file(path1, None, PixelScale(0.2, -0.2), WGS_84_PROJECTION)
 
         path2 = os.path.join(tempdir, "test2.gpkg")
         area2 = Area(-0.0, 10.0, 20.0, -10.0)
         make_vectors_with_id(24, {area2}, path2)
-        vector2 = VectorLayer.layer_from_file(path2, None, PixelScale(0.2, -0.2), WSG_84_PROJECTION)
+        vector2 = VectorLayer.layer_from_file(path2, None, PixelScale(0.2, -0.2), WGS_84_PROJECTION)
 
         group = GroupLayer([vector1, vector2])
         assert group.area == Area(-10, 10, 20, -10)
@@ -96,7 +96,7 @@ def test_with_window_adjust():
             path = os.path.join(tempdir, f"{i}.gpkg")
             area = Area(i, 10, i+1, -10)
             make_vectors_with_id(i, {area}, path)
-            vector = VectorLayer.layer_from_file(path, None, PixelScale(0.1, -0.1), WSG_84_PROJECTION, burn_value="id_no")
+            vector = VectorLayer.layer_from_file(path, None, PixelScale(0.1, -0.1), WGS_84_PROJECTION, burn_value="id_no")
             layers.append(vector)
 
         group = GroupLayer(layers)

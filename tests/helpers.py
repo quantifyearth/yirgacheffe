@@ -6,7 +6,7 @@ from osgeo import gdal, ogr
 from yirgacheffe.window import Area
 from yirgacheffe.layers import YirgacheffeLayer
 from yirgacheffe.rounding import round_up_pixels
-from yirgacheffe import WSG_84_PROJECTION
+from yirgacheffe import WGS_84_PROJECTION
 
 def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[str]=None) -> gdal.Dataset:
     if filename:
@@ -25,7 +25,7 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[st
     dataset.SetGeoTransform([
         area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0
     ])
-    dataset.SetProjection(WSG_84_PROJECTION)
+    dataset.SetProjection(WGS_84_PROJECTION)
     # the dataset isn't valid until you populate the data
     band = dataset.GetRasterBand(1)
     for yoffset in range(dataset.RasterYSize):
@@ -44,7 +44,7 @@ def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset
     dataset.SetGeoTransform([
         area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0
     ])
-    dataset.SetProjection(WSG_84_PROJECTION)
+    dataset.SetProjection(WGS_84_PROJECTION)
     return dataset
 
 def gdal_dataset_of_layer(layer: YirgacheffeLayer, filename: Optional[str]=None) -> gdal.Dataset:
@@ -81,7 +81,7 @@ def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: numpy.array)
     dataset.SetGeoTransform([
         origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0
     ])
-    dataset.SetProjection(WSG_84_PROJECTION)
+    dataset.SetProjection(WGS_84_PROJECTION)
     band = dataset.GetRasterBand(1)
     for index, val in enumerate(data):
         band.WriteArray(numpy.array([list(val)]), 0, index)
