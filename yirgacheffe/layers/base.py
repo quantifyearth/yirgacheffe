@@ -202,3 +202,28 @@ class YirgacheffeLayer(LayerMathMixin):
 
     def read_array(self, _x: int, _y: int, _xsize: int, _ysize: int) -> Any:
         raise NotImplementedError("Must be overridden by subclass")
+
+    def latlng_for_pixel(self, x_coord: int, y_coord: int) -> Tuple[float,float]:
+        """Get geo coords for pixel. This is relative to the set view window."""
+        if "WGS 84" not in self.projection:
+            raise NotImplementedError("Not yet supported for other projections")
+        pixel_scale = self.pixel_scale
+        if pixel_scale is None:
+            raise ValueError("Layer has no pixel scale")
+        return (
+            (y_coord * pixel_scale.ystep) + self.area.top,
+            (x_coord * pixel_scale.xstep) + self.area.left
+        )
+
+    def pixel_for_latlng(self, lat: float, lng: float) -> Tuple[int,int]:
+        """Get pixel for geo coords. This is relative to the set view window.
+        Result is rounded down to nearest pixel."""
+        if "WGS 84" not in self.projection:
+            raise NotImplementedError("Not yet supported for other projections")
+        pixel_scale = self.pixel_scale
+        if pixel_scale is None:
+            raise ValueError("Layer has no pixel scale")
+        return (
+            round_down_pixels((lng - self.area.left) / pixel_scale.xstep, abs(pixel_scale.xstep)),
+            round_down_pixels((lat - self.area.top) / pixel_scale.ystep, abs(pixel_scale.ystep)),
+        )
