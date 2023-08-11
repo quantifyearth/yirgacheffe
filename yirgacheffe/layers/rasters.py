@@ -37,8 +37,13 @@ class RasterLayer(YirgacheffeLayer):
             bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
         )
 
+        options = []
+
         if filename:
             driver = gdal.GetDriverByName('GTiff')
+            options.append('BIGTIFF=YES')
+            if compress:
+                options.append('COMPRESS=LZW')
         else:
             driver = gdal.GetDriverByName('mem')
             filename = 'mem'
@@ -49,7 +54,7 @@ class RasterLayer(YirgacheffeLayer):
             round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
             1,
             datatype,
-            [] if not compress else ['COMPRESS=LZW'],
+            options
         )
         dataset.SetGeoTransform([
             pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
@@ -79,8 +84,13 @@ class RasterLayer(YirgacheffeLayer):
                 area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep
             )
 
+        options = []
+
         if filename:
             driver = gdal.GetDriverByName('GTiff')
+            options.append('BIGTIFF=YES')
+            if compress:
+                options.append('COMPRESS=LZW')
         else:
             driver = gdal.GetDriverByName('mem')
             filename = 'mem'
@@ -91,7 +101,7 @@ class RasterLayer(YirgacheffeLayer):
             height,
             1,
             datatype if datatype is not None else layer.datatype,
-            [] if not compress else ['COMPRESS=LZW'],
+            options,
         )
         dataset.SetGeoTransform(geo_transform)
         dataset.SetProjection(layer.projection)
@@ -123,8 +133,12 @@ class RasterLayer(YirgacheffeLayer):
         new_top = math.ceil((source.area.top / new_pixel_scale.ystep)) * new_pixel_scale.ystep
 
         # now build a target dataset
+        options = []
         if filename:
             driver = gdal.GetDriverByName('GTiff')
+            options.append('BIGTIFF=YES')
+            if compress:
+                options.append('COMPRESS=LZW')
         else:
             driver = gdal.GetDriverByName('mem')
             filename = 'mem'
@@ -135,7 +149,7 @@ class RasterLayer(YirgacheffeLayer):
             new_height,
             1,
             source.datatype,
-            [] if not compress else ['COMPRESS=LZW'],
+            options
         )
         dataset.SetGeoTransform((
             new_left, new_pixel_scale.xstep, 0.0,
