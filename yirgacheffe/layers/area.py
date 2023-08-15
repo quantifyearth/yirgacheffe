@@ -1,3 +1,4 @@
+from math import ceil, floor
 from typing import Any, Optional
 
 import numpy
@@ -63,15 +64,22 @@ class UniformAreaLayer(RasterLayer):
         super().__init__(dataset, name)
 
         transform = dataset.GetGeoTransform()
+
+        self._underlying_area = Area(
+            floor(-180 / self.pixel_scale.xstep) * self.pixel_scale.xstep, 
+            self.area.top, 
+            ceil(180 / self.pixel_scale.xstep) * self.pixel_scale.xstep, 
+            self.area.bottom
+        )
+        self._active_area = self._underlying_area
+
         self._window = Window(
             xoff=0,
             yoff=0,
-            xsize=360 / transform[1],
+            xsize=int((self.area.right - self.area.left) / transform[1]),
             ysize=dataset.RasterYSize,
         )
         self._raster_xsize = self.window.xsize
-        self._underlying_area = Area(-180, self.area.top, 180, self.area.bottom)
-        self._active_area = self._underlying_area
 
     def read_array(self, xoffset, yoffset, _xsize, ysize) -> Any:
         offset = self.window.yoff + yoffset
