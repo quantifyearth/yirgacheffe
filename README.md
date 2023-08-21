@@ -23,7 +23,7 @@ area_layer = UniformAreaLayer('area.tiff')
 validity_layer = RasterLayer.layer_from_file('validity.tiff')
 
 # Work out the common subsection of all these and apply it to the layers
-intersection = RasterLayer.find_intersection(elecation_layer, area_layer, validity_layer)
+intersection = RasterLayer.find_intersection([elecation_layer, area_layer, validity_layer])
 elevation_layer.set_window_for_intersection(intersection)
 area_layer.set_window_for_intersection(intersection)
 validity_layer.set_window_for_intersection(intersection)
