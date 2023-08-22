@@ -3,7 +3,7 @@ from typing import Any, Optional, Union
 
 from osgeo import gdal, ogr
 
-from ..window import Area, PixelScale, Window
+from ..window import Area, PixelScale
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 

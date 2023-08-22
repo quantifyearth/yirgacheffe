@@ -193,9 +193,6 @@ def test_scale_down():
     )
     assert scaled.area == Area(-10, 10, 10, -10)
     assert scaled.window == Window(0, 0, 20 / 0.5, 20 / 0.5)
-    print(scaled.sum())
-    print(source.sum())
-    print(scaled.sum() / source.sum())
     # because we're dropping pixels, it's not easy to do this comparison
     # but at least make sure its less
     assert scaled.sum() < source.sum()

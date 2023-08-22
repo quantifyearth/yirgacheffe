@@ -2,7 +2,7 @@ from typing import Any, Union
 
 from osgeo import gdal
 
-from ..window import Area, PixelScale, Window
+from ..window import Area, PixelScale
 from .base import YirgacheffeLayer
 from .. import WGS_84_PROJECTION
 

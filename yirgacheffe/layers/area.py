@@ -66,9 +66,9 @@ class UniformAreaLayer(RasterLayer):
         transform = dataset.GetGeoTransform()
 
         self._underlying_area = Area(
-            floor(-180 / self.pixel_scale.xstep) * self.pixel_scale.xstep, 
-            self.area.top, 
-            ceil(180 / self.pixel_scale.xstep) * self.pixel_scale.xstep, 
+            floor(-180 / self.pixel_scale.xstep) * self.pixel_scale.xstep,
+            self.area.top,
+            ceil(180 / self.pixel_scale.xstep) * self.pixel_scale.xstep,
             self.area.bottom
         )
         self._active_area = self._underlying_area
