@@ -114,15 +114,16 @@ def test_multi_area_vector() -> None:
 def test_empty_layer_from_vector():
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
-        area = Area(-10.0, 10.0, 10.0, 0.0)
+        area = Area(left=44.00253688814017, top=-12.440948032828079, right=50.483612168477286, bottom=-25.1535466075739)
         make_vectors_with_id(42, {area}, path)
 
-        source = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
+        source = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(xstep=0.00026949458523585647, ystep=-0.00026949458523585647), WGS_84_PROJECTION)
 
         empty = RasterLayer.empty_raster_layer_like(source)
         assert empty.pixel_scale == source.pixel_scale
         assert empty.projection == source.projection
         assert empty.window == source.window
+        assert empty.area == source.area
 
 @pytest.mark.parametrize(
     "klass",
