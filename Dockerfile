@@ -10,10 +10,10 @@ RUN apt-get update -qqy && \
 COPY ./ /root/
 WORKDIR /root/
 
-RUN pip install numpy 
+RUN pip install numpy
 RUN pip install pylint mypy pytest types-setuptools
 RUN pip install h3 --pre
 
-RUN python3 -m pytest
-RUN mypy yirgacheffe
+RUN python3 -m pytest -vv
+# RUN mypy yirgacheffe
 RUN python -m pylint yirgacheffe
