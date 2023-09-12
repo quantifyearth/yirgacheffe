@@ -85,6 +85,11 @@ class LayerOperation(LayerMathMixin):
         if rhs is not None:
             if isinstance(rhs, (float, int)):
                 self.rhs = LayerConstant(rhs)
+            elif isinstance(rhs, (np.ndarray)):
+                if rhs.shape == ():
+                    self.rhs = LayerConstant(rhs.item())
+                else:
+                    raise ValueError("Numpy arrays are no allowed")
             else:
                 self.rhs = rhs
 
@@ -92,7 +97,10 @@ class LayerOperation(LayerMathMixin):
         try:
             return f"({self.lhs} {self.operator} {self.rhs})"
         except AttributeError:
-            return str(self.lhs)
+            try:
+                return f"({self.operator} {self.lhs})"
+            except AttributeError:
+                return str(self.lhs)
 
     def __len__(self):
         return len(self.lhs)

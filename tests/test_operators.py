@@ -84,6 +84,32 @@ def test_mult_float_layers() -> None:
 
     assert (expected == actual).all()
 
+def test_add_to_float_layer_by_const() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 + 2.5
+    comp.save(result)
+
+    expected = data1 + 2.5
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_sub_from_float_layer_by_const() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 - 0.5
+    comp.save(result)
+
+    expected = data1 - 0.5
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
 def test_mult_float_layer_by_const() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
@@ -369,3 +395,16 @@ def test_direct_layer_save_and_sum() -> None:
 
     assert (data1 == actual_data).all()
     assert expected_sum == actual_sum
+
+def test_add_to_float_layer_by_np_array() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 + np.array(2.5)
+    comp.save(result)
+
+    expected = data1 + 2.5
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
