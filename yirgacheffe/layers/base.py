@@ -13,13 +13,15 @@ class YirgacheffeLayer(LayerMathMixin):
     def __init__(self,
         area: Area,
         pixel_scale: Optional[PixelScale],
-        projection: str
+        projection: str,
+        name: Optional[str] = None
     ):
         self._pixel_scale = pixel_scale
         self._underlying_area = area
         self._active_area = area
         self._projection = projection
         self._window: Optional[Window] = None
+        self.name = name
 
         self.reset_window()
 

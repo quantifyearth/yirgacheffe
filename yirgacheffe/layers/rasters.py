@@ -185,7 +185,8 @@ class RasterLayer(YirgacheffeLayer):
         super().__init__(
             area,
             scale,
-            dataset.GetProjection()
+            dataset.GetProjection(),
+            name=name
         )
 
         # The constructor works out the window from the area
@@ -196,7 +197,6 @@ class RasterLayer(YirgacheffeLayer):
         self._dataset = dataset
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
-        self.name = name
 
     @property
     def datatype(self) -> int:
