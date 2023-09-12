@@ -2,7 +2,7 @@ import math
 import sys
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
@@ -16,7 +16,7 @@ class Area:
     def __hash__(self):
         return (self.left, self.top, self.right, self.bottom).__hash__()
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return math.isclose(self.left, other.left, abs_tol=1e-09) and \
             math.isclose(self.right, other.right, abs_tol=1e-09) and \
             math.isclose(self.top, other.top, abs_tol=1e-09) and \
@@ -28,6 +28,19 @@ class Area:
             top=self.top + offset,
             right=self.right + offset,
             bottom=self.bottom - offset
+        )
+
+    def overlaps(self, other) -> bool:
+        return (
+            (self.left <= other.left <= self.right) or
+            (self.left <= other.right <= self.right) or
+            (other.left <= self.left <= other.right) or
+            (other.left <= self.right <= other.right)
+        ) and (
+            (self.top >= other.top >= self.bottom) or
+            (self.top >= other.bottom >= self.bottom) or
+            (other.top >= self.top >= other.bottom) or
+            (other.top >= self.bottom >= other.bottom)
         )
 
 @dataclass
@@ -95,6 +108,35 @@ class Window:
                 bottom = w_bottom
         if (left >= right) or (top >= bottom):
             raise ValueError('No intersection possible')
+        return Window(
+            left,
+            top,
+            right - left,
+            bottom - top
+        )
+
+    @staticmethod
+    def find_intersection_no_throw(windows: List) -> Optional["Window"]:
+        if not windows:
+            raise ValueError("Expected list of windows")
+        # This isn't very pythonic, as it was originally written, but
+        # this method gets called a lot (by every Layer.read_array), so not looping
+        # over the window list multiple times halves the performance cost (as
+        # measured with cProfile).
+        left, top, right, bottom = -sys.maxsize, -sys.maxsize, sys.maxsize, sys.maxsize
+        for window in windows:
+            if window.xoff > left:
+                left = window.xoff
+            if window.yoff > top:
+                top = window.yoff
+            w_right = window.xoff + window.xsize
+            if  w_right < right:
+                right = w_right
+            w_bottom = window.yoff + window.ysize
+            if w_bottom < bottom:
+                bottom = w_bottom
+        if (left >= right) or (top >= bottom):
+            return None
         return Window(
             left,
             top,
