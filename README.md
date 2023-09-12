@@ -294,6 +294,8 @@ calc = area_layer * mask_layer
 total_area = calc.sum()
 ```
 
+Similar to sum, you can also call `min` and `max` on a layer or calculation.
+
 
 ## Thanks
 

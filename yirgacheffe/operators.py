@@ -1,4 +1,4 @@
-import numpy
+import numpy as np
 
 from .window import Window
 
@@ -69,6 +69,12 @@ class LayerMathMixin:
     def sum(self):
         return LayerOperation(self).sum()
 
+    def min(self):
+        return LayerOperation(self).min()
+
+    def max(self):
+        return LayerOperation(self).max()
+
 
 class LayerOperation(LayerMathMixin):
 
@@ -109,7 +115,6 @@ class LayerOperation(LayerMathMixin):
             operator = getattr(lhs, self.operator)
             rhs = self.rhs._eval(index, step)
             result = operator(rhs)
-
             # This is currently a hurried work around for the fact that
             #   0.0 + numpy array
             # is valid, but
@@ -136,7 +141,29 @@ class LayerOperation(LayerMathMixin):
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(yoffset, step)
-            total += numpy.sum(chunk)
+            total += np.sum(chunk)
+        return total
+
+    def min(self):
+        total = 0.0
+        computation_window = self.window
+        for yoffset in range(0, computation_window.ysize, YSTEP):
+            step=YSTEP
+            if yoffset+step > computation_window.ysize:
+                step = computation_window.ysize - yoffset
+            chunk = self._eval(yoffset, step)
+            total += np.min(chunk)
+        return total
+
+    def max(self):
+        total = 0.0
+        computation_window = self.window
+        for yoffset in range(0, computation_window.ysize, YSTEP):
+            step=YSTEP
+            if yoffset+step > computation_window.ysize:
+                step = computation_window.ysize - yoffset
+            chunk = self._eval(yoffset, step)
+            total += np.max(chunk)
         return total
 
     def save(self, destination_layer, and_sum=False):
@@ -167,14 +194,14 @@ class LayerOperation(LayerMathMixin):
                 step = computation_window.ysize - yoffset
             chunk = self._eval(yoffset, step)
             if isinstance(chunk, (float, int)):
-                chunk = numpy.full((step, destination_window.xsize), chunk)
+                chunk = np.full((step, destination_window.xsize), chunk)
             band.WriteArray(
                 chunk,
                 destination_window.xoff,
                 yoffset + destination_window.yoff,
             )
             if and_sum:
-                total += numpy.sum(chunk)
+                total += np.sum(chunk)
 
         return total if and_sum else None
 
@@ -196,9 +223,9 @@ class ShaderStyleOperation(LayerOperation):
             if isinstance(rhs, (int, float)):
                 return self.operator(lhs, rhs)
             else:
-                result = numpy.empty_like(rhs)
+                result = np.empty_like(rhs)
         else:
-            result = numpy.empty_like(lhs)
+            result = np.empty_like(lhs)
 
         window = self.window
         for yoffset in range(step):
