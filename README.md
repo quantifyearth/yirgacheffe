@@ -169,6 +169,22 @@ all_tiles = GroupLayer([tile1, tile2])
 
 If you provide tiles that overlap then they will be rendered in reverse one, so in the above example if tile1 and tile2 overlap, then in that region you'd get the data from tile1.
 
+### TiledGroupLayer
+
+This is a specialisation of GroupLayer, which you can use if your layers are all the same size and form a grid, as is often the case with map tiles. In this case the rendering code can be optimised and this class is significantly faster that GroupLayer.
+
+```python
+tile1 = RasterLayer.layer_from_file('tile_N10_E10.tif')
+tile2 = RasterLayer.layer_from_file('tile_N20_E10.tif')
+all_tiles = TiledGroupLayer([tile1, tile2])
+```
+
+Notes:
+
+* You can have missing tiles, and these will be filled in with zeros.
+* You can have tiles that overlap, so long as they still conform to the rule that all tiles are the same size and on a grid.
+
+
 ## Supported operations on layers
 
 Once you have two layers, you can perform numerical analysis on them similar to how numpy works:
