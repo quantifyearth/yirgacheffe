@@ -1,6 +1,6 @@
 from typing import Set, Optional, Tuple
 
-import numpy
+import numpy as np
 from osgeo import gdal, ogr
 
 from yirgacheffe.window import Area
@@ -29,7 +29,7 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[st
     # the dataset isn't valid until you populate the data
     band = dataset.GetRasterBand(1)
     for yoffset in range(dataset.RasterYSize):
-        band.WriteArray(numpy.array([[(yoffset % 256),] * dataset.RasterXSize]), 0, yoffset)
+        band.WriteArray(np.array([[(yoffset % 256),] * dataset.RasterXSize]), 0, yoffset)
     return dataset
 
 def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset:
@@ -65,7 +65,7 @@ def gdal_dataset_of_layer(layer: YirgacheffeLayer, filename: Optional[str]=None)
     dataset.SetProjection(layer.projection)
     return dataset
 
-def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: numpy.array) -> gdal.Dataset:
+def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: np.array) -> gdal.Dataset:
     assert data.ndim == 2
     datatype = gdal.GDT_Byte
     if isinstance(data[0][0], float):
@@ -84,7 +84,7 @@ def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: numpy.array)
     dataset.SetProjection(WGS_84_PROJECTION)
     band = dataset.GetRasterBand(1)
     for index, val in enumerate(data):
-        band.WriteArray(numpy.array([list(val)]), 0, index)
+        band.WriteArray(np.array([list(val)]), 0, index)
     return dataset
 
 def make_vectors_with_id(identifier: int, areas: Set[Area], filename: str) -> None:
@@ -147,3 +147,12 @@ def make_vectors_with_mutlile_ids(areas: Set[Tuple[Area,int]], filename: str) ->
         layer.CreateFeature(feature)
 
     package.Destroy()
+
+def generate_child_tile(xoffset: int, yoffset: int, width: int, height: int, outer_width: int, outer_height: int) -> np.ndarray:
+    data = np.zeros((height, width))
+    assert xoffset + width <= outer_width
+    assert yoffset + height <= outer_height
+    for y in range(height):
+        for x in range(width):
+            data[y][x] = ((yoffset + y) * outer_width) + (x + xoffset)
+    return data

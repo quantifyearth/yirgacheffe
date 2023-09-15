@@ -113,6 +113,18 @@ class TileData:
         self.x = x
         self.y = y
 
+    @property
+    def origin(self):
+        return (self.x, self.y)
+
+    @property
+    def width(self):
+        return self.data.shape[1]
+
+    @property
+    def height(self):
+        return self.data.shape[0]
+
     def __cmp__(self, other):
         if self.y != other.y:
             return self.y.cmp(other.y)
@@ -127,7 +139,10 @@ class TileData:
         return self.x.__gt__(other.x)
 
     def __repr__(self):
-        return f"<Tile: {self.x} {self.y} {self.data.shape[1]} {self.data.shape[0]}>"
+        if self.data is not None:
+            return f"<Tile: {self.x} {self.y} {self.data.shape[1]} {self.data.shape[0]}>"
+        else:
+            return "<Tile: sentinal>"
 
 class TiledGroupLayer(GroupLayer):
     """An optimised version of GroupLayer for the case where you have a grid of regular sized
@@ -178,17 +193,44 @@ class TiledGroupLayer(GroupLayer):
             partials.append(TileData(data, result_x_offset, result_y_offset))
 
         sorted_partials = sorted(partials)
+
+        # When tiles overlap (hello JRC Annual Change!), then if the read aligns
+        # with the edge of a tile, then we can end up with multiple results at the same
+        # offset as we get the dregs of the above/left tile and the bulk of the data from
+        # the "obvious" tile. In which case, we should reject the smaller section. If we have
+        # two tiles at the same offset and one is not a perfect subset of the other then the
+        # tile set we were given is not regularly shaped, and so we should give up.
+        combed_partials = []
+        previous_tile = None
+        for tile in sorted_partials:
+            if previous_tile is None:
+                previous_tile = tile
+                continue
+
+            if previous_tile.origin == tile.origin:
+                if (tile.width >= previous_tile.width) and \
+                    (tile.height >= previous_tile.height):
+                    previous_tile = tile
+                continue
+
+            combed_partials.append(previous_tile)
+            previous_tile = tile
+        if previous_tile:
+            combed_partials.append(previous_tile)
+
         # Add a terminator to force the last row to be added
-        sorted_partials.append(TileData(None, 0, -1))
+        combed_partials.append(TileData(None, 0, -1))
         last_y_offset = None
         last_y_height = 0
         expected_next_x = 0
         expected_next_y = 0
         data = None
         row_chunk = None
-        for tile in sorted_partials:
+        for tile in combed_partials:
             if tile.y == last_y_offset:
                 assert row_chunk is not None
+                assert row_chunk.shape[0] == tile.data.shape[0]
+
                 # We're adding a tile to an existing row
                 x_offset = expected_next_x - tile.x
                 if x_offset == 0:
@@ -197,9 +239,11 @@ class TiledGroupLayer(GroupLayer):
                     expected_next_x = expected_next_x + tile.data.shape[1]
                 elif x_offset > 0:
                     # tiles overlap
-                    subdata = np.delete(tile.data, np.s_[0:x_offset], 1)
-                    row_chunk = np.hstack((row_chunk, subdata))
-                    expected_next_x = expected_next_x + subdata.shape[1]
+                    remainder = tile.data.shape[1] - xoffset
+                    if remainder > 0:
+                        subdata = np.delete(tile.data, np.s_[0:x_offset], 1)
+                        row_chunk = np.hstack((row_chunk, subdata))
+                        expected_next_x = expected_next_x + subdata.shape[1]
                 else:
                     # Gap between tiles, so fill it before adding new data
                     row_chunk = np.hstack((row_chunk, np.zeros((tile.data.shape[0], -x_offset))))

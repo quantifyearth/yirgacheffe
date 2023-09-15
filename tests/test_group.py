@@ -5,7 +5,7 @@ import tempfile
 import numpy as np
 import pytest
 
-from helpers import gdal_dataset_of_region, gdal_dataset_with_data, make_vectors_with_id
+from helpers import gdal_dataset_of_region, gdal_dataset_with_data, make_vectors_with_id, generate_child_tile
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import GroupLayer, RasterLayer, TiledGroupLayer, VectorLayer
 from yirgacheffe.window import Area, PixelScale, Window
@@ -67,7 +67,7 @@ def test_two_raster_areas_top_to_bottom(klass):
         (TiledGroupLayer, 3),
     ]
 )
-def test_four_tiles(klass, dims):
+def test_grid_tiles(klass, dims):
     rasters = []
     for x in range(dims):
         for y in range(dims):
@@ -98,14 +98,16 @@ def test_overlapping_tiles(klass, dims):
             raster = RasterLayer(gdal_dataset_with_data(
                 (-2 + (10 * x), 2 + (-10 * y)),
                 2.0,
-                np.full((7, 7), (y * dims) + x)
+                generate_child_tile(x * 5, y * 5, 7, 7, (dims * 5) + 2, (dims * 5) + 2)
             ))
             rasters.append(raster)
 
     group = klass(rasters)
     assert group.area == Area(-2, 2, (10 * dims) + 2, (-10 * dims) - 2)
     assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
-    assert group.read_array(0, 0, (5 * dims) + 2, (5 * dims) + 2).shape == ((5 * dims) + 2, (5 * dims) + 2)
+    data = group.read_array(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+    assert data.shape == ((5 * dims) + 2, (5 * dims) + 2)
+    assert (data == generate_child_tile(0, 0, (dims * 5) + 2, (dims * 5) + 2, (dims * 5) + 2, (dims * 5) + 2)).all()
 
 def test_two_raster_read_only_from_one():
     area1 = Area(-10, 10, 10, -10)
@@ -243,11 +245,12 @@ def test_overlapping_tiles_with_window(klass, dims):
     rasters = []
     for x in range(dims):
         for y in range(dims):
+            val = (y * dims) + x
             raster = RasterLayer(gdal_dataset_with_data(
                 (-2 + (10 * x), 2 + (-10 * y)),
                 2.0,
-                np.full((7, 7), (y * dims) + x)
-            ))
+                generate_child_tile(x * 5, y * 5, 7, 7, (dims * 5) + 2, (dims * 5) + 2)
+            ), name=f"tile_{val}")
             rasters.append(raster)
 
     group = klass(rasters)
@@ -257,7 +260,39 @@ def test_overlapping_tiles_with_window(klass, dims):
     area = Area(group.area.left + 4.0, group.area.top - 4.0, group.area.right - 4.0, group.area.bottom + 4.0)
     group.set_window_for_intersection(area)
     assert group.window == Window(2, 2, (5 * dims) - 2, (5 * dims) - 2)
-    assert group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == ((5 * dims) - 4, (5 * dims) - 4)
+    data = group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4)
+    assert data.shape == ((5 * dims) - 4, (5 * dims) - 4)
+    assert (data == generate_child_tile(2, 2, (5 * dims) - 4, (5 * dims) - 4, (dims * 5) + 2, (dims * 5) + 2)).all()
+
+@pytest.mark.parametrize("klass",
+    [
+        (GroupLayer),
+        (TiledGroupLayer),
+    ]
+)
+def test_overlapping_tiles_with_read_aligned_to_tiles(klass):
+    dims = 3
+    rasters = []
+    for x in range(dims):
+        for y in range(dims):
+            val = (y * dims) + x
+            raster = RasterLayer(gdal_dataset_with_data(
+                (-2 + (10 * x), 2 + (-10 * y)),
+                2.0,
+                generate_child_tile(x * 5, y * 5, 7, 7, (dims * 5) + 2, (dims * 5) + 2)
+            ), name=f"tile_{val}")
+            rasters.append(raster)
+
+    group = klass(rasters)
+    assert group.area == Area(-2, 2, (10 * dims) + 2, (-10 * dims) - 2)
+    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+
+    # Read each OG tile in turn
+    for y in range(dims):
+        for x in range(dims):
+            data = group.read_array(x * 5, y * 5, 7, 7)
+            assert data.shape == (7, 7)
+            assert (data == generate_child_tile(x * 5, y * 5, 7, 7, (dims * 5) + 2, (dims * 5) + 2)).all()
 
 @pytest.mark.parametrize("klass,dims,remove",
     [
