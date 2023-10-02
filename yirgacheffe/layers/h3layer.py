@@ -78,6 +78,9 @@ class H3CellLayer(YirgacheffeLayer):
         return gdal.GDT_CFloat64
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
+        if (xsize <= 0) or (ysize <= 0):
+            raise ValueError("Request dimensions must be positive and non-zero")
+
         # We have two paths: one for the common case where the hex cell doesn't cross 180˚ longitude,
         # and another case for where it does
         max_width_projection = self.area.right - self.area.left

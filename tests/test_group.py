@@ -384,3 +384,31 @@ def test_oversized_tiles_with_missing_tile(klass, dims, remove):
     group.set_window_for_intersection(area)
     assert group.window == Window(2, 2, (5 * dims) - 2, (5 * dims) - 2)
     assert group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == ((5 * dims) - 4, (5 * dims) - 4)
+
+@pytest.mark.parametrize("klass,size",
+    [
+        (GroupLayer, (10, 0)),
+        (GroupLayer, (0, 10)),
+        (TiledGroupLayer, (10, 0)),
+        (TiledGroupLayer, (0, 10)),
+    ]
+)
+def test_read_zero_pixels(klass, size):
+    dims = 2
+    rasters = []
+    for x in range(dims):
+        for y in range(dims):
+            val = (y * dims) + x
+            raster = RasterLayer(gdal_dataset_with_data(
+                (-2 + (10 * x), 2 + (-10 * y)),
+                2.0,
+                generate_child_tile(x * 5, y * 5, 7, 7, (dims * 5) + 2, (dims * 5) + 2)
+            ), name=f"tile_{val}")
+            rasters.append(raster)
+
+    group = klass(rasters)
+    assert group.area == Area(-2, 2, (10 * dims) + 2, (-10 * dims) - 2)
+    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+
+    with pytest.raises(ValueError):
+        _ = group.read_array(0, 0, size[0], size[1])

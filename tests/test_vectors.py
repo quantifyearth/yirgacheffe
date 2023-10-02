@@ -370,3 +370,28 @@ def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None
         # we get half and half, but then multiplied by burn value
         total = layer.sum()
         assert total == (layer.window.xsize * layer.window.ysize) * value
+
+
+@pytest.mark.parametrize("size,expect_success",
+    [
+        ((5, 5), True),
+        ((5, 1), True),
+        ((1, 5), True),
+        ((5, 0), False),
+        ((0, 5), False),
+    ]
+)
+def test_read_array_size(size, expect_success):
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        area = Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        source = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
+
+        if expect_success:
+            data = source.read_array(0, 0, size[0], size[1])
+            assert data.shape == (size[1], size[0])
+        else:
+            with pytest.raises(ValueError):
+                _ = source.read_array(0, 0, size[0], size[1])

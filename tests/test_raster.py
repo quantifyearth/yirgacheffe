@@ -196,3 +196,24 @@ def test_scale_down():
     # because we're dropping pixels, it's not easy to do this comparison
     # but at least make sure its less
     assert scaled.sum() < source.sum()
+
+@pytest.mark.parametrize("size,expect_success",
+    [
+        ((5, 5), True),
+        ((5, 1), True),
+        ((1, 5), True),
+        ((5, 0), False),
+        ((0, 5), False),
+    ]
+)
+def test_read_array_size(size, expect_success):
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.2))
+    assert source.area == Area(-10, 10, 10, -10)
+    assert source.window == Window(0, 0, 20 / 0.2, 20 / 0.2)
+
+    if expect_success:
+        data = source.read_array(0, 0, size[0], size[1])
+        assert data.shape == (size[1], size[0])
+    else:
+        with pytest.raises(ValueError):
+            _ = source.read_array(0, 0, size[0], size[1])

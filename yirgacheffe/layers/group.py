@@ -51,6 +51,9 @@ class GroupLayer(YirgacheffeLayer):
             pass # called from Base constructor before we've added the extra field
 
     def read_array(self, xoffset: int, yoffset: int, xsize: int, ysize: int) -> Any:
+        if (xsize <= 0) or (ysize <= 0):
+            raise ValueError("Request dimensions must be positive and non-zero")
+
         scale = self.pixel_scale
         assert scale is not None
 
@@ -158,6 +161,9 @@ class TiledGroupLayer(GroupLayer):
     """
 
     def read_array(self, xoffset: int, yoffset: int, xsize: int, ysize: int) -> Any:
+        if (xsize <= 0) or (ysize <= 0):
+            raise ValueError("Request dimensions must be positive and non-zero")
+
         scale = self.pixel_scale
         assert scale is not None
 

@@ -240,6 +240,9 @@ class VectorLayer(YirgacheffeLayer):
         return self._datatype
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
+        if (xsize <= 0) or (ysize <= 0):
+            raise ValueError("Request dimensions must be positive and non-zero")
+
         # I did try recycling this object to save allocation/dealloction, but in practice it
         # seemed to only make things slower (particularly as you need to zero the memory each time yourself)
         dataset = gdal.GetDriverByName('mem').Create(

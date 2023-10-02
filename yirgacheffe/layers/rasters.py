@@ -203,6 +203,9 @@ class RasterLayer(YirgacheffeLayer):
         return self._dataset.GetRasterBand(1).DataType
 
     def read_array(self, xoffset, yoffset, xsize, ysize) -> Any:
+        if (xsize <= 0) or (ysize <= 0):
+            raise ValueError("Request dimensions must be positive and non-zero")
+
         # if we're dealing with an intersection, we can just read the data directly,
         # otherwise we need to read the data into another array with suitable padding
         target_window = Window(
