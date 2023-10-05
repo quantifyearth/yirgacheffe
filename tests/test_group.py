@@ -412,3 +412,42 @@ def test_read_zero_pixels(klass, size):
 
     with pytest.raises(ValueError):
         _ = group.read_array(0, 0, size[0], size[1])
+
+@pytest.mark.parametrize("read_area",
+    [
+        (0, 0, 12, 12),     # sanity check equal area
+        (2, 2, 8, 8),       # sanity check pure subset
+        (0, 0, 22, 12),     # off right
+        (-10, 0, 22, 12),   # off left
+        (0, -10, 12, 22),   # off top
+        (0, 0, 12, 15),     # off bottom
+        (-10, -10, 32, 32), # off all sides
+    ]
+)
+def test_read_tiles_superset(read_area):
+    dims = 2
+    rasters = []
+    for x in range(dims):
+        for y in range(dims):
+            val = (y * dims) + x
+            raster = RasterLayer(gdal_dataset_with_data(
+                (-2 + (10 * x), 2 + (-10 * y)),
+                2.0,
+                generate_child_tile(x * 5, y * 5, 7, 7, (dims * 5) + 2, (dims * 5) + 2)
+            ), name=f"tile_{val}")
+            rasters.append(raster)
+
+    group = GroupLayer(rasters)
+    assert group.area == Area(-2, 2, (10 * dims) + 2, (-10 * dims) - 2)
+    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+
+    tiled = TiledGroupLayer(rasters)
+    assert tiled.area == Area(-2, 2, (10 * dims) + 2, (-10 * dims) - 2)
+    assert tiled.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+
+    group_data = group.read_array(*read_area)
+    tiled_data = tiled.read_array(*read_area)
+    assert group_data.shape == (read_area[3], read_area[2])
+    assert tiled_data.shape == (read_area[3], read_area[2])
+
+    assert (tiled_data == group_data).all()

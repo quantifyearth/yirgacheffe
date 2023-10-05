@@ -232,6 +232,14 @@ class TiledGroupLayer(GroupLayer):
         expected_next_y = 0
         data = None
         row_chunk = None
+
+        # Allow for reading off top
+        if combed_partials:
+            if combed_partials[0].y > 0:
+                row_chunk = np.zeros((combed_partials[0].y, xsize))
+                last_y_offset = 0
+                last_y_height = combed_partials[0].y
+
         for tile in combed_partials:
             if tile.y == last_y_offset:
                 assert row_chunk is not None
@@ -271,7 +279,7 @@ class TiledGroupLayer(GroupLayer):
                             expected_next_y += last_y_height
                         else:
                             diff = expected_next_y - last_y_offset
-                            assert diff > 0
+                            assert diff > 0, f"{expected_next_y} - {last_y_offset} <= 0 (aka {diff})"
                             subdata = np.delete(row_chunk, np.s_[0:diff], 0)
                             data = np.vstack((data, subdata))
                             expected_next_y += subdata.shape[0]
@@ -283,6 +291,9 @@ class TiledGroupLayer(GroupLayer):
                     last_y_offset = tile.y
                     last_y_height = tile.data.shape[0]
                     expected_next_x = tile.data.shape[1] + tile.x
+
+        if (last_y_offset + last_y_height) < ysize:
+            data = np.vstack((data, np.zeros((ysize - (last_y_offset + last_y_height), xsize))))
 
         assert data.shape == (ysize, xsize)
         return data
