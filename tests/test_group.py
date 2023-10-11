@@ -314,6 +314,30 @@ def test_overlapping_tiles_with_read_aligned_to_tiles(klass):
         (TiledGroupLayer, 3, 7),
         (GroupLayer, 3, 8),
         (TiledGroupLayer, 3, 8),
+        (GroupLayer, 4, 0),
+        (TiledGroupLayer, 4, 0),
+        (GroupLayer, 4, 1),
+        (TiledGroupLayer, 4, 1),
+        (GroupLayer, 4, 2),
+        (TiledGroupLayer, 3, 2),
+        (GroupLayer, 4, 3),
+        (TiledGroupLayer, 4, 3),
+        (GroupLayer, 4, 4),
+        (TiledGroupLayer, 4, 4),
+        (GroupLayer, 4, 5),
+        (TiledGroupLayer, 4, 5),
+        (GroupLayer, 4, 6),
+        (TiledGroupLayer, 4, 6),
+        (GroupLayer, 4, 7),
+        (TiledGroupLayer, 4, 7),
+        (GroupLayer, 4, 12),
+        (TiledGroupLayer, 4, 12),
+        (GroupLayer, 4, 13),
+        (TiledGroupLayer, 4, 13),
+        (GroupLayer, 4, 14),
+        (TiledGroupLayer, 4, 14),
+        (GroupLayer, 4, 15),
+        (TiledGroupLayer, 4, 15),
     ]
 )
 def test_multipe_tiles_with_missing_tile(klass, dims, remove):
@@ -339,7 +363,6 @@ def test_multipe_tiles_with_missing_tile(klass, dims, remove):
     assert group.window == Window(2, 2, (5 * dims) - 4, (5 * dims) - 4)
     assert group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == ((5 * dims) - 4, (5 * dims) - 4)
 
-
 @pytest.mark.parametrize("klass,dims,remove",
     [
         (GroupLayer, 3, 0),
@@ -360,6 +383,30 @@ def test_multipe_tiles_with_missing_tile(klass, dims, remove):
         (TiledGroupLayer, 3, 7),
         (GroupLayer, 3, 8),
         (TiledGroupLayer, 3, 8),
+        (GroupLayer, 4, 0),
+        (TiledGroupLayer, 4, 0),
+        (GroupLayer, 4, 1),
+        (TiledGroupLayer, 4, 1),
+        (GroupLayer, 4, 2),
+        (TiledGroupLayer, 3, 2),
+        (GroupLayer, 4, 3),
+        (TiledGroupLayer, 4, 3),
+        (GroupLayer, 4, 4),
+        (TiledGroupLayer, 4, 4),
+        (GroupLayer, 4, 5),
+        (TiledGroupLayer, 4, 5),
+        (GroupLayer, 4, 6),
+        (TiledGroupLayer, 4, 6),
+        (GroupLayer, 4, 7),
+        (TiledGroupLayer, 4, 7),
+        (GroupLayer, 4, 12),
+        (TiledGroupLayer, 4, 12),
+        (GroupLayer, 4, 13),
+        (TiledGroupLayer, 4, 13),
+        (GroupLayer, 4, 14),
+        (TiledGroupLayer, 4, 14),
+        (GroupLayer, 4, 15),
+        (TiledGroupLayer, 4, 15),
     ]
 )
 def test_oversized_tiles_with_missing_tile(klass, dims, remove):
@@ -451,3 +498,89 @@ def test_read_tiles_superset(read_area):
     assert tiled_data.shape == (read_area[3], read_area[2])
 
     assert (tiled_data == group_data).all()
+
+@pytest.mark.parametrize("klass,dims,remove",
+    [
+        (GroupLayer, 3, 0),
+        (TiledGroupLayer, 3, 0),
+        (GroupLayer, 3, 1),
+        (TiledGroupLayer, 3, 1),
+        (GroupLayer, 3, 2),
+        (TiledGroupLayer, 3, 2),
+        (GroupLayer, 3, 3),
+        (TiledGroupLayer, 3, 3),
+        (GroupLayer, 3, 4),
+        (TiledGroupLayer, 3, 4),
+        (GroupLayer, 3, 5),
+        (TiledGroupLayer, 3, 5),
+        (GroupLayer, 3, 6),
+        (TiledGroupLayer, 3, 6),
+        (GroupLayer, 3, 7),
+        (TiledGroupLayer, 3, 7),
+        (GroupLayer, 3, 8),
+        (TiledGroupLayer, 3, 8),
+    ]
+)
+def test_oversized_tiles_with_missing_tile_row_slices(klass, dims, remove):
+    rasters = []
+    for x in range(dims):
+        for y in range(dims):
+            val = (y * dims) + x
+            if val == remove:
+                continue
+            raster = RasterLayer(gdal_dataset_with_data(
+                (-2 + (10 * x), 2 + (-10 * y)),
+                2.0,
+                np.full((7, 7), val)
+            ))
+            rasters.append(raster)
+
+    group = klass(rasters)
+    assert group.area == Area(-2, 2, (10 * dims) + 2, (-10 * dims) - 2)
+    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+
+    for y in range(group.window.ysize - 6):
+        assert group.read_array(0, y, group.window.xsize, 6).shape == (6, group.window.xsize)
+
+@pytest.mark.parametrize("klass,dims,remove",
+    [
+        (GroupLayer, 3, 0),
+        (TiledGroupLayer, 3, 0),
+        (GroupLayer, 3, 1),
+        (TiledGroupLayer, 3, 1),
+        (GroupLayer, 3, 2),
+        (TiledGroupLayer, 3, 2),
+        (GroupLayer, 3, 3),
+        (TiledGroupLayer, 3, 3),
+        (GroupLayer, 3, 4),
+        (TiledGroupLayer, 3, 4),
+        (GroupLayer, 3, 5),
+        (TiledGroupLayer, 3, 5),
+        (GroupLayer, 3, 6),
+        (TiledGroupLayer, 3, 6),
+        (GroupLayer, 3, 7),
+        (TiledGroupLayer, 3, 7),
+        (GroupLayer, 3, 8),
+        (TiledGroupLayer, 3, 8),
+    ]
+)
+def test_multipe_tiles_with_missing_tile_row_slices(klass, dims, remove):
+    rasters = []
+    for x in range(dims):
+        for y in range(dims):
+            val = (y * dims) + x
+            if val == remove:
+                continue
+            raster = RasterLayer(gdal_dataset_with_data(
+                (10.0 * x, -10 * y),
+                2.0,
+                np.full((5, 5), val)
+            ))
+            rasters.append(raster)
+
+    group = klass(rasters)
+    assert group.area == Area(0, 0, 10 * dims, -10 * dims)
+    assert group.window == Window(0, 0, 5 * dims, 5 * dims)
+
+    for y in range(group.window.ysize - 6):
+        assert group.read_array(0, y, group.window.xsize, 6).shape == (6, group.window.xsize)

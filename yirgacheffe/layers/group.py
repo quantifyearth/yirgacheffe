@@ -243,31 +243,45 @@ class TiledGroupLayer(GroupLayer):
         for tile in combed_partials:
             if tile.y == last_y_offset:
                 assert row_chunk is not None
-                assert row_chunk.shape[0] == tile.data.shape[0]
+                if row_chunk.shape[0] < tile.data.shape[0]:
+                    assert last_y_height == row_chunk.shape[0]
+                    row_chunk = np.vstack(
+                        (row_chunk, np.zeros((tile.data.shape[0] - row_chunk.shape[0], row_chunk.shape[1])))
+                    )
+                    last_y_height = row_chunk.shape[0]
+                new_data = tile.data
+                if row_chunk.shape[0] != new_data.shape[0]:
+                    assert row_chunk.shape[0] > new_data.shape[0]
+                    # we have some overlap data from oversized tiles (hello JRC) when there's a GAP in general
+                    new_data = np.vstack(
+                        (new_data, np.zeros((row_chunk.shape[0] - new_data.shape[0], new_data.shape[1])))
+                    )
+                assert row_chunk.shape[0] == new_data.shape[0]
 
                 # We're adding a tile to an existing row
                 x_offset = expected_next_x - tile.x
                 if x_offset == 0:
                     # Tiles line up neatly!
-                    row_chunk = np.hstack((row_chunk, tile.data))
-                    expected_next_x = expected_next_x + tile.data.shape[1]
+                    row_chunk = np.hstack((row_chunk, new_data))
+                    expected_next_x = expected_next_x + new_data.shape[1]
                 elif x_offset > 0:
                     # tiles overlap
-                    remainder = tile.data.shape[1] - xoffset
+                    remainder = new_data.shape[1] - xoffset
                     if remainder > 0:
-                        subdata = np.delete(tile.data, np.s_[0:x_offset], 1)
+                        subdata = np.delete(new_data, np.s_[0:x_offset], 1)
                         row_chunk = np.hstack((row_chunk, subdata))
                         expected_next_x = expected_next_x + subdata.shape[1]
                 else:
                     # Gap between tiles, so fill it before adding new data
-                    row_chunk = np.hstack((row_chunk, np.zeros((tile.data.shape[0], -x_offset))))
-                    row_chunk = np.hstack((row_chunk, tile.data))
-                    expected_next_x = expected_next_x + tile.data.shape[1] + x_offset
+                    row_chunk = np.hstack((row_chunk, np.zeros((new_data.shape[0], -x_offset))))
+                    row_chunk = np.hstack((row_chunk, new_data))
+                    expected_next_x = expected_next_x + new_data.shape[1] + -x_offset
             else:
                 # This is a new row, so we need to add the row in progress
                 # and start a new one
                 if row_chunk is not None:
                     if row_chunk.shape[1] != xsize:
+                        assert row_chunk.shape[1] < xsize, f"row is too wide: expected {xsize}, is {row_chunk.shape[1]}"
                         # Missing tile at end of row, so fill in
                         row_chunk = np.hstack((row_chunk, np.zeros((last_y_height, xsize - row_chunk.shape[1]))))
                     if data is None:

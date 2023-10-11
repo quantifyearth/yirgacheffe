@@ -72,7 +72,6 @@ def test_empty_layers_are_pixel_aligned(initial_area):
     expanded_area = initial_area.grow(0.1)
 
     initial_layer = RasterLayer.empty_raster_layer(initial_area, scale, gdal.GDT_Float64)
-    print((initial_layer.area.right - initial_layer.area.left) / scale.xstep)
 
     pixel_width = (initial_layer.area.right - initial_layer.area.left) / scale.xstep
     assert round_up_pixels(pixel_width, scale.xstep) == initial_layer.window.xsize
