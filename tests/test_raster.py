@@ -88,6 +88,18 @@ def test_empty_layer_from_raster():
     assert empty.window == source.window
     assert empty.datatype == source.datatype
     assert empty.geo_transform == source.geo_transform
+    assert empty._dataset.GetRasterBand(1).GetNoDataValue() == None
+
+@pytest.mark.parametrize("nodata", [0, 0.0, 2, 2.0])
+def test_empty_layer_from_raster_with_no_data_value(nodata):
+    source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    empty = RasterLayer.empty_raster_layer_like(source, nodata=nodata)
+    assert empty.pixel_scale == source.pixel_scale
+    assert empty.projection == source.projection
+    assert empty.window == source.window
+    assert empty.datatype == source.datatype
+    assert empty.geo_transform == source.geo_transform
+    assert empty._dataset.GetRasterBand(1).GetNoDataValue() == nodata
 
 def test_empty_layer_from_raster_with_new_smaller_area():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))

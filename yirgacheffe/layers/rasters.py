@@ -1,5 +1,5 @@
 import math
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, Union
 
 import numpy
 from osgeo import gdal
@@ -25,7 +25,8 @@ class RasterLayer(YirgacheffeLayer):
         filename: Optional[str]=None,
         projection: str=WGS_84_PROJECTION,
         name: Optional[str]=None,
-        compress: bool=True
+        compress: bool=True,
+        nodata: Optional[Union[float,int]]=None
     ) -> RasterLayerT:
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
@@ -60,6 +61,8 @@ class RasterLayer(YirgacheffeLayer):
             pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
         ])
         dataset.SetProjection(projection)
+        if nodata is not None:
+            dataset.GetRasterBand(1).SetNoDataValue(nodata)
         return RasterLayer(dataset, name=name)
 
     @staticmethod
@@ -68,7 +71,8 @@ class RasterLayer(YirgacheffeLayer):
         filename: Optional[str]=None,
         area: Optional[Area]=None,
         datatype: Optional[int]=None,
-        compress: bool=True
+        compress: bool=True,
+        nodata: Optional[Union[float,int]]=None
     ) -> RasterLayerT:
         width = layer.window.xsize
         height = layer.window.ysize
@@ -105,6 +109,9 @@ class RasterLayer(YirgacheffeLayer):
         )
         dataset.SetGeoTransform(geo_transform)
         dataset.SetProjection(layer.projection)
+        if nodata is not None:
+            dataset.GetRasterBand(1).SetNoDataValue(nodata)
+
         return RasterLayer(dataset)
 
     @classmethod
