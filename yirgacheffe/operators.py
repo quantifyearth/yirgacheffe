@@ -116,30 +116,43 @@ class LayerOperation(LayerMathMixin):
             return self.rhs.window
 
     def _eval(self, index, step):
-        try:
-            lhs = self.lhs._eval(index, step)
-            # we want operator to fail first, before the rhs check, as we
-            # support unary operations
-            operator = getattr(lhs, self.operator)
-            rhs = self.rhs._eval(index, step)
-            result = operator(rhs)
+        lhs = self.lhs._eval(index, step)
+
+        raw_operator = getattr(self, 'operator', None)
+        if raw_operator is None:
+            return lhs
+        raw_rhs = getattr(self, 'rhs', None)
+
+        if isinstance(raw_operator, str):
+            operator = getattr(lhs, raw_operator)
+
+            if raw_rhs is None:
+                return operator()
+            rhs = raw_rhs._eval(index, step)
+
+            result = operator(self.rhs._eval(index, step))
             # This is currently a hurried work around for the fact that
             #   0.0 + numpy array
             # is valid, but
             #   getattr(0.0, '__add__')(numpy array)
             # returns NotImplemented
             if result.__class__ == NotImplemented.__class__:
-                if self.operator in ['__add__', '__mul__']:
-                    result = getattr(rhs, self.operator)(lhs)
+                if raw_operator in ['__add__', '__mul__']:
+                    operator = getattr(rhs, raw_operator)
+                    result = operator(lhs)
 
             return result
-        except TypeError: # operator not a string
-            try:
-                return self.operator(lhs, self.rhs._eval(index,step))
-            except AttributeError: # no rhs
-                return self.operator(lhs)
-        except AttributeError: # no operator attr
-            return lhs
+
+        elif callable(raw_operator):
+            operator = raw_operator
+
+            if raw_rhs is not None:
+                rhs = raw_rhs._eval(index, step)
+                return operator(lhs, rhs)
+            else:
+                return operator(lhs)
+
+        assert False
 
     def sum(self):
         total = 0.0
