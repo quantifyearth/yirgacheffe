@@ -1,5 +1,6 @@
 from typing import Any, Union
 
+import numpy as np
 from osgeo import gdal
 
 from ..window import Area, PixelScale
@@ -30,5 +31,5 @@ class ConstantLayer(YirgacheffeLayer):
     def set_window_for_intersection(self, _intersection: Area) -> None:
         pass
 
-    def read_array(self, _x: int, _y: int, _xsize: int, _ysize: int) -> Any:
-        return self.value
+    def read_array(self, _x: int, _y: int, xsize: int, ysize: int) -> Any:
+        return np.full((ysize, xsize), self.value)

@@ -18,44 +18,44 @@ class LayerConstant:
 class LayerMathMixin:
 
     def __add__(self, other):
-        return LayerOperation(self, "__add__", other)
+        return LayerOperation(self, np.ndarray.__add__, other)
 
     def __sub__(self, other):
-        return LayerOperation(self, "__sub__", other)
+        return LayerOperation(self, np.ndarray.__sub__, other)
 
     def __mul__(self, other):
-        return LayerOperation(self, "__mul__", other)
+        return LayerOperation(self, np.ndarray.__mul__, other)
 
     def __truediv__(self, other):
-        return LayerOperation(self, "__truediv__", other)
+        return LayerOperation(self, np.ndarray.__truediv__, other)
 
     def __pow__(self, other):
-        return LayerOperation(self, "__pow__", other)
+        return LayerOperation(self, np.ndarray.__pow__, other)
 
     def __eq__(self, other):
-        return LayerOperation(self, "__eq__", other)
+        return LayerOperation(self, np.ndarray.__eq__, other)
 
     def __ne__(self, other):
-        return LayerOperation(self, "__ne__", other)
+        return LayerOperation(self, np.ndarray.__ne__, other)
 
     def __lt__(self, other):
-        return LayerOperation(self, "__lt__", other)
+        return LayerOperation(self, np.ndarray.__lt__, other)
 
     def __le__(self, other):
-        return LayerOperation(self, "__le__", other)
+        return LayerOperation(self, np.ndarray.__le__, other)
 
     def __gt__(self, other):
-        return LayerOperation(self, "__gt__", other)
+        return LayerOperation(self, np.ndarray.__gt__, other)
 
     def __ge__(self, other):
-        return LayerOperation(self, "__ge__", other)
+        return LayerOperation(self, np.ndarray.__ge__, other)
 
-    def _eval(self, index, step):
+    def _eval(self, index, step, target_window=None):
         try:
             window = self.window
             return self.read_array(0, index, window.xsize, step)
         except AttributeError:
-            return self.read_array(0, index, 1, step)
+            return self.read_array(0, index, target_window.xsize if target_window else 1, step)
 
     def numpy_apply(self, func, other=None):
         return LayerOperation(self, func, other)
@@ -79,9 +79,12 @@ class LayerMathMixin:
 class LayerOperation(LayerMathMixin):
 
     def __init__(self, lhs, operator=None, rhs=None):
+        if lhs is None:
+            raise ValueError("LHS on operation should not be none")
         self.lhs = lhs
-        if operator:
-            self.operator = operator
+
+        self.operator = operator
+
         if rhs is not None:
             if isinstance(rhs, (float, int)):
                 self.rhs = LayerConstant(rhs)
@@ -92,6 +95,8 @@ class LayerOperation(LayerMathMixin):
                     raise ValueError("Numpy arrays are no allowed")
             else:
                 self.rhs = rhs
+        else:
+            self.rhs = None
 
     def __str__(self):
         try:
@@ -115,44 +120,17 @@ class LayerOperation(LayerMathMixin):
             # say, so let the exception propagate up
             return self.rhs.window
 
-    def _eval(self, index, step):
-        lhs = self.lhs._eval(index, step)
+    def _eval(self, index, step): # pylint: disable=W0221
+        lhs_data = self.lhs._eval(index, step)
 
-        raw_operator = getattr(self, 'operator', None)
-        if raw_operator is None:
-            return lhs
-        raw_rhs = getattr(self, 'rhs', None)
+        if self.operator is None:
+            return lhs_data
 
-        if isinstance(raw_operator, str):
-            operator = getattr(lhs, raw_operator)
-
-            if raw_rhs is None:
-                return operator()
-            rhs = raw_rhs._eval(index, step)
-
-            result = operator(self.rhs._eval(index, step))
-            # This is currently a hurried work around for the fact that
-            #   0.0 + numpy array
-            # is valid, but
-            #   getattr(0.0, '__add__')(numpy array)
-            # returns NotImplemented
-            if result.__class__ == NotImplemented.__class__:
-                if raw_operator in ['__add__', '__mul__']:
-                    operator = getattr(rhs, raw_operator)
-                    result = operator(lhs)
-
-            return result
-
-        elif callable(raw_operator):
-            operator = raw_operator
-
-            if raw_rhs is not None:
-                rhs = raw_rhs._eval(index, step)
-                return operator(lhs, rhs)
-            else:
-                return operator(lhs)
-
-        assert False
+        if self.rhs is not None:
+            rhs_data = self.rhs._eval(index, step)
+            return self.operator(lhs_data, rhs_data)
+        else:
+            return self.operator(lhs_data)
 
     def sum(self):
         total = 0.0
@@ -230,36 +208,46 @@ class LayerOperation(LayerMathMixin):
 class ShaderStyleOperation(LayerOperation):
 
     def _eval(self, index, step):
-        lhs = self.lhs._eval(index, step)
-        try:
-            rhs = self.rhs._eval(index, step)
-        except AttributeError: # no rhs
-            rhs = None
+        lhs_data = self.lhs._eval(index, step, self.window)
+        if self.rhs is not None:
+            rhs_data = self.rhs._eval(index, step, self.window)
+        else:
+            rhs_data = None
 
         # Constant results make this a bit messier. Might in future
         # be nicer to promote them to arrays sooner?
-        if isinstance(lhs, (int, float)):
-            if rhs is None:
-                return self.operator(lhs)
-            if isinstance(rhs, (int, float)):
-                return self.operator(lhs, rhs)
+        if isinstance(lhs_data, (int, float)):
+            if rhs_data is None:
+                return self.operator(lhs_data)
+            if isinstance(rhs_data, (int, float)):
+                return self.operator(lhs_data, rhs_data)
             else:
-                result = np.empty_like(rhs)
+                result = np.empty_like(rhs_data)
         else:
-            result = np.empty_like(lhs)
+            result = np.empty_like(lhs_data)
+
+        print(self.window)
+        print(self.lhs._window)
+        if self.rhs is not None:
+            print(self.rhs._window)
+        print(lhs_data)
+        if self.rhs is not None:
+            print(self.rhs)
+        print(rhs_data)
+        print(result)
 
         window = self.window
         for yoffset in range(step):
             for xoffset in range(window.xsize):
                 try:
-                    lhs_val = lhs[yoffset][xoffset]
+                    lhs_val = lhs_data[yoffset][xoffset]
                 except TypeError:
-                    lhs_val = lhs
-                if rhs is not None:
+                    lhs_val = lhs_data
+                if rhs_data is not None:
                     try:
-                        rhs_val = rhs[yoffset][xoffset]
+                        rhs_val = rhs_data[yoffset][xoffset]
                     except TypeError:
-                        rhs_val = rhs
+                        rhs_val = rhs_data
                     result[yoffset][xoffset] = self.operator(lhs_val, rhs_val)
                 else:
                     result[yoffset][xoffset] = self.operator(lhs_val)
