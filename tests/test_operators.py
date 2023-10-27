@@ -3,6 +3,7 @@ import pytest
 
 from helpers import gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer, ConstantLayer
+from yirgacheffe.operators import LayerOperation
 
 def test_add_byte_layers() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
@@ -366,6 +367,17 @@ def test_direct_layer_sum() -> None:
     expected = np.sum(data1)
     assert expected == actual
 
+def test_direct_layer_sum_chunked() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    calc = LayerOperation(layer1)
+    calc.ystep = 1
+    actual = calc.sum()
+
+    expected = np.sum(data1)
+    assert expected == actual
+
 def test_direct_layer_min() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
@@ -375,11 +387,33 @@ def test_direct_layer_min() -> None:
     expected = np.min(data1)
     assert expected == actual
 
+def test_direct_layer_min_chunked() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    calc = LayerOperation(layer1)
+    calc.ystep = 1
+    actual = calc.min()
+
+    expected = np.min(data1)
+    assert expected == actual
+
 def test_direct_layer_max() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
 
     actual = layer1.max()
+
+    expected = np.max(data1)
+    assert expected == actual
+
+def test_direct_layer_max_chunked() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    calc = LayerOperation(layer1)
+    calc.ystep = 1
+    actual = calc.max()
 
     expected = np.max(data1)
     assert expected == actual

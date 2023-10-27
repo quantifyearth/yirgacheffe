@@ -79,6 +79,8 @@ class LayerMathMixin:
 class LayerOperation(LayerMathMixin):
 
     def __init__(self, lhs, operator=None, rhs=None):
+        self.ystep = YSTEP
+
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
         self.lhs = lhs
@@ -133,37 +135,41 @@ class LayerOperation(LayerMathMixin):
             return self.operator(lhs_data)
 
     def sum(self):
-        total = 0.0
+        res = 0.0
         computation_window = self.window
-        for yoffset in range(0, computation_window.ysize, YSTEP):
-            step=YSTEP
+        for yoffset in range(0, computation_window.ysize, self.ystep):
+            step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(yoffset, step)
-            total += np.sum(chunk)
-        return total
+            res += np.sum(chunk)
+        return res
 
     def min(self):
-        total = 0.0
+        res = None
         computation_window = self.window
-        for yoffset in range(0, computation_window.ysize, YSTEP):
-            step=YSTEP
+        for yoffset in range(0, computation_window.ysize, self.ystep):
+            step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(yoffset, step)
-            total += np.min(chunk)
-        return total
+            chunk_min = np.min(chunk)
+            if (res is None) or (res > chunk_min):
+                res = chunk_min
+        return res
 
     def max(self):
-        total = 0.0
+        res = None
         computation_window = self.window
-        for yoffset in range(0, computation_window.ysize, YSTEP):
-            step=YSTEP
+        for yoffset in range(0, computation_window.ysize, self.ystep):
+            step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(yoffset, step)
-            total += np.max(chunk)
-        return total
+            chunk_max = np.max(chunk)
+            if (res is None) or (chunk_max > res):
+                res = chunk_max
+        return res
 
     def save(self, destination_layer, and_sum=False):
         """
@@ -187,8 +193,8 @@ class LayerOperation(LayerMathMixin):
 
         total = 0.0
 
-        for yoffset in range(0, computation_window.ysize, YSTEP):
-            step=YSTEP
+        for yoffset in range(0, computation_window.ysize, self.ystep):
+            step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(yoffset, step)
