@@ -1,5 +1,5 @@
 from math import ceil, floor
-from typing import Any, Optional, Union
+from typing import Any, Optional, Tuple, Union
 
 from osgeo import gdal, ogr
 
@@ -154,6 +154,42 @@ class VectorLayer(YirgacheffeLayer):
     modify this class so that it chunks things internally)."""
 
     @classmethod
+    def layer_from_file_like(
+        cls,
+        filename: str,
+        where_filter: Optional[str],
+        other_layer: YirgacheffeLayer,
+        datatype: Optional[int] = None,
+        burn_value: Union[int,float,str] = 1,
+    ):
+        if other_layer is None:
+            raise ValueError("like layer can not be None")
+
+        vectors = ogr.Open(filename)
+        if vectors is None:
+            raise FileNotFoundError(filename)
+        layer = vectors.GetLayer()
+        if where_filter is not None:
+            layer.SetAttributeFilter(where_filter)
+
+        vector_layer = VectorLayer(
+            layer,
+            other_layer.pixel_scale,
+            other_layer.projection,
+            name=filename,
+            datatype=datatype if datatype is not None else other_layer.datatype,
+            burn_value=burn_value,
+            anchor=(other_layer.area.left, other_layer.area.top),
+        )
+
+        # this is a gross hack, but unless you hold open the original file, you'll get
+        # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
+        # the original object being around
+        vector_layer._original = vectors
+        return vector_layer
+
+
+    @classmethod
     def layer_from_file(
         cls,
         filename: str,
@@ -162,6 +198,7 @@ class VectorLayer(YirgacheffeLayer):
         projection: str,
         datatype: Optional[int] = None,
         burn_value: Union[int,float,str] = 1,
+        anchor: Tuple[float,float] = (0.0, 0.0)
     ):
         vectors = ogr.Open(filename)
         if vectors is None:
@@ -181,6 +218,7 @@ class VectorLayer(YirgacheffeLayer):
             name=filename,
             datatype=datatype,
             burn_value=burn_value,
+            anchor=anchor
         )
 
         # this is a gross hack, but unless you hold open the original file, you'll get
@@ -197,6 +235,7 @@ class VectorLayer(YirgacheffeLayer):
         name: Optional[str] = None,
         datatype: int = gdal.GDT_Byte,
         burn_value: Union[int,float,str] = 1,
+        anchor: Tuple[float,float] = (0.0, 0.0)
     ):
         if layer is None:
             raise ValueError('No layer provided')
@@ -225,15 +264,25 @@ class VectorLayer(YirgacheffeLayer):
         # the pixel scale GDAL uses can have -ve values, but those will mess up the
         # ceil/floor math, so we use absolute versions when trying to round.
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+
+        # Lacking any other reference, we will make the raster align with
+        # (0.0, 0.0), if sometimes we want to align with an existing raster, so if
+        # an anchor is specified, ensure we use that as our pixel space alignment
+        x_anchor = anchor[0]
+        y_anchor = anchor[1]
+        left_shift = x_anchor - abs_xstep
+        right_shift = x_anchor
+        top_shift = y_anchor
+        bottom_shift = y_anchor - abs_ystep
+
         area = Area(
-            left=floor(min(x[0] for x in envelopes) / abs_xstep) * abs_xstep,
-            top=ceil(max(x[3] for x in envelopes) / abs_ystep) * abs_ystep,
-            right=ceil(max(x[1] for x in envelopes) / abs_xstep) * abs_xstep,
-            bottom=floor(min(x[2] for x in envelopes) / abs_ystep) * abs_ystep,
+            left=(floor((min(x[0] for x in envelopes) - left_shift) / abs_xstep) * abs_xstep) + left_shift,
+            top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
+            right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
+            bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
         )
 
         super().__init__(area, scale, projection)
-
 
     @property
     def datatype(self) -> int:

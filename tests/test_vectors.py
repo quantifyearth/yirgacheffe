@@ -395,3 +395,40 @@ def test_read_array_size(size, expect_success):
         else:
             with pytest.raises(ValueError):
                 _ = source.read_array(0, 0, size[0], size[1])
+
+@pytest.mark.parametrize("anchor,area,expected",
+    [
+        ((0.0, 0.0), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)),
+        ((0.0, 0.0), Area(-9.9, 9.9, 9.9, -9.9), Area(-10.0, 10.0, 10.0, -10.0)),
+        ((0.0, 0.0), Area(-9.1, 9.1, 9.1, -9.1), Area(-10.0, 10.0, 10.0, -10.0)),
+
+        ((0.0, 0.0), Area(5.0, 10.0, 10.0, 5.0), Area(5.0, 10.0, 10.0, 5.0)),
+        ((0.0, 0.0), Area(5.0, -5.0, 10.0, -10.0), Area(5.0, -5.0, 10.0, -10.0)),
+        ((0.0, 0.0), Area(-10.0, -5.0, -5.0, -10.0), Area(-10.0, -5.0, -5.0, -10.0)),
+        ((0.0, 0.0), Area(-10.0, 10.0, -5.0, 5.0), Area(-10.0, 10.0, -5.0, 5.0)),
+
+        ((0.0, 0.0), Area(5.1, 9.9, 9.9, 5.1), Area(5.0, 10.0, 10.0, 5.0)),
+        ((0.0, 0.0), Area(5.1, -5.1, 9.9, -9.9), Area(5.0, -5.0, 10.0, -10.0)),
+        ((0.0, 0.0), Area(-9.9, -5.1, -5.1, -9.9), Area(-10.0, -5.0, -5.0, -10.0)),
+        ((0.0, 0.0), Area(-9.9, 9.9, -5.1, 5.1), Area(-10.0, 10.0, -5.0, 5.0)),
+
+        ((0.1, 0.1), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.9, 10.1, 10.1, -10.9)),
+
+        ((0.1, 0.1), Area(5.0, 10.0, 10.0, 5.0), Area(4.1, 10.1, 10.1, 4.1)),
+        ((0.1, 0.1), Area(5.0, -5.0, 10.0, -10.0), Area(4.1, -4.9, 10.1, -10.9)),
+        ((0.1, 0.1), Area(-10.0, -5.0, -5.0, -10.0), Area(-10.9, -4.9, -4.9, -10.9)),
+        ((0.1, 0.1), Area(-10.0, 10.0, -5.0, 5.0), Area(-10.9, 10.1, -4.9, 4.1)),
+
+        ((-0.9, -0.9), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.9, 10.1, 10.1, -10.9)),
+        ((-1000.9, 100.1), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.9, 10.1, 10.1, -10.9)),
+    ]
+)
+def test_anchor_offsets(anchor, area, expected):
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        make_vectors_with_id(42, {area}, path)
+
+        source = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION, anchor=anchor)
+
+        final_area = source.area
+        assert final_area == expected
