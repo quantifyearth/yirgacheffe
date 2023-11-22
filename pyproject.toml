@@ -27,7 +27,7 @@ requires-python = ">=3.9"
 dev = ["mypy", "pylint", "pytest", "h3"]
 
 [project.urls]
-Homepage = "https://github.com/carboncredits/yirgacheffe"
+Homepage = "https://github.com/quantifyearth/yirgacheffe"
 
 [project.scripts]
 realpython = "reader.__main__:main"
