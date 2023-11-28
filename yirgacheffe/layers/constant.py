@@ -23,7 +23,7 @@ class ConstantLayer(YirgacheffeLayer):
 
     @property
     def datatype(self) -> int:
-        return gdal.GDT_CFloat64
+        return gdal.GDT_Float64
 
     def check_pixel_scale(self, _scale: PixelScale) -> bool:
         return True
