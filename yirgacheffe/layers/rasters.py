@@ -12,6 +12,10 @@ from .base import YirgacheffeLayer
 # Still to early to require Python 3.11 :/
 RasterLayerT = TypeVar("RasterLayerT", bound="RasterLayer")
 
+class InvalidRasterBand(Exception):
+    def __init__ (self, band):
+        self.band = band
+
 class RasterLayer(YirgacheffeLayer):
     """Layer provides a wrapper around a gdal dataset/band that also records offset state so that
     we can work with maps over different geographic regions but work withing a particular frame
@@ -176,13 +180,15 @@ class RasterLayer(YirgacheffeLayer):
         return RasterLayer(dataset)
 
     @classmethod
-    def layer_from_file(cls, filename: str) -> RasterLayerT:
+    def layer_from_file(cls, filename: str, band: int = 1) -> RasterLayerT:
         dataset = gdal.Open(filename, gdal.GA_ReadOnly)
         if dataset is None:
             raise FileNotFoundError(filename)
-        return cls(dataset, filename)
+        if dataset.GetRasterBand(band) is None:
+            raise InvalidRasterBand(band)
+        return cls(dataset, filename, band)
 
-    def __init__(self, dataset: gdal.Dataset, name: Optional[str] = None):
+    def __init__(self, dataset: gdal.Dataset, name: Optional[str] = None, band: int = 1):
         if not dataset:
             raise ValueError("None is not a valid dataset")
 
@@ -208,6 +214,7 @@ class RasterLayer(YirgacheffeLayer):
         assert self.window == Window(0, 0, dataset.RasterXSize, dataset.RasterYSize)
 
         self._dataset = dataset
+        self._band = band
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
 
@@ -240,11 +247,11 @@ class RasterLayer(YirgacheffeLayer):
 
         if target_window == intersection:
             # The target window is a subset of or equal to the source, so we can just ask for the data
-            data = self._dataset.GetRasterBand(1).ReadAsArray(*intersection.as_array_args)
+            data = self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args)
             return data
         else:
             # We should read the intersection from the array, and the rest should be zeros
-            subset = self._dataset.GetRasterBand(1).ReadAsArray(*intersection.as_array_args)
+            subset = self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args)
             data = numpy.pad(
                 subset,
                 (

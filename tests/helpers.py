@@ -87,6 +87,30 @@ def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: np.array) ->
         band.WriteArray(np.array([list(val)]), 0, index)
     return dataset
 
+def gdal_multiband_dataset_with_data(origin: Tuple, pixel_pitch: float, datas: list[np.array]) -> gdal.Dataset:
+    for data in datas:
+        assert data.ndim == 2
+    datatype = gdal.GDT_Byte
+    if isinstance(data[0][0], float):
+        datatype = gdal.GDT_Float64
+    dataset = gdal.GetDriverByName('mem').Create(
+        'mem',
+        len(datas[0][0]),
+        len(datas[0]),
+        len(datas),
+        datatype,
+        []
+    )
+    dataset.SetGeoTransform([
+        origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0
+    ])
+    dataset.SetProjection(WGS_84_PROJECTION)
+    for i in range(len(datas)):
+        band = dataset.GetRasterBand(i + 1)
+        for index, val in enumerate(datas[i]):
+            band.WriteArray(np.array([list(val)]), 0, index)
+    return dataset
+
 def make_vectors_with_id(identifier: int, areas: Set[Area], filename: str) -> None:
     poly = ogr.Geometry(ogr.wkbPolygon)
 

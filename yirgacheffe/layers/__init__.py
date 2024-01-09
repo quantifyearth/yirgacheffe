@@ -2,7 +2,7 @@ from osgeo import ogr
 
 from ..window import PixelScale
 from .base import YirgacheffeLayer
-from .rasters import RasterLayer
+from .rasters import RasterLayer, InvalidRasterBand
 from .vectors import RasteredVectorLayer, VectorLayer
 from .area import UniformAreaLayer
 from .constant import ConstantLayer

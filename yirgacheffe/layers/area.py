@@ -56,12 +56,12 @@ class UniformAreaLayer(RasterLayer):
                 return False
         return True
 
-    def __init__(self, dataset, name: Optional[str] = None):
+    def __init__(self, dataset, name: Optional[str] = None, band: int = 1):
         if dataset.RasterXSize > 1:
             raise ValueError("Expected a shrunk dataset")
         self.databand = dataset.GetRasterBand(1).ReadAsArray(0, 0, 1, dataset.RasterYSize)
 
-        super().__init__(dataset, name)
+        super().__init__(dataset, name, band)
 
         transform = dataset.GetGeoTransform()
 

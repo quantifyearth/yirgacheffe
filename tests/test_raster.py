@@ -1,12 +1,13 @@
 import os
 import tempfile
 
+import numpy as np
 import pytest
 from osgeo import gdal
 
-from helpers import gdal_dataset_of_region
+from helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data
 from yirgacheffe.window import Area, PixelScale, Window
-from yirgacheffe.layers import RasterLayer
+from yirgacheffe.layers import RasterLayer, InvalidRasterBand
 from yirgacheffe.rounding import round_up_pixels
 
 
@@ -228,3 +229,29 @@ def test_read_array_size(size, expect_success):
     else:
         with pytest.raises(ValueError):
             _ = source.read_array(0, 0, size[0], size[1])
+
+def test_invalid_band() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        area = Area(-10, 10, 10, -10)
+        dataset = gdal_dataset_of_region(area, 0.02, filename=path)
+        del dataset
+        assert os.path.exists(path)
+        with pytest.raises(InvalidRasterBand):
+            _ = RasterLayer.layer_from_file(path, band=42)
+
+def test_multiband_raster() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+
+    datas = [data1, data2]
+    dataset = gdal_multiband_dataset_with_data((0.0, 0.0), 0.02, datas)
+    layer1 = RasterLayer(dataset, band=1)
+    layer2 = RasterLayer(dataset, band=2)
+
+    layers = [layer1, layer2]
+    for i in range(2):
+        data = datas[i]
+        layer = layers[i]
+        actual = layer.read_array(0, 0, 4, 2)
+        assert (data == actual).all()
