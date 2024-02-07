@@ -180,3 +180,39 @@ def generate_child_tile(xoffset: int, yoffset: int, width: int, height: int, out
         for x in range(width):
             data[y][x] = ((yoffset + y) * outer_width) + (x + xoffset)
     return data
+
+def make_vectors_with_empty_feature(areas: Set[Tuple[Area,int]], filename: str) -> None:
+    srs = ogr.osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+
+    package = ogr.GetDriverByName("GPKG").CreateDataSource(filename)
+    layer = package.CreateLayer("onlylayer", srs, geom_type=ogr.wkbPolygon)
+    field_type = ogr.OFTInteger
+    try:
+        if isinstance(list(areas)[0][1], float):
+            field_type = ogr.OFTReal
+    except IndexError:
+        pass
+    id_field = ogr.FieldDefn("id_no", field_type)
+    layer.CreateField(id_field)
+    feature_definition = layer.GetLayerDefn()
+
+    for area, identifier in areas:
+        poly = ogr.Geometry(ogr.wkbPolygon)
+        geometry = ogr.Geometry(ogr.wkbLinearRing)
+        geometry.AddPoint(area.left, area.top)
+        geometry.AddPoint(area.right, area.top)
+        geometry.AddPoint(area.right, area.bottom)
+        geometry.AddPoint(area.left, area.bottom)
+        geometry.AddPoint(area.left, area.top)
+        poly.AddGeometry(geometry)
+
+        feature = ogr.Feature(feature_definition)
+        feature.SetGeometry(poly)
+        feature.SetField("id_no", identifier)
+        layer.CreateFeature(feature)
+
+    feature = ogr.Feature(feature_definition)
+    layer.CreateFeature(feature)
+
+    package.Destroy()

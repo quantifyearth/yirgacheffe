@@ -108,7 +108,9 @@ class RasteredVectorLayer(RasterLayer):
         layer.ResetReading()
         feature = layer.GetNextFeature()
         while feature:
-            envelopes.append(feature.GetGeometryRef().GetEnvelope())
+            geometry = feature.GetGeometryRef()
+            if geometry:
+                envelopes.append(geometry.GetEnvelope())
             feature = layer.GetNextFeature()
         if len(envelopes) == 0:
             raise ValueError('No geometry found for')
@@ -255,7 +257,9 @@ class VectorLayer(YirgacheffeLayer):
         layer.ResetReading()
         feature = layer.GetNextFeature()
         while feature:
-            envelopes.append(feature.GetGeometryRef().GetEnvelope())
+            geometry = feature.GetGeometryRef()
+            if geometry:
+                envelopes.append(geometry.GetEnvelope())
             feature = layer.GetNextFeature()
         if len(envelopes) == 0:
             raise ValueError('No geometry found')

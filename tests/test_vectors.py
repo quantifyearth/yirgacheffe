@@ -4,7 +4,7 @@ import tempfile
 import pytest
 from osgeo import gdal
 
-from helpers import make_vectors_with_mutlile_ids, make_vectors_with_id
+from helpers import make_vectors_with_mutlile_ids, make_vectors_with_id, make_vectors_with_empty_feature
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, RasteredVectorLayer, VectorLayer, VectorRangeLayer, DynamicVectorRangeLayer
 from yirgacheffe.window import Area, PixelScale, Window
@@ -432,3 +432,32 @@ def test_anchor_offsets(anchor, area, expected):
 
         final_area = source.area
         assert final_area == expected
+
+
+@pytest.mark.parametrize(
+    "klass",
+    [
+        VectorLayer,
+        RasteredVectorLayer
+    ]
+)
+def test_vector_layers_with_empty_features(klass) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        areas = {
+            (Area(-10.0, 10.0, 0.0, 0.0), 42),
+            (Area(0.0, 0.0, 10, -10), 43)
+        }
+        make_vectors_with_empty_feature(areas, path)
+
+        layer = klass.layer_from_file(path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION)
+
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.datatype == gdal.GDT_Byte
+
+        # The default burn value is 1, so check that if we sum the area
+        # we get half and half
+        total = layer.sum()
+        assert total == (layer.window.xsize * layer.window.ysize) / 2
