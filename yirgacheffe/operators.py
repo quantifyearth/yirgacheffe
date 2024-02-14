@@ -171,7 +171,7 @@ class LayerOperation(LayerMathMixin):
                 res = chunk_max
         return res
 
-    def save(self, destination_layer, and_sum=False):
+    def save(self, destination_layer, and_sum, callback=None):
         """
         Calling save will write the output of the operation to the provied layer.
         If you provide sum as true it will additionall compute the sum and return that.
@@ -194,6 +194,8 @@ class LayerOperation(LayerMathMixin):
         total = 0.0
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
+            if callback:
+                callback(yoffset / computation_window.ysize)
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
@@ -207,6 +209,8 @@ class LayerOperation(LayerMathMixin):
             )
             if and_sum:
                 total += np.sum(chunk)
+        if callback:
+            callback(1.0)
 
         return total if and_sum else None
 
