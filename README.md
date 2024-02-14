@@ -277,7 +277,18 @@ calc.save(result)
 
 ## Getting an answer out
 
-There are two ways to store the result of a computation. In all the above examples we use the `save` call, to which you pass a gdal dataset band, into which the results will be written.
+There are two ways to store the result of a computation. In all the above examples we use the `save` call, to which you pass a gdal dataset band, into which the results will be written. You can optionally pass a callback to save which will be called for each chunk of data processed and give you the amount of progress made so far as a number between 0.0 and 1.0:
+
+```python
+
+def print_progress(p)
+    print(f"We have made {p *100} percent progress")
+
+...
+
+calc.save(result, callback=print_progress)
+```
+
 
 The alternative is to call `sum` which will give you a total:
 

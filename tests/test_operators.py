@@ -21,6 +21,31 @@ def test_add_byte_layers() -> None:
 
     assert (expected == actual).all()
 
+@pytest.mark.parametrize("skip,expected_steps", [
+    (1, [0.0, 0.5, 1.0]),
+    (2, [0.0, 1.0]),
+])
+def test_add_byte_layers_with_callback(skip, expected_steps) -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    callback_possitions = []
+
+    comp = layer1 + layer2
+    comp.ystep = skip
+    comp.save(result, callback=lambda x: callback_possitions.append(x))
+    
+    expected = data1 + data2
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+    assert callback_possitions == expected_steps
+
 def test_sub_byte_layers() -> None:
     data1 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
     data2 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
