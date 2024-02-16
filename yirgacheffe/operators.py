@@ -193,7 +193,6 @@ class LayerOperation(LayerMathMixin):
 
         total = 0.0
 
-        print(self.ystep)
         for yoffset in range(0, computation_window.ysize, self.ystep):
             if callback:
                 callback(yoffset / computation_window.ysize)
@@ -236,16 +235,6 @@ class ShaderStyleOperation(LayerOperation):
                 result = np.empty_like(rhs_data)
         else:
             result = np.empty_like(lhs_data)
-
-        print(self.window)
-        print(self.lhs._window)
-        if self.rhs is not None:
-            print(self.rhs._window)
-        print(lhs_data)
-        if self.rhs is not None:
-            print(self.rhs)
-        print(rhs_data)
-        print(result)
 
         window = self.window
         for yoffset in range(step):
