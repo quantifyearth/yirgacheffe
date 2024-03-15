@@ -96,16 +96,10 @@ class Window:
         # measured with cProfile).
         left, top, right, bottom = -sys.maxsize, -sys.maxsize, sys.maxsize, sys.maxsize
         for window in windows:
-            if window.xoff > left:
-                left = window.xoff
-            if window.yoff > top:
-                top = window.yoff
-            w_right = window.xoff + window.xsize
-            if  w_right < right:
-                right = w_right
-            w_bottom = window.yoff + window.ysize
-            if w_bottom < bottom:
-                bottom = w_bottom
+            left = max(left, window.xoff)
+            top = max(top, window.yoff)
+            right = min(right, window.xoff + window.xsize)
+            bottom = min(bottom, window.yoff + window.ysize)
         if (left >= right) or (top >= bottom):
             raise ValueError('No intersection possible')
         return Window(
@@ -125,16 +119,10 @@ class Window:
         # measured with cProfile).
         left, top, right, bottom = -sys.maxsize, -sys.maxsize, sys.maxsize, sys.maxsize
         for window in windows:
-            if window.xoff > left:
-                left = window.xoff
-            if window.yoff > top:
-                top = window.yoff
-            w_right = window.xoff + window.xsize
-            if  w_right < right:
-                right = w_right
-            w_bottom = window.yoff + window.ysize
-            if w_bottom < bottom:
-                bottom = w_bottom
+            left = max(left, window.xoff)
+            top = max(top, window.yoff)
+            right = min(right, window.xoff + window.xsize)
+            bottom = min(bottom, window.yoff + window.ysize)
         if (left >= right) or (top >= bottom):
             return None
         return Window(
