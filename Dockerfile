@@ -1,4 +1,4 @@
-from osgeo/gdal:ubuntu-small-latest
+from ghcr.io/osgeo/gdal:ubuntu-small-latest
 
 RUN apt-get update -qqy && \
 	apt-get install -qy \
@@ -12,7 +12,7 @@ WORKDIR /root/
 
 RUN pip install numpy
 RUN pip install pylint mypy pytest types-setuptools
-RUN pip install h3 --pre
+RUN pip install h3==4.0.0b2
 
 RUN python3 -m pytest -vv
 # RUN mypy yirgacheffe

@@ -1,17 +1,49 @@
 import copy
-from typing import Any, List, Optional
+import glob
+import os
+from typing import Any, List, Optional, TypeVar
 
 import numpy as np
 
 from ..rounding import are_pixel_scales_equal_enough, round_down_pixels
 from ..window import Area, Window
 from .base import YirgacheffeLayer
+from .rasters import RasterLayer
+
+GroupLayerT = TypeVar("GroupLayerT", bound="GroupLayer")
+
+class GroupLayerEmpty(ValueError):
+    def __init__(self, msg):
+        self.msg = msg
 
 class GroupLayer(YirgacheffeLayer):
 
-    def __init__(self, layers: List[YirgacheffeLayer], name: Optional[str] = None):
+    @classmethod
+    def layer_from_directory(
+        cls,
+        directory_path: str,
+        name: Optional[str] = None,
+        matching: str = "*.tif"
+    ) -> GroupLayerT:
+        if directory_path is None:
+            raise ValueError("Directory path is None")
+        files = [os.path.join(directory_path, x) for x in glob.glob(matching, root_dir=directory_path)]
+        if len(files) < 1:
+            raise GroupLayerEmpty(directory_path)
+        return cls.layer_from_files(files, name)
+
+    @classmethod
+    def layer_from_files(cls, filenames: List[str], name: Optional[str] = None) -> GroupLayerT:
+        if filenames is None:
+            raise ValueError("filenames argument is None")
+        if len(filenames) < 1:
+            raise GroupLayerEmpty("No files found")
+        rasters = [RasterLayer.layer_from_file(x) for x in filenames]
+        return cls(rasters, name)
+
+    def __init__(self, layers: List[YirgacheffeLayer], name: Optional[str] = None) -> GroupLayerT:
         if not layers:
-            raise ValueError("Expected one or more layers")
+            raise GroupLayerEmpty("Expected one or more layers")
         if not are_pixel_scales_equal_enough([x.pixel_scale for x in layers]):
             raise ValueError("Not all layers are at the same pixel scale")
         if not all(x.projection == layers[0].projection for x in layers):
