@@ -14,6 +14,38 @@ def test_empty_group():
     with pytest.raises(ValueError):
         _ = GroupLayer(set())
 
+def test_invalid_file_list():
+    with pytest.raises(ValueError):
+        _ = GroupLayer.layer_from_files(None)
+
+def test_empty_file_list():
+    with pytest.raises(ValueError):
+        _ = GroupLayer.layer_from_files([])
+
+def test_valid_file_list():
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        area = Area(-10, 10, 10, -10)
+        dataset = gdal_dataset_of_region(area, 0.2, filename=path)
+        del dataset
+        assert os.path.exists(path)
+
+        group = GroupLayer.layer_from_files([path])
+        assert group.area == area
+        assert group.window == Window(0, 0, 100, 100)
+
+def test_valid_file_list():
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        area = Area(-10, 10, 10, -10)
+        dataset = gdal_dataset_of_region(area, 0.2, filename=path)
+        del dataset
+        assert os.path.exists(path)
+
+        group = GroupLayer.layer_from_directory(tempdir)
+        assert group.area == area
+        assert group.window == Window(0, 0, 100, 100)
+
 def test_single_raster_layer_in_group():
     area = Area(-10, 10, 10, -10)
     raster1 = RasterLayer(gdal_dataset_of_region(area, 0.2))
