@@ -198,7 +198,7 @@ def test_h3_layer_overlapped():
     right, bottom = (121.62494, 19.18478)
     scale = PixelScale(0.000898315284120,-0.000898315284120)
 
-    cells = h3.polygon_to_cells(h3.Polygon([
+    cells = h3.geo_to_cells(h3.LatLngPoly([
         (top, left),
         (top, right),
         (bottom, right),
