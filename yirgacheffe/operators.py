@@ -1,12 +1,12 @@
 import sys
 import time
-from multiprocessing import Semaphore, Process
 import multiprocessing
+from multiprocessing import Semaphore, Process
+from multiprocessing.managers import SharedMemoryManager
 
 import numpy as np
 from osgeo import gdal
 
-from multiprocessing.managers import SharedMemoryManager
 
 from .window import Window
 
@@ -279,7 +279,7 @@ class LayerOperation(LayerMathMixin):
 
                 mem_and_locks = [
                     (
-                        smm.SharedMemory(size=(np_dtype.itemsize * self.ystep * destination_window.xsize)),
+                        smm.SharedMemory(size=np_dtype.itemsize * self.ystep * destination_window.xsize),
                         Semaphore(),
                     ) for _ in range(worker_count)
                 ]

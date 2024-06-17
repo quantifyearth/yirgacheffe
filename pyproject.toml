@@ -16,7 +16,7 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-keywords = ["gdal", "numpy", "math", "pathos"]
+keywords = ["gdal", "numpy", "math"]
 dependencies = [
     "numpy",
     "gdal",
