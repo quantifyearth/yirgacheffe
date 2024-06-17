@@ -1,9 +1,11 @@
-import multiprocessing
 from functools import partial
 
 import numpy as np
+import pathos.multiprocessing as multiprocessing
 
 from .window import Window
+
+
 
 YSTEP = 512
 
