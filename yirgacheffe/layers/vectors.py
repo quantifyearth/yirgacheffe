@@ -254,6 +254,7 @@ class VectorLayer(YirgacheffeLayer):
         self.burn_value = burn_value
 
         self._original = None
+        self._filter = None
 
         # work out region for mask
         envelopes = []
