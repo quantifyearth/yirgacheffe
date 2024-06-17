@@ -1,3 +1,6 @@
+import multiprocessing
+from functools import partial
+
 import numpy as np
 
 from .window import Window
@@ -209,6 +212,53 @@ class LayerOperation(LayerMathMixin):
             )
             if and_sum:
                 total += np.sum(chunk)
+        if callback:
+            callback(1.0)
+
+        return total if and_sum else None
+
+    def _parallel_step(self, task):
+        yoffset, step, width = task
+        chunk = self._eval(yoffset, step)
+        if isinstance(chunk, (float, int)):
+            chunk = np.full((step, width), chunk)
+        return (yoffset, chunk)
+
+    def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None):
+        if destination_layer is None:
+            raise ValueError("Layer is required")
+        try:
+            band = destination_layer._dataset.GetRasterBand(1)
+        except AttributeError as exc:
+            raise ValueError("Layer must be a raster backed layer") from exc
+
+        computation_window = self.window
+        destination_window = destination_layer.window
+
+        if (computation_window.xsize != destination_window.xsize) \
+                or (computation_window.ysize != destination_window.ysize):
+            raise ValueError("Destination raster window size does not match input raster window size.")
+
+        total = 0.0
+
+        tasks = [
+            (yoffset, computation_window.ysize - yoffset if yoffset+self.ystep > computation_window.ysize else self.ystep, destination_window.xsize)
+            for yoffset in range(0, computation_window.ysize, self.ystep)
+        ]
+
+        cores = parallelism or multiprocessing.cpu_count()
+        with multiprocessing.Pool(processes=cores) as pool:
+            res = pool.map(self._parallel_step, tasks)
+
+            for yoffset, chunk in res:
+                band.WriteArray(
+                    chunk,
+                    destination_window.xoff,
+                    yoffset + destination_window.yoff,
+                )
+                if and_sum:
+                    total += np.sum(chunk)
+
         if callback:
             callback(1.0)
 
