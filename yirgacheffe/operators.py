@@ -2,6 +2,10 @@ from functools import partial
 
 import numpy as np
 import pathos.multiprocessing as multiprocessing
+from osgeo import gdal
+
+from multiprocessing.managers import SharedMemoryManager
+from multiprocessing.shared_memory import SharedMemory
 
 from .window import Window
 
@@ -220,11 +224,12 @@ class LayerOperation(LayerMathMixin):
         return total if and_sum else None
 
     def _parallel_step(self, task):
-        yoffset, step, width = task
-        chunk = self._eval(yoffset, step)
-        if isinstance(chunk, (float, int)):
-            chunk = np.full((step, width), chunk)
-        return (yoffset, chunk)
+        yoffset, step, width, np_dtype, shared_mem = task
+        arr = np.frombuffer(shared_mem.buf, dtype=np_dtype)
+        arr = arr.reshape((step, width))
+        arr[:] = self._eval(yoffset, step)
+        return task
+
 
     def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None):
         if destination_layer is None:
@@ -243,23 +248,53 @@ class LayerOperation(LayerMathMixin):
 
         total = 0.0
 
-        tasks = [
-            (yoffset, computation_window.ysize - yoffset if yoffset+self.ystep > computation_window.ysize else self.ystep, destination_window.xsize)
-            for yoffset in range(0, computation_window.ysize, self.ystep)
-        ]
+        np_dtype = {
+            gdal.GDT_Byte:    np.dtype('byte'),
+            gdal.GDT_Float32: np.dtype('float32'),
+            gdal.GDT_Float64: np.dtype('float64'),
+            gdal.GDT_Int8:    np.dtype('int8'),
+            gdal.GDT_Int16:   np.dtype('int16'),
+            gdal.GDT_Int32:   np.dtype('int32'),
+            gdal.GDT_Int64:   np.dtype('int64'),
+            gdal.GDT_UInt16:  np.dtype('uint16'),
+            gdal.GDT_UInt32:  np.dtype('uint32'),
+            gdal.GDT_UInt64:  np.dtype('uint64'),
+        }[band.DataType]
 
-        cores = parallelism or multiprocessing.cpu_count()
-        with multiprocessing.Pool(processes=cores) as pool:
-            res = pool.map(self._parallel_step, tasks)
 
-            for yoffset, chunk in res:
-                band.WriteArray(
-                    chunk,
-                    destination_window.xoff,
-                    yoffset + destination_window.yoff,
-                )
-                if and_sum:
-                    total += np.sum(chunk)
+        with SharedMemoryManager() as smm:
+
+            tasks = []
+            for yoffset in range(0, computation_window.ysize, self.ystep):
+                step = computation_window.ysize - yoffset if yoffset+self.ystep > computation_window.ysize else self.ystep
+                tasks.append((
+                    yoffset,
+                    step,
+                    destination_window.xsize,
+                    np_dtype,
+                    smm.SharedMemory(size=(np_dtype.itemsize * step * destination_window.xsize))
+                ))
+
+            cores = parallelism or multiprocessing.cpu_count()
+            cores = min(len(tasks), cores)
+
+
+            with multiprocessing.Pool(processes=cores) as pool:
+                res = pool.map(self._parallel_step, tasks)
+
+                for yoffset, step, width, np_type, shared_mem in res:
+                    arr = np.frombuffer(shared_mem.buf, dtype=np_dtype)
+                    arr = arr.reshape((step, width))
+                    band.WriteArray(
+                        arr,
+                        destination_window.xoff,
+                        yoffset + destination_window.yoff,
+                    )
+                    if and_sum:
+                        total += np.sum(arr)
+
+
+
 
         if callback:
             callback(1.0)
