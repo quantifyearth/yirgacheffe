@@ -1,11 +1,12 @@
-from functools import partial
+import sys
+import time
+from multiprocessing import Semaphore, Process
+import multiprocessing
 
 import numpy as np
-import pathos.multiprocessing as multiprocessing
 from osgeo import gdal
 
 from multiprocessing.managers import SharedMemoryManager
-from multiprocessing.shared_memory import SharedMemory
 
 from .window import Window
 
@@ -223,12 +224,20 @@ class LayerOperation(LayerMathMixin):
 
         return total if and_sum else None
 
-    def _parallel_step(self, task):
-        yoffset, step, width, np_dtype, shared_mem = task
-        arr = np.frombuffer(shared_mem.buf, dtype=np_dtype)
-        arr = arr.reshape((step, width))
-        arr[:] = self._eval(yoffset, step)
-        return task
+    def _parallel_worker(self, index, shared_mem, sem, np_dtype, width, input_queue, output_queue):
+        arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
+
+        while True:
+            task = input_queue.get()
+            if task is None:
+                output_queue.put(None)
+                break
+            yoffset, step = task
+
+            sem.acquire()
+            arr[:step] = self._eval(yoffset, step)
+
+            output_queue.put((index, yoffset, step))
 
 
     def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None):
@@ -262,38 +271,76 @@ class LayerOperation(LayerMathMixin):
         }[band.DataType]
 
 
-        with SharedMemoryManager() as smm:
+        with multiprocessing.Manager() as manager:
+            with SharedMemoryManager() as smm:
 
-            tasks = []
-            for yoffset in range(0, computation_window.ysize, self.ystep):
-                step = computation_window.ysize - yoffset if yoffset+self.ystep > computation_window.ysize else self.ystep
-                tasks.append((
-                    yoffset,
-                    step,
-                    destination_window.xsize,
+                worker_count = parallelism or multiprocessing.cpu_count()
+                worker_count = min(len(range(0, computation_window.ysize, self.ystep)), worker_count)
+
+                mem_and_locks = [
+                    (
+                        smm.SharedMemory(size=(np_dtype.itemsize * self.ystep * destination_window.xsize)),
+                        Semaphore(),
+                    ) for _ in range(worker_count)
+                ]
+
+                cast_mem = [
+                    np.ndarray((self.ystep, destination_window.xsize), dtype=np_dtype, buffer=shared_mem.buf)
+                for shared_mem, _ in mem_and_locks]
+
+                source_queue = manager.Queue()
+                result_queue = manager.Queue()
+
+                for yoffset in range(0, computation_window.ysize, self.ystep):
+                    step = computation_window.ysize - yoffset if yoffset+self.ystep > computation_window.ysize else self.ystep
+                    source_queue.put((
+                        yoffset,
+                        step
+                    ))
+                for _ in range(worker_count):
+                    source_queue.put(None)
+
+                workers = [Process(target=self._parallel_worker, args=(
+                    i,
+                    mem_and_locks[i][0],
+                    mem_and_locks[i][1],
                     np_dtype,
-                    smm.SharedMemory(size=(np_dtype.itemsize * step * destination_window.xsize))
-                ))
+                    destination_window.xsize,
+                    source_queue,
+                    result_queue
+                )) for i in range(worker_count)]
+                for worker in workers:
+                    worker.start()
 
-            cores = parallelism or multiprocessing.cpu_count()
-            cores = min(len(tasks), cores)
-
-
-            with multiprocessing.Pool(processes=cores) as pool:
-                res = pool.map(self._parallel_step, tasks)
-
-                for yoffset, step, width, np_type, shared_mem in res:
-                    arr = np.frombuffer(shared_mem.buf, dtype=np_dtype)
-                    arr = arr.reshape((step, width))
+                sentinal_count = len(workers)
+                while sentinal_count > 0:
+                    res = result_queue.get()
+                    if res is None:
+                        sentinal_count -= 1
+                        continue
+                    index, yoffset, step = res
+                    _, sem = mem_and_locks[index]
+                    arr = cast_mem[index]
                     band.WriteArray(
-                        arr,
+                        arr[0:step],
                         destination_window.xoff,
                         yoffset + destination_window.yoff,
                     )
                     if and_sum:
-                        total += np.sum(arr)
+                        total += np.sum(arr[0:step])
+                    sem.release()
 
-
+                processes = workers
+                while processes:
+                    candidates = [x for x in processes if not x.is_alive()]
+                    for candidate in candidates:
+                        candidate.join()
+                        if candidate.exitcode:
+                            for victim in processes:
+                                victim.kill()
+                            sys.exit(candidate.exitcode)
+                        processes.remove(candidate)
+                    time.sleep(0.01)
 
 
         if callback:
