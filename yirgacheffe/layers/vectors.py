@@ -1,3 +1,4 @@
+import os
 from math import ceil, floor
 from typing import Any, Optional, Tuple, Union
 
@@ -188,6 +189,7 @@ class VectorLayer(YirgacheffeLayer):
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
         # the original object being around
         vector_layer._original = vectors
+        vector_layer._filter = where_filter
         return vector_layer
 
 
@@ -227,6 +229,7 @@ class VectorLayer(YirgacheffeLayer):
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
         # the original object being around
         vector_layer._original = vectors
+        vector_layer._filter = where_filter
         return vector_layer
 
     def __init__(
@@ -287,6 +290,27 @@ class VectorLayer(YirgacheffeLayer):
         )
 
         super().__init__(area, scale, projection)
+
+    def __getstate__(self) -> object:
+        # Only support pickling on file backed rasters (ideally read only ones...)
+        fpath = self._original.GetDescription()
+        if not os.path.isfile(fpath):
+            raise ValueError("Can not pickle raster layer that is not file backed.")
+        odict = self.__dict__.copy()
+        del odict['_original']
+        del odict['layer']
+        odict['_dataset_path'] = fpath
+        return odict
+
+    def __setstate__(self, state):
+        vectors = ogr.Open(state['_dataset_path'])
+        if vectors is None:
+            raise FileNotFoundError(f"Failed to open pickled vectors {state['_dataset_path']}")
+        self.__dict__.update(state)
+        self._original = vectors
+        self.layer = vectors.GetLayer()
+        if self._filter is not None:
+            self.layer.SetAttributeFilter(self._filter)
 
     @property
     def datatype(self) -> int:

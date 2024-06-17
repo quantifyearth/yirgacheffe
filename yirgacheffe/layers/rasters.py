@@ -1,4 +1,5 @@
 import math
+import os
 from typing import Any, Optional, TypeVar, Union
 
 import numpy
@@ -217,6 +218,23 @@ class RasterLayer(YirgacheffeLayer):
         self._band = band
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
+
+    def __getstate__(self) -> object:
+        # Only support pickling on file backed rasters (ideally read only ones...)
+        fpath = self._dataset.GetDescription()
+        if not os.path.isfile(fpath):
+            raise ValueError("Can not pickle raster layer that is not file backed.")
+        odict = self.__dict__.copy()
+        del odict['_dataset']
+        odict['_dataset_path'] = fpath
+        return odict
+
+    def __setstate__(self, state):
+        dataset = gdal.Open(state['_dataset_path'])
+        if dataset is None:
+            raise FileNotFoundError(f"Failed to open pickled raster {state['_dataset_path']}")
+        self.__dict__.update(state)
+        self._dataset = dataset
 
     @property
     def datatype(self) -> int:
