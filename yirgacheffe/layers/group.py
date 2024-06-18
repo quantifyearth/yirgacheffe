@@ -63,6 +63,13 @@ class GroupLayer(YirgacheffeLayer):
         self._underlying_layers.reverse()
         self.layers = self._underlying_layers
 
+    def _park(self):
+        for layer in self.layers:
+            try:
+                layer._park()
+            except AttributeError:
+                pass
+
     def set_window_for_intersection(self, new_area: Area) -> None:
         super().set_window_for_intersection(new_area)
 
