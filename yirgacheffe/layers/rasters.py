@@ -229,6 +229,7 @@ class RasterLayer(YirgacheffeLayer):
         if not os.path.isfile(self._dataset_path):
             raise ValueError("Can not pickle layer that is not file backed.")
         odict = self.__dict__.copy()
+        self._park()
         del odict['_dataset']
         return odict
 
@@ -237,6 +238,10 @@ class RasterLayer(YirgacheffeLayer):
         self._unpark()
 
     def _park(self):
+        try:
+            self._dataset.Close()
+        except AttributeError:
+            pass
         self._dataset = None
 
     def _unpark(self):
