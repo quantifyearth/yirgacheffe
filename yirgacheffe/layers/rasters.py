@@ -182,11 +182,15 @@ class RasterLayer(YirgacheffeLayer):
 
     @classmethod
     def layer_from_file(cls, filename: str, band: int = 1) -> RasterLayerT:
-        dataset = gdal.Open(filename, gdal.GA_ReadOnly)
-        if dataset is None:
-            raise FileNotFoundError(filename)
-        if dataset.GetRasterBand(band) is None:
-            raise InvalidRasterBand(band)
+        try:
+            dataset = gdal.Open(filename, gdal.GA_ReadOnly)
+        except RuntimeError as exc:
+            # With exceptions on GDAL now returns the wrong (IMHO) exception
+            raise FileNotFoundError(filename) from exc
+        try:
+            _ = dataset.GetRasterBand(band)
+        except RuntimeError as exc:
+            raise InvalidRasterBand(band) from exc
         return cls(dataset, filename, band)
 
     def __init__(self, dataset: gdal.Dataset, name: Optional[str] = None, band: int = 1):
@@ -215,32 +219,42 @@ class RasterLayer(YirgacheffeLayer):
         assert self.window == Window(0, 0, dataset.RasterXSize, dataset.RasterYSize)
 
         self._dataset = dataset
+        self._dataset_path = dataset.GetDescription()
         self._band = band
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
 
     def __getstate__(self) -> object:
-        # Only support pickling on file backed rasters (ideally read only ones...)
-        fpath = self._dataset.GetDescription()
-        if not os.path.isfile(fpath):
-            raise ValueError("Can not pickle raster layer that is not file backed.")
+        # Only support pickling on file backed layers (ideally read only ones...)
+        if not os.path.isfile(self._dataset_path):
+            raise ValueError("Can not pickle layer that is not file backed.")
         odict = self.__dict__.copy()
         del odict['_dataset']
-        odict['_dataset_path'] = fpath
         return odict
 
     def __setstate__(self, state):
-        dataset = gdal.Open(state['_dataset_path'])
-        if dataset is None:
-            raise FileNotFoundError(f"Failed to open pickled raster {state['_dataset_path']}")
         self.__dict__.update(state)
-        self._dataset = dataset
+        self._unpark()
+
+    def _park(self):
+        self._dataset = None
+
+    def _unpark(self):
+        if getattr(self, "_dataset", None) is None:
+            try:
+                self._dataset = gdal.Open(self._dataset_path)
+            except RuntimeError as exc:
+                raise FileNotFoundError(f"Failed to open pickled raster {self._dataset_path}") from exc
 
     @property
     def datatype(self) -> int:
+        if self._dataset is None:
+            self._unpark()
         return self._dataset.GetRasterBand(1).DataType
 
     def read_array(self, xoffset, yoffset, xsize, ysize) -> Any:
+        if self._dataset is None:
+            self._unpark()
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 

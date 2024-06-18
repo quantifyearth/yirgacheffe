@@ -239,6 +239,15 @@ class LayerOperation(LayerMathMixin):
 
             output_queue.put((index, yoffset, step))
 
+    def _park(self):
+        try:
+            self.lhs._park()
+        except AttributeError:
+            pass
+        try:
+            self.rhs._park()
+        except AttributeError:
+            pass
 
     def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None):
         if destination_layer is None:
@@ -250,6 +259,10 @@ class LayerOperation(LayerMathMixin):
 
         computation_window = self.window
         destination_window = destination_layer.window
+
+        # The parallel save will cause a fork on linux, so we need to
+        # remove all SWIG references
+        self._park()
 
         if (computation_window.xsize != destination_window.xsize) \
                 or (computation_window.ysize != destination_window.ysize):
@@ -292,7 +305,9 @@ class LayerOperation(LayerMathMixin):
                 result_queue = manager.Queue()
 
                 for yoffset in range(0, computation_window.ysize, self.ystep):
-                    step = computation_window.ysize - yoffset if yoffset+self.ystep > computation_window.ysize else self.ystep
+                    step = ((computation_window.ysize - yoffset)
+                        if yoffset+self.ystep > computation_window.ysize
+                        else self.ystep)
                     source_queue.put((
                         yoffset,
                         step

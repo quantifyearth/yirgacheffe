@@ -189,6 +189,7 @@ class VectorLayer(YirgacheffeLayer):
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
         # the original object being around
         vector_layer._original = vectors
+        vector_layer._dataset_path = filename
         vector_layer._filter = where_filter
         return vector_layer
 
@@ -229,6 +230,7 @@ class VectorLayer(YirgacheffeLayer):
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
         # the original object being around
         vector_layer._original = vectors
+        vector_layer._dataset_path = filename
         vector_layer._filter = where_filter
         return vector_layer
 
@@ -254,6 +256,7 @@ class VectorLayer(YirgacheffeLayer):
         self.burn_value = burn_value
 
         self._original = None
+        self._dataset_path = None
         self._filter = None
 
         # work out region for mask
@@ -293,14 +296,12 @@ class VectorLayer(YirgacheffeLayer):
         super().__init__(area, scale, projection)
 
     def __getstate__(self) -> object:
-        # Only support pickling on file backed rasters (ideally read only ones...)
-        fpath = self._original.GetDescription()
-        if not os.path.isfile(fpath):
-            raise ValueError("Can not pickle raster layer that is not file backed.")
+        # Only support pickling on file backed layers (ideally read only ones...)
+        if not os.path.isfile(self._dataset_path):
+            raise ValueError("Can not pickle layer that is not file backed.")
         odict = self.__dict__.copy()
         del odict['_original']
         del odict['layer']
-        odict['_dataset_path'] = fpath
         return odict
 
     def __setstate__(self, state):
@@ -313,11 +314,26 @@ class VectorLayer(YirgacheffeLayer):
         if self._filter is not None:
             self.layer.SetAttributeFilter(self._filter)
 
+    def _park(self):
+        self._original = None
+
+    def _unpark(self):
+        if getattr(self, "_original", None) is None:
+            try:
+                self._original = ogr.Open(self._dataset_path)
+            except RuntimeError as exc:
+                raise FileNotFoundError(f"Failed to open pickled layer {self._dataset_path}") from exc
+            self.layer = self._original.GetLayer()
+            if self._filter is not None:
+                self.layer.SetAttributeFilter(self._filter)
+
     @property
     def datatype(self) -> int:
         return self._datatype
 
     def read_array(self, xoffset, yoffset, xsize, ysize):
+        if self._original is None:
+            self._unpark()
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
