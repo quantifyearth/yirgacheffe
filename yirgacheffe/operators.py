@@ -231,13 +231,21 @@ class LayerOperation(LayerMathMixin):
         arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
 
         while True:
+            # We aquire the lock so we know we have somewhere to put the
+            # result before we take work. This is because in practice
+            # it seems the writing to GeoTIFF is the bottleneck, and
+            # we had workers taking a task, then waiting for somewhere to
+            # write to for ages when other workers were exiting because there
+            # was nothing to do.
+            sem.acquire()
+
             task = input_queue.get()
             if task is None:
+                sem.release()
                 output_queue.put(None)
                 break
             yoffset, step = task
 
-            sem.acquire()
             arr[:step] = self._eval(yoffset, step)
 
             output_queue.put((index, yoffset, step))

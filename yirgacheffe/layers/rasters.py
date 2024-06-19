@@ -32,7 +32,8 @@ class RasterLayer(YirgacheffeLayer):
         name: Optional[str]=None,
         compress: bool=True,
         nodata: Optional[Union[float,int]]=None,
-        nbits: Optional[int]=None
+        nbits: Optional[int]=None,
+        threads: Optional[int]=None
     ) -> RasterLayerT:
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
@@ -45,6 +46,8 @@ class RasterLayer(YirgacheffeLayer):
         )
 
         options = []
+        if threads is not None:
+            options.append(f"NUM_THREADS={threads}")
         if nbits is not None:
             options.append(f"NBITS={nbits}")
 
@@ -53,6 +56,8 @@ class RasterLayer(YirgacheffeLayer):
             options.append('BIGTIFF=YES')
             if compress:
                 options.append('COMPRESS=LZW')
+            else:
+                options.append('COMPRESS=NONE')
         else:
             driver = gdal.GetDriverByName('mem')
             filename = 'mem'
@@ -81,7 +86,8 @@ class RasterLayer(YirgacheffeLayer):
         datatype: Optional[int]=None,
         compress: bool=True,
         nodata: Optional[Union[float,int]]=None,
-        nbits: Optional[int]=None
+        nbits: Optional[int]=None,
+        threads: Optional[int]=None
     ) -> RasterLayerT:
         width = layer.window.xsize
         height = layer.window.ysize
@@ -98,6 +104,8 @@ class RasterLayer(YirgacheffeLayer):
             )
 
         options = []
+        if threads is not None:
+            options.append(f"NUM_THREADS={threads}")
         if nbits is not None:
             options.append(f"NBITS={nbits}")
 
@@ -106,6 +114,8 @@ class RasterLayer(YirgacheffeLayer):
             options.append('BIGTIFF=YES')
             if compress:
                 options.append('COMPRESS=LZW')
+            else:
+                options.append('COMPRESS=NONE')
         else:
             driver = gdal.GetDriverByName('mem')
             filename = 'mem'
