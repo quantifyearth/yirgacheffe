@@ -55,14 +55,18 @@ def test_parallel_with_different_skip(skip, expected_steps) -> None:
         layer2 = RasterLayer.layer_from_file(path2)
         result = RasterLayer.empty_raster_layer_like(layer1)
 
+        callback_possitions = []
+
         comp = layer1 + layer2
         comp.ystep = skip
-        comp.parallel_save(result)
+        comp.parallel_save(result, callback=lambda x: callback_possitions.append(x))
 
         expected = data1 + data2
         actual = result.read_array(0, 0, 4, 2)
 
         assert (expected == actual).all()
+
+        assert callback_possitions == expected_steps
 
 def test_parallel_unary_numpy_apply_with_function() -> None:
     with tempfile.TemporaryDirectory() as tempdir:

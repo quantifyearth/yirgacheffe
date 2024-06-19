@@ -76,6 +76,9 @@ class LayerMathMixin:
     def save(self, destination_layer, and_sum=False, callback=None):
         return LayerOperation(self).save(destination_layer, and_sum, callback)
 
+    def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None):
+        return LayerOperation(self).parallel_save(destination_layer, and_sum, callback, parallelism)
+
     def sum(self):
         return LayerOperation(self).sum()
 
@@ -288,7 +291,8 @@ class LayerOperation(LayerMathMixin):
             with SharedMemoryManager() as smm:
 
                 worker_count = parallelism or multiprocessing.cpu_count()
-                worker_count = min(len(range(0, computation_window.ysize, self.ystep)), worker_count)
+                work_blocks = len(range(0, computation_window.ysize, self.ystep))
+                worker_count = min(work_blocks, worker_count)
 
                 mem_and_locks = [
                     (
@@ -315,6 +319,9 @@ class LayerOperation(LayerMathMixin):
                 for _ in range(worker_count):
                     source_queue.put(None)
 
+                if callback:
+                    callback(0.0)
+
                 workers = [Process(target=self._parallel_worker, args=(
                     i,
                     mem_and_locks[i][0],
@@ -328,6 +335,7 @@ class LayerOperation(LayerMathMixin):
                     worker.start()
 
                 sentinal_count = len(workers)
+                retired_blocks = 0
                 while sentinal_count > 0:
                     res = result_queue.get()
                     if res is None:
@@ -344,6 +352,9 @@ class LayerOperation(LayerMathMixin):
                     if and_sum:
                         total += np.sum(arr[0:step])
                     sem.release()
+                    retired_blocks += 1
+                    if callback:
+                        callback(retired_blocks / work_blocks)
 
                 processes = workers
                 while processes:
@@ -356,10 +367,6 @@ class LayerOperation(LayerMathMixin):
                             sys.exit(candidate.exitcode)
                         processes.remove(candidate)
                     time.sleep(0.01)
-
-
-        if callback:
-            callback(1.0)
 
         return total if and_sum else None
 
