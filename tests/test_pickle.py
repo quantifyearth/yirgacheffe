@@ -9,9 +9,8 @@ import pytest
 
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe.window import Area, PixelScale, Window
-from yirgacheffe.layers import GroupLayer, RasterLayer, UniformAreaLayer, VectorLayer
+from yirgacheffe.layers import ConstantLayer, GroupLayer, RasterLayer, UniformAreaLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
-
 
 def test_pickle_raster_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -87,7 +86,7 @@ def test_pickle_uniform_area_layer() -> None:
             math.ceil((restore.area.top - restore.area.bottom) / pixel_scale)
         )
 
-def test_pickle_group_layer():
+def test_pickle_group_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10)
@@ -107,3 +106,60 @@ def test_pickle_group_layer():
 
         result = restore.read_array(0, 0, 100, 100)
         assert (expected == result).all()
+
+def test_pickle_constant_layer() -> None:
+    layer = ConstantLayer(42.0)
+
+    p = pickle.dumps(layer)
+    restore = pickle.loads(p)
+
+    result = restore.read_array(0, 0, 1, 1)
+    assert (result == np.array([[42.0]])).all()
+
+def test_pickle_simple_calc() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        area = Area(-10, 10, 10, -10)
+        layer = RasterLayer(gdal_dataset_of_region(area, 0.2, filename=path))
+
+        calc = layer * 2.0
+        assert calc.sum() != 0
+        assert calc.sum() == layer.sum() * 2
+
+        p = pickle.dumps(calc)
+        restore = pickle.loads(p)
+
+        assert calc.sum() == restore.sum()
+
+def test_pickle_lambda_calc() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        area = Area(-10, 10, 10, -10)
+        layer = RasterLayer(gdal_dataset_of_region(area, 0.2, filename=path))
+
+        calc = layer.numpy_apply(lambda x: x * 2.0)
+        assert calc.sum() != 0
+        assert calc.sum() == layer.sum() * 2
+
+        p = pickle.dumps(calc)
+        restore = pickle.loads(p)
+
+        assert calc.sum() == restore.sum()
+
+def test_pickle_func_calc() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        area = Area(-10, 10, 10, -10)
+        layer = RasterLayer(gdal_dataset_of_region(area, 0.2, filename=path))
+
+        def mulex(x):
+            return x * 2.0
+
+        calc = layer.numpy_apply(mulex)
+        assert calc.sum() != 0
+        assert calc.sum() == layer.sum() * 2
+
+        p = pickle.dumps(calc)
+        restore = pickle.loads(p)
+
+        assert calc.sum() == restore.sum()

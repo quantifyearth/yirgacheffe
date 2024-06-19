@@ -1,12 +1,13 @@
 import sys
 import time
 import multiprocessing
+import types
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
 
 import numpy as np
 from osgeo import gdal
-
+from dill import dumps, loads
 
 from .window import Window
 
@@ -124,6 +125,19 @@ class LayerOperation(LayerMathMixin):
 
     def __len__(self):
         return len(self.lhs)
+
+    def __getstate__(self) -> object:
+        odict = self.__dict__.copy()
+        if isinstance(self.operator, types.LambdaType):
+            odict['operator_dill'] = dumps(self.operator)
+            del odict['operator']
+        return odict
+
+    def __setstate__(self, state):
+        if 'operator_dill' in state:
+            state['operator'] = loads(state['operator_dill'])
+            del state['operator_dill']
+        self.__dict__.update(state)
 
     @property
     def window(self) -> Window:

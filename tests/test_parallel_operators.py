@@ -30,9 +30,6 @@ def test_add_byte_layers() -> None:
         expected = data1 + data2
         actual = result.read_array(0, 0, 4, 2)
 
-        print(f"expected: {expected}")
-        print(f"actual: {actual}")
-
         assert (expected == actual).all()
 
 @pytest.mark.parametrize("skip,expected_steps", [
