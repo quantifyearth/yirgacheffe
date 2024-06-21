@@ -316,16 +316,12 @@ class LayerOperation(LayerMathMixin):
                 work_blocks = len(range(0, computation_window.ysize, self.ystep))
                 worker_count = min(work_blocks, worker_count)
 
-                mem_and_locks = [
-                    (
-                        smm.SharedMemory(size=np_dtype.itemsize * self.ystep * destination_window.xsize),
-                        Semaphore(),
-                    ) for _ in range(worker_count)
-                ]
-
-                cast_mem = [
-                    np.ndarray((self.ystep, destination_window.xsize), dtype=np_dtype, buffer=shared_mem.buf)
-                for shared_mem, _ in mem_and_locks]
+                mem_sem_cast = []
+                for i in range(worker_count):
+                    shared_buf = smm.SharedMemory(size=np_dtype.itemsize * self.ystep * destination_window.xsize)
+                    cast_buf = np.ndarray((self.ystep, destination_window.xsize), dtype=np_dtype, buffer=shared_buf.buf)
+                    cast_buf[:] = np.zeros((self.ystep, destination_window.xsize), np_dtype)
+                    mem_sem_cast.append((shared_buf, Semaphore(), cast_buf))
 
                 source_queue = manager.Queue()
                 result_queue = manager.Queue()
@@ -346,8 +342,8 @@ class LayerOperation(LayerMathMixin):
 
                 workers = [Process(target=self._parallel_worker, args=(
                     i,
-                    mem_and_locks[i][0],
-                    mem_and_locks[i][1],
+                    mem_sem_cast[i][0],
+                    mem_sem_cast[i][1],
                     np_dtype,
                     destination_window.xsize,
                     source_queue,
@@ -364,8 +360,7 @@ class LayerOperation(LayerMathMixin):
                         sentinal_count -= 1
                         continue
                     index, yoffset, step = res
-                    _, sem = mem_and_locks[index]
-                    arr = cast_mem[index]
+                    _, sem, arr = mem_sem_cast[index]
                     band.WriteArray(
                         arr[0:step],
                         destination_window.xoff,
