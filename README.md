@@ -282,7 +282,7 @@ There are two ways to store the result of a computation. In all the above exampl
 ```python
 
 def print_progress(p)
-    print(f"We have made {p *100} percent progress")
+    print(f"We have made {p * 100} percent progress")
 
 ...
 
@@ -306,6 +306,23 @@ total_area = calc.sum()
 ```
 
 Similar to sum, you can also call `min` and `max` on a layer or calculation.
+
+## Experimental
+
+There is a parallel version of save, that is added as an experimental feature for testing in our wider codebase, which
+will run concurrently the save over many threads.
+
+```
+calc.parallel_save(result)
+```
+
+By default it will use as many CPU cores as are available, but if you want to limit that you can pass an extra argument to constrain that:
+
+```
+calc.parallel_save(result, parallelism=4)
+```
+
+Because of the number of tricks that Python plays under the hood this feature needs a bunch of testing to let us remove the experimental flag, but in order to get that testing we need to put it out there! Hopefully in the next release we can remove the experimental warning.
 
 
 ## Thanks

@@ -65,13 +65,18 @@ def gdal_dataset_of_layer(layer: YirgacheffeLayer, filename: Optional[str]=None)
     dataset.SetProjection(layer.projection)
     return dataset
 
-def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: np.array) -> gdal.Dataset:
+def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: np.array, filename: Optional[str]=None) -> gdal.Dataset:
     assert data.ndim == 2
     datatype = gdal.GDT_Byte
     if isinstance(data[0][0], float):
         datatype = gdal.GDT_Float64
-    dataset = gdal.GetDriverByName('mem').Create(
-        'mem',
+    if filename:
+        driver = gdal.GetDriverByName('GTiff')
+    else:
+        driver = gdal.GetDriverByName('mem')
+        filename = 'mem'
+    dataset = driver.Create(
+        filename,
         len(data[0]),
         len(data),
         1,

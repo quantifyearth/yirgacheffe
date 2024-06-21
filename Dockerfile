@@ -12,7 +12,7 @@ WORKDIR /root/
 
 RUN pip install numpy
 RUN pip install pylint mypy pytest types-setuptools
-RUN pip install h3==4.0.0b2
+RUN pip install h3==4.0.0b5
 
 RUN python3 -m pytest -vv
 # RUN mypy yirgacheffe
