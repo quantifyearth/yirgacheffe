@@ -66,7 +66,7 @@ Yirgacheffe is work in progress, so things planned but not supported currently:
 * Dynamic pixel scale adjustment - all raster layers must be provided at the same pixel scale currently
 * A fold operation
 * CUPY support
-* Dispatching work across multiple CPUs
+* Dispatching work across multiple CPUs *NOW IN EXPERIMENTAL TESTING, SEE BELOW*
 
 
 
