@@ -65,7 +65,6 @@ def test_pickle_uniform_area_layer() -> None:
         assert dataset.RasterXSize == 1
         assert dataset.RasterYSize == math.ceil(180 / pixel_scale)
         dataset.Close()
-        del dataset
 
         layer = UniformAreaLayer.layer_from_file(path)
 
@@ -92,7 +91,6 @@ def test_pickle_group_layer() -> None:
         area = Area(-10, 10, 10, -10)
         dataset = gdal_dataset_of_region(area, 0.2, filename=path)
         dataset.Close()
-        del dataset
 
         group = GroupLayer.layer_from_directory(tempdir)
         expected = group.read_array(0, 0, 100, 100)

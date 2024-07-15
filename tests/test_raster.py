@@ -49,7 +49,7 @@ def test_open_file() -> None:
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10)
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
-        del dataset
+        dataset.Close()
         assert os.path.exists(path)
         layer = RasterLayer.layer_from_file(path)
         assert layer.area == area
@@ -235,7 +235,7 @@ def test_invalid_band() -> None:
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10)
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
-        del dataset
+        dataset.Close()
         assert os.path.exists(path)
         with pytest.raises(InvalidRasterBand):
             _ = RasterLayer.layer_from_file(path, band=42)

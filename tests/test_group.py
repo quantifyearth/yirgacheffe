@@ -27,7 +27,7 @@ def test_valid_file_list():
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10)
         dataset = gdal_dataset_of_region(area, 0.2, filename=path)
-        del dataset
+        dataset.Close()
         assert os.path.exists(path)
 
         group = GroupLayer.layer_from_files([path])
@@ -39,7 +39,7 @@ def test_valid_file_list():
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10)
         dataset = gdal_dataset_of_region(area, 0.2, filename=path)
-        del dataset
+        dataset.Close()
         assert os.path.exists(path)
 
         group = GroupLayer.layer_from_directory(tempdir)
