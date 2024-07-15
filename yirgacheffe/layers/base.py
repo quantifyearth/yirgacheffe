@@ -25,6 +25,9 @@ class YirgacheffeLayer(LayerMathMixin):
 
         self.reset_window()
 
+    def close(self):
+        pass
+
     @property
     def projection(self) -> str:
         return self._projection

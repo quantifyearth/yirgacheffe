@@ -74,11 +74,11 @@ class LayerMathMixin:
     def shader_apply(self, func, other=None):
         return ShaderStyleOperation(self, func, other)
 
-    def save(self, destination_layer, and_sum=False, callback=None):
-        return LayerOperation(self).save(destination_layer, and_sum, callback)
+    def save(self, destination_layer, and_sum=False, callback=None, band=1):
+        return LayerOperation(self).save(destination_layer, and_sum, callback, band)
 
-    def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None):
-        return LayerOperation(self).parallel_save(destination_layer, and_sum, callback, parallelism)
+    def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
+        return LayerOperation(self).parallel_save(destination_layer, and_sum, callback, parallelism, band)
 
     def sum(self):
         return LayerOperation(self).sum()
@@ -198,7 +198,7 @@ class LayerOperation(LayerMathMixin):
                 res = chunk_max
         return res
 
-    def save(self, destination_layer, and_sum=False, callback=None):
+    def save(self, destination_layer, and_sum=False, callback=None, band=1):
         """
         Calling save will write the output of the operation to the provied layer.
         If you provide sum as true it will additionall compute the sum and return that.
@@ -207,7 +207,7 @@ class LayerOperation(LayerMathMixin):
         if destination_layer is None:
             raise ValueError("Layer is required")
         try:
-            band = destination_layer._dataset.GetRasterBand(1)
+            band = destination_layer._dataset.GetRasterBand(band)
         except AttributeError as exc:
             raise ValueError("Layer must be a raster backed layer") from exc
 
@@ -274,11 +274,11 @@ class LayerOperation(LayerMathMixin):
         except AttributeError:
             pass
 
-    def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None):
+    def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
         if destination_layer is None:
             raise ValueError("Layer is required")
         try:
-            band = destination_layer._dataset.GetRasterBand(1)
+            band = destination_layer._dataset.GetRasterBand(band)
         except AttributeError as exc:
             raise ValueError("Layer must be a raster backed layer") from exc
 

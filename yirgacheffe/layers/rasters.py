@@ -33,7 +33,8 @@ class RasterLayer(YirgacheffeLayer):
         compress: bool=True,
         nodata: Optional[Union[float,int]]=None,
         nbits: Optional[int]=None,
-        threads: Optional[int]=None
+        threads: Optional[int]=None,
+        bands: int=1
     ) -> RasterLayerT:
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
@@ -66,7 +67,7 @@ class RasterLayer(YirgacheffeLayer):
             filename,
             round_up_pixels((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep, abs_xstep),
             round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
-            1,
+            bands,
             datatype,
             options
         )
@@ -87,7 +88,8 @@ class RasterLayer(YirgacheffeLayer):
         compress: bool=True,
         nodata: Optional[Union[float,int]]=None,
         nbits: Optional[int]=None,
-        threads: Optional[int]=None
+        threads: Optional[int]=None,
+        bands: int=1
     ) -> RasterLayerT:
         width = layer.window.xsize
         height = layer.window.ysize
@@ -124,7 +126,7 @@ class RasterLayer(YirgacheffeLayer):
             filename,
             width,
             height,
-            1,
+            bands,
             datatype if datatype is not None else layer.datatype,
             options,
         )
@@ -233,6 +235,14 @@ class RasterLayer(YirgacheffeLayer):
         self._band = band
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
+
+    def close(self):
+        if self._dataset:
+            try:
+                self._dataset.Close()
+            except AttributeError:
+                pass
+            del self._dataset
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)

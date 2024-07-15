@@ -1,10 +1,9 @@
 import numpy as np
 import pytest
 
-from helpers import gdal_dataset_with_data, gdal_dataset_of_region
+from helpers import gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe.operators import LayerOperation
-from yirgacheffe.window import Area
 
 def test_add_byte_layers() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
