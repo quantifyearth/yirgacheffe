@@ -17,22 +17,23 @@ from yirgacheffe.operators import ShaderStyleOperation
 )
 def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
     if is_valid:
-        layer = H3CellLayer(cell_id, PixelScale(0.001, -0.001), WGS_84_PROJECTION)
-        assert layer.zoom == expected_zoom
-        assert layer.projection == WGS_84_PROJECTION
+        with H3CellLayer(cell_id, PixelScale(0.001, -0.001), WGS_84_PROJECTION) as layer:
+            assert layer.zoom == expected_zoom
+            assert layer.projection == WGS_84_PROJECTION
 
-        # without getting too deep, we'd expect a mix of zeros and ones in the data
-        window = layer.window
-        one_count = 0
-        for yoffset in range(window.ysize):
-            data = layer.read_array(0, yoffset, window.xsize, 1)
-            assert data.shape == (1, window.xsize)
-            one_count += data.sum()
-        assert one_count != 0
+            # without getting too deep, we'd expect a mix of zeros and ones in the data
+            window = layer.window
+            one_count = 0
+            for yoffset in range(window.ysize):
+                data = layer.read_array(0, yoffset, window.xsize, 1)
+                assert data.shape == (1, window.xsize)
+                one_count += data.sum()
+            assert one_count != 0
 
     else:
         with pytest.raises(ValueError):
-            _ = H3CellLayer(cell_id, PixelScale(0.001, -0.001), WGS_84_PROJECTION)
+            with H3CellLayer(cell_id, PixelScale(0.001, -0.001), WGS_84_PROJECTION) as _layer:
+                pass
 
 @pytest.mark.parametrize(
     "lat,lng",

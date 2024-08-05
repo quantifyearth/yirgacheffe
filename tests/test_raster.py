@@ -18,27 +18,41 @@ from yirgacheffe.rounding import round_up_pixels
 
 def test_make_basic_layer() -> None:
     area = Area(-10, 10, 10, -10)
-    layer = RasterLayer(gdal_dataset_of_region(area, 0.02))
-    assert layer.area == area
-    assert layer.pixel_scale == (0.02, -0.02)
-    assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
-    assert layer.window == Window(0, 0, 1000, 1000)
+    dataset = gdal_dataset_of_region(area, 0.02)
+
+    # The context manager routines are just called on the base class, so ensure
+    # they do call the GDAL close method, otherwise all that is for nothing
+    original_ref = dataset.Close
+    close_called = []
+    def mocked_close():
+        close_called.append(True)
+        original_ref()
+    dataset.Close = mocked_close
+
+    with RasterLayer(dataset) as layer:
+        assert layer.area == area
+        assert layer.pixel_scale == (0.02, -0.02)
+        assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+        assert layer.window == Window(0, 0, 1000, 1000)
+
+    assert close_called
 
 def test_make_basic_layer_old_name() -> None:
     from yirgacheffe.layers import Layer
 
     area = Area(-10, 10, 10, -10)
-    layer = Layer(gdal_dataset_of_region(area, 0.02))
-    assert layer.area == area
-    assert layer.pixel_scale == (0.02, -0.02)
-    assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
-    assert layer.window == Window(0, 0, 1000, 1000)
+    with Layer(gdal_dataset_of_region(area, 0.02)) as layer:
+        assert layer.area == area
+        assert layer.pixel_scale == (0.02, -0.02)
+        assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+        assert layer.window == Window(0, 0, 1000, 1000)
 
 def test_layer_from_null() -> None:
     # Seems a petty test, but gdal doesn't throw exceptions
     # so you often get None datasets if you're not careful
     with pytest.raises(ValueError):
-        _ = RasterLayer(None)
+        with RasterLayer(None) as _layer:
+            pass
 
 def test_layer_from_nonexistent_file() -> None:
     with pytest.raises(FileNotFoundError):

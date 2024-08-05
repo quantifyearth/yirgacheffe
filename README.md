@@ -43,6 +43,7 @@ def is_munro(data):
 calc = validity_layer * area_layer * elevation_layer.numpy_apply(is_munro)
 
 calc.save(result)
+result.close()
 ```
 
 If you want the union then you can simply swap do:
@@ -57,6 +58,26 @@ validity_layer.set_window_for_union(intersection)
 If you want to work on the data in a layer directly you can call `read_array`, as you would with gdal. The data you access will be relative to the specified window - that is, if you've called either `set_window_for_intersection` or `set_window_for_union` then `read_array` will be relative to that and Yirgacheffe will clip or expand the data with zero values as necessary.
 
 If you have set either the intersection window or union window on a layer and you wish to undo that restriction, then you can simply call `reset_window()` on the layer.
+
+Layers also work with Python's `with` statement, which helps prevent you forgetting to close a layer, which is important both for ensuring results are written to disk when you want, and that memory used by layers is freed (Yirgacheffe doesn't cache data in memory, but it uses GDAL which does).
+
+So for example you can turn the above example to:
+
+```python
+with RasterLayer.empty_raster_layer(
+    intersection,
+    area_layer.pixel_scale,
+    area_layer.datatype,
+    "result.tif",
+    area_layer.projection
+) as result:
+    # Work out the area where the data is valid and over 3000ft
+    def is_munro(data):
+        return numpy.where(data > 3000.0, 0.0, 1.0)
+    calc = validity_layer * area_layer * elevation_layer.numpy_apply(is_munro)
+```
+
+And you no longer need to explicitly call `result.close()` to ensure the result is written to disk.
 
 
 ### Todo but not supported
@@ -77,31 +98,35 @@ Yirgacheffe is work in progress, so things planned but not supported currently:
 This is your basic GDAL raster layer, which you load from a geotiff.
 
 ```python
-layer1 = RasterLayer.layer_from_file('test1.tif')
+with RasterLayer.layer_from_file('test1.tif') as layer:
+    data = layer.read_array(0, 0, 10, 10)
+    ...
 ```
 
 You can also create empty layers ready for you to store results, either by taking the dimensions from an existing layer. In both these cases you can either provide a filename to which the data will be written, or if you do not provide a filename then the layer will only exist in memory - this will be more efficient if the layer is being used for intermediary results.
 
 ```python
-result = RasterLayer.empty_raster_layer_like(layer1, "results.tiff")
+with RasterLayer.empty_raster_layer_like(layer1, "results.tiff") as result:
+    ...
 ```
 
 Or you can specify the geographic area directly:
 
 ```python
-result = RasterLayer.empty_raster_layer(
+with RasterLayer.empty_raster_layer(
     Area(left=-10.0, top=10.0, right=-5.0, bottom=5.0),
     PixelScale(0.005,-0.005),
     gdal.GDT_Float64,
     "results.tiff"
-)
+) as result:
+    ...
 ```
 
 You can also create a new layer that is a scaled version of an existing layer:
 
 ```python
-source = RasterLayer.layer_from_file('test1.tif')
-scaled = RasterLayer.scaled_raster_from_raster(source, PixelScale(0.0001, -0.0001), 'scaled.tif')
+with RasterLayer.layer_from_file('test1.tif') as source:
+    scaled = RasterLayer.scaled_raster_from_raster(source, PixelScale(0.0001, -0.0001), 'scaled.tif')
 ```
 
 
@@ -112,7 +137,8 @@ This layer will load vector data and rasterize it on demand as part of a calcula
 Because it will be rasterized you need to specify the pixel scale and map projection to be used when rasterising the data, and the common way to do that is by using one of your other layers.
 
 ```python
-vector_layer = VectorLayer.layer_from_file('range.gpkg', 'id_no == 42', layer1.pixel_scale, layer1.projection)
+with VectorLayer.layer_from_file('range.gpkg', 'id_no == 42', layer1.pixel_scale, layer1.projection) as layer:
+    ...
 ```
 
 This class was formerly called `DynamicVectorRangeLayer`, a name now deprecated.
@@ -122,15 +148,16 @@ This class was formerly called `DynamicVectorRangeLayer`, a name now deprecated.
 
 In certain calculations you find you have a layer where all the rows of data are the same - notably geotiffs that contain the area of a given pixel do this due to how conventional map projections work. It's hugely inefficient to load the full map into memory, so whilst you could just load them as `Layer` types, we recommend you do:
 
-```
-area_layer = UniformAreaLayer('area.tiff')
+```python
+with UniformAreaLayer('area.tiff') as layer:
+    ....
 ```
 
 Note that loading this data can still be very slow, due to how image compression works. So if you plan to use area.tiff more than once, we recommend use save an optimised version - this will do the slow uncompression once and then save a minimal file to speed up future processing:
 
 ```python
 if not os.path.exists('yirgacheffe_area.tiff'):
-    UniformAreaLayer('area.tiff', 'yirgacheffe_area.tiff')
+    UniformAreaLayer.generate_narrow_area_projection('area.tiff', 'yirgacheffe_area.tiff')
 area_layer = UniformAreaLayer('yirgacheffe_area.tiff')
 ```
 
@@ -169,6 +196,20 @@ all_tiles = GroupLayer([tile1, tile2])
 
 If you provide tiles that overlap then they will be rendered in reverse one, so in the above example if tile1 and tile2 overlap, then in that region you'd get the data from tile1.
 
+To save you specifying each layer, there is a convenience method to let you just load a set of TIFs by filename:
+
+```python
+with GroupLayer.layer_from_files(['tile_N10_E10.tif', 'tile_N20_E10.tif']) as all_tiles:
+    ...
+```
+
+Or you can just specify a directory and it'll find the tifs in there (you can also add your own custom file filter too):
+
+```python
+with GroupLayer.layer_from_directory('.') as all_tiles:
+    ...
+```
+
 ### TiledGroupLayer
 
 This is a specialisation of GroupLayer, which you can use if your layers are all the same size and form a grid, as is often the case with map tiles. In this case the rendering code can be optimised and this class is significantly faster that GroupLayer.
@@ -194,24 +235,20 @@ Once you have two layers, you can perform numerical analysis on them similar to 
 Pixel-wise addition, subtraction, multiplication or division, either between arrays, or with constants:
 
 ```python
-layer1 = RasterLayer.layer_from_file('test1.tif')
-layer2 = RasterLayer.layer_from_file('test2.tif')
-result = RasterLayer.empty_raster_layer_like(layer1, 'result.tif')
-
-calc = layer1 + layer2
-
-calculation.save(result)
+with RasterLayer.layer_from_file('test1.tif') as layer1:
+    with RasterLayer.layer_from_file('test2.tif') as layer2:
+        with RasterLayer.empty_raster_layer_like(layer1, 'result.tif') as result:
+            calc = layer1 + layer2
+            calc.save(result)
 ```
 
 or
 
 ```python
-layer1 = RasterLayer.layer_from_file('test1.tif')
-result = RasterLayer.empty_raster_layer_like(layer1, 'result.tif')
-
-calc = layer1 * 42.0
-
-calc.save(result)
+with RasterLayer.layer_from_file('test1.tif') as layer1:
+    with RasterLayer.empty_raster_layer_like(layer1, 'result.tif') as result:
+        calc = layer1 * 42.0
+        calc.save(result)
 ```
 
 ### Power
@@ -219,12 +256,10 @@ calc.save(result)
 Pixel-wise raising to a constant power:
 
 ```python
-layer1 = RasterLayer.layer_from_file('test1.tif')
-result = RasterLayer.empty_raster_layer_like(layer1, 'result.tif')
-
-calc = layer1 ** 0.65
-
-calc.save(result)
+with RasterLayer.layer_from_file('test1.tif') as layer1:
+    with RasterLayer.empty_raster_layer_like(layer1, 'result.tif') as result:
+        calc = layer1 ** 0.65
+        calc.save(result)
 ```
 
 
@@ -275,6 +310,8 @@ calc = layer1.shader_apply(is_over_ten)
 calc.save(result)
 ```
 
+Note that in general `numpy_apply` is considerably faster than `shader_apply`.
+
 ## Getting an answer out
 
 There are two ways to store the result of a computation. In all the above examples we use the `save` call, to which you pass a gdal dataset band, into which the results will be written. You can optionally pass a callback to save which will be called for each chunk of data processed and give you the amount of progress made so far as a number between 0.0 and 1.0:
@@ -293,16 +330,16 @@ calc.save(result, callback=print_progress)
 The alternative is to call `sum` which will give you a total:
 
 ```python
-area_layer = RasterLayer.layer_from_file(...)
-mask_layer = VectorLayer(...)
+with RasterLayer.layer_from_file(...) as area_layer:
+    with VectorLayer(...) as mask_layer:
 
-intersection = RasterLayer.find_intersection([area_layer, mask_layer])
-area_layer.set_intersection_window(intersection)
-mask_layer.set_intersection_window(intersection)
+        intersection = RasterLayer.find_intersection([area_layer, mask_layer])
+        area_layer.set_intersection_window(intersection)
+        mask_layer.set_intersection_window(intersection)
 
-calc = area_layer * mask_layer
+        calc = area_layer * mask_layer
 
-total_area = calc.sum()
+        total_area = calc.sum()
 ```
 
 Similar to sum, you can also call `min` and `max` on a layer or calculation.
@@ -327,6 +364,6 @@ Because of the number of tricks that Python plays under the hood this feature ne
 
 ## Thanks
 
-Thanks to discussion and feedback from the 4C team, particularly Alison Eyres, Amelia Holcomb, and Anil Madhavapeddy.
+Thanks to discussion and feedback from the 4C team, particularly Alison Eyres, Patrick Ferris, Amelia Holcomb, and Anil Madhavapeddy.
 
 Inspired by the work of Daniele Baisero in his AoH library.

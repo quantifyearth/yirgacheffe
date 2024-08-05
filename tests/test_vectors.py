@@ -16,7 +16,8 @@ def test_basic_vector_layer_no_filter_match() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with pytest.raises(ValueError):
-            _ = RasteredVectorLayer.layer_from_file(path, "id_no = 123", PixelScale(1.0, -1.0), "WGS 84")
+            with RasteredVectorLayer.layer_from_file(path, "id_no = 123", PixelScale(1.0, -1.0), "WGS 84") as _layer:
+                pass
 
 def test_basic_dyanamic_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -24,13 +25,11 @@ def test_basic_dyanamic_vector_layer() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
-        assert layer.area == area
-        assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 10)
-        assert layer.projection == WGS_84_PROJECTION
-
-        del layer
+        with VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
+            assert layer.area == area
+            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.window == Window(0, 0, 20, 10)
+            assert layer.projection == WGS_84_PROJECTION
 
 def test_old_dyanamic_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -38,13 +37,11 @@ def test_old_dyanamic_vector_layer() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
-        assert layer.area == area
-        assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 10)
-        assert layer.projection == WGS_84_PROJECTION
-
-        del layer
+        with DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
+            assert layer.area == area
+            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.window == Window(0, 0, 20, 10)
+            assert layer.projection == WGS_84_PROJECTION
 
 def test_rastered_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -52,13 +49,11 @@ def test_rastered_vector_layer() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = RasteredVectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
-        assert layer.area == area
-        assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 10)
-        assert layer.projection == WGS_84_PROJECTION
-
-        del layer
+        with RasteredVectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
+            assert layer.area == area
+            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.window == Window(0, 0, 20, 10)
+            assert layer.projection == WGS_84_PROJECTION
 
 def test_old_rastered_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -66,13 +61,11 @@ def test_old_rastered_vector_layer() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        layer = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
-        assert layer.area == area
-        assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 10)
-        assert layer.projection == WGS_84_PROJECTION
-
-        del layer
+        with VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
+            assert layer.area == area
+            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.window == Window(0, 0, 20, 10)
+            assert layer.projection == WGS_84_PROJECTION
 
 def test_basic_dynamic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:

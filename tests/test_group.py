@@ -12,7 +12,8 @@ from yirgacheffe.window import Area, PixelScale, Window
 
 def test_empty_group():
     with pytest.raises(ValueError):
-        _ = GroupLayer(set())
+        with GroupLayer(set()) as _layer:
+            pass
 
 def test_invalid_file_list():
     with pytest.raises(ValueError):
@@ -30,9 +31,9 @@ def test_valid_file_list():
         dataset.Close()
         assert os.path.exists(path)
 
-        group = GroupLayer.layer_from_files([path])
-        assert group.area == area
-        assert group.window == Window(0, 0, 100, 100)
+        with GroupLayer.layer_from_files([path]) as group:
+            assert group.area == area
+            assert group.window == Window(0, 0, 100, 100)
 
 def test_valid_file_list():
     with tempfile.TemporaryDirectory() as tempdir:
@@ -42,21 +43,21 @@ def test_valid_file_list():
         dataset.Close()
         assert os.path.exists(path)
 
-        group = GroupLayer.layer_from_directory(tempdir)
-        assert group.area == area
-        assert group.window == Window(0, 0, 100, 100)
+        with GroupLayer.layer_from_directory(tempdir) as group:
+            assert group.area == area
+            assert group.window == Window(0, 0, 100, 100)
 
 def test_single_raster_layer_in_group():
     area = Area(-10, 10, 10, -10)
-    raster1 = RasterLayer(gdal_dataset_of_region(area, 0.2))
-    assert raster1.area == area
-    assert raster1.window == Window(0, 0, 100, 100)
-    assert raster1.sum() != 0
+    with RasterLayer(gdal_dataset_of_region(area, 0.2)) as raster1:
+        assert raster1.area == area
+        assert raster1.window == Window(0, 0, 100, 100)
+        assert raster1.sum() != 0
 
-    group = GroupLayer([raster1])
-    assert group.area == area
-    assert group.window == Window(0, 0, 100, 100)
-    assert group.sum() == raster1.sum()
+        with GroupLayer([raster1]) as group:
+            assert group.area == area
+            assert group.window == Window(0, 0, 100, 100)
+            assert group.sum() == raster1.sum()
 
 def test_mismatched_layers():
     area1 = Area(-10, 10, 10, -10)

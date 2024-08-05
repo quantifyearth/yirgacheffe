@@ -28,6 +28,12 @@ class YirgacheffeLayer(LayerMathMixin):
     def close(self):
         pass
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     @property
     def projection(self) -> str:
         return self._projection
