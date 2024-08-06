@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yirgacheffe"
-version = "0.8.0"
+version = "0.8.1"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
@@ -19,9 +19,10 @@ classifiers = [
 keywords = ["gdal", "numpy", "math"]
 dependencies = [
     "numpy",
-    "gdal",
+    "gdal[numpy]",
+    "scikit-image"
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 dev = ["mypy", "pylint", "pytest", "h3"]

@@ -84,7 +84,7 @@ And you no longer need to explicitly call `result.close()` to ensure the result 
 
 Yirgacheffe is work in progress, so things planned but not supported currently:
 
-* Dynamic pixel scale adjustment - all raster layers must be provided at the same pixel scale currently
+* Dynamic pixel scale adjustment - all raster layers must be provided at the same pixel scale currently  *NOW IN EXPERIMENTAL TESTING, SEE BELOW*
 * A fold operation
 * CUPY support
 * Dispatching work across multiple CPUs *NOW IN EXPERIMENTAL TESTING, SEE BELOW*
@@ -317,7 +317,6 @@ Note that in general `numpy_apply` is considerably faster than `shader_apply`.
 There are two ways to store the result of a computation. In all the above examples we use the `save` call, to which you pass a gdal dataset band, into which the results will be written. You can optionally pass a callback to save which will be called for each chunk of data processed and give you the amount of progress made so far as a number between 0.0 and 1.0:
 
 ```python
-
 def print_progress(p)
     print(f"We have made {p * 100} percent progress")
 
@@ -330,37 +329,58 @@ calc.save(result, callback=print_progress)
 The alternative is to call `sum` which will give you a total:
 
 ```python
-with RasterLayer.layer_from_file(...) as area_layer:
-    with VectorLayer(...) as mask_layer:
+with (
+    RasterLayer.layer_from_file(...) as area_layer,
+    VectorLayer(...) as mask_layer
+):
+    intersection = RasterLayer.find_intersection([area_layer, mask_layer])
+    area_layer.set_intersection_window(intersection)
+    mask_layer.set_intersection_window(intersection)
 
-        intersection = RasterLayer.find_intersection([area_layer, mask_layer])
-        area_layer.set_intersection_window(intersection)
-        mask_layer.set_intersection_window(intersection)
+    calc = area_layer * mask_layer
 
-        calc = area_layer * mask_layer
-
-        total_area = calc.sum()
+    total_area = calc.sum()
 ```
 
 Similar to sum, you can also call `min` and `max` on a layer or calculation.
 
 ## Experimental
 
-There is a parallel version of save, that is added as an experimental feature for testing in our wider codebase, which
-will run concurrently the save over many threads.
+The following features are considered experimental - they have test cases to show them working in limited circumstances, but they've not yet been tested on a wide range of use cases. We hope that you will try them out and let us know how they work out.
+
+### RescaledRasterLayer
+
+The RescaledRasterLayer will take a GeoTIFF and do on demand rescaling in memory to get the layer to match other layers you're working on.
+
+```python
+with RasterLayer.layer_from_file("high_density_file.tif") as high_density:
+    with RescaledRasterLayer.layer_from_file("low_density_file.tif", high_density.pixel_scale) as matched_density:
+
+        # Normally this next line would fail with two RasterLayers as they ahve a different pixel density
+        intersection = RasterLayer.find_intersection([high_density, matched_density])
+        high_density.set_intersection_window(intersection)
+        matched_density.set_intersection_window(intersection)
+
+        calc = high_density * matched_density
+        total = calc.sum()
 
 ```
+
+### Parallel saving
+
+There is a parallel version of save that can use multiple CPU cores at once to speed up work, that is added as an experimental feature for testing in our wider codebase, which will run concurrently the save over many threads.
+
+```python
 calc.parallel_save(result)
 ```
 
 By default it will use as many CPU cores as are available, but if you want to limit that you can pass an extra argument to constrain that:
 
-```
+```python
 calc.parallel_save(result, parallelism=4)
 ```
 
 Because of the number of tricks that Python plays under the hood this feature needs a bunch of testing to let us remove the experimental flag, but in order to get that testing we need to put it out there! Hopefully in the next release we can remove the experimental warning.
-
 
 ## Thanks
 

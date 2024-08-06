@@ -3,6 +3,7 @@ from osgeo import ogr
 from ..window import PixelScale
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer, InvalidRasterBand
+from .rescaled import RescaledRasterLayer
 from .vectors import RasteredVectorLayer, VectorLayer
 from .area import UniformAreaLayer
 from .constant import ConstantLayer
