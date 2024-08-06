@@ -38,64 +38,64 @@ def test_scaling_up_pixels() -> None:
     data[0:2,2:4] = 1
     data[2:4,0:2] = 1
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
-    raster = RasterLayer(dataset)
+    with RasterLayer(dataset) as raster:
 
-    target_pixel_scale = PixelScale(0.5, -0.5)
-    with RescaledRasterLayer(raster, target_pixel_scale) as layer:
-        assert layer.area == Area(0, 0, 4, -4)
-        assert layer.pixel_scale == target_pixel_scale
-        assert layer.geo_transform == (0.0, 0.5, 0.0, 0.0, 0.0, -0.5)
-        assert layer.window == Window(0, 0, 8, 8)
+        target_pixel_scale = PixelScale(0.5, -0.5)
+        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+            assert layer.area == Area(0, 0, 4, -4)
+            assert layer.pixel_scale == target_pixel_scale
+            assert layer.geo_transform == (0.0, 0.5, 0.0, 0.0, 0.0, -0.5)
+            assert layer.window == Window(0, 0, 8, 8)
 
-        actual_raster = layer.read_array(0, 0, 8, 8)
-        expected_raster = np.zeros((8, 8))
-        expected_raster[0:4,4:8] = 1
-        expected_raster[4:8,0:4] = 1
-        assert (expected_raster == actual_raster).all()
+            actual_raster = layer.read_array(0, 0, 8, 8)
+            expected_raster = np.zeros((8, 8))
+            expected_raster[0:4,4:8] = 1
+            expected_raster[4:8,0:4] = 1
+            assert (expected_raster == actual_raster).all()
 
-        # Try getting just the quads
-        expected_quad_raster = np.zeros((4, 4))
-        actual_raster = layer.read_array(0, 0, 4, 4)
-        assert (expected_quad_raster == actual_raster).all()
-        actual_raster = layer.read_array(4, 4, 4, 4)
-        assert (expected_quad_raster == actual_raster).all()
+            # Try getting just the quads
+            expected_quad_raster = np.zeros((4, 4))
+            actual_raster = layer.read_array(0, 0, 4, 4)
+            assert (expected_quad_raster == actual_raster).all()
+            actual_raster = layer.read_array(4, 4, 4, 4)
+            assert (expected_quad_raster == actual_raster).all()
 
-        expected_quad_raster = np.ones((4, 4))
-        actual_raster = layer.read_array(0, 4, 4, 4)
-        assert (expected_quad_raster == actual_raster).all()
-        actual_raster = layer.read_array(4, 0, 4, 4)
-        assert (expected_quad_raster == actual_raster).all()
+            expected_quad_raster = np.ones((4, 4))
+            actual_raster = layer.read_array(0, 4, 4, 4)
+            assert (expected_quad_raster == actual_raster).all()
+            actual_raster = layer.read_array(4, 0, 4, 4)
+            assert (expected_quad_raster == actual_raster).all()
 
-        for box in range(1, 7):
-            # anchored top left
-            actual_raster = layer.read_array(0, 0, box, box)
-            exepected_sub_raster = expected_raster[0:box, 0:box]
-            assert (exepected_sub_raster == actual_raster).all()
+            for box in range(1, 7):
+                # anchored top left
+                actual_raster = layer.read_array(0, 0, box, box)
+                exepected_sub_raster = expected_raster[0:box, 0:box]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # anchored bottom right
-            actual_raster = layer.read_array(box, box, 8 - box, 8 - box)
-            exepected_sub_raster = expected_raster[box:8, box:8]
-            assert (exepected_sub_raster == actual_raster).all()
+                # anchored bottom right
+                actual_raster = layer.read_array(box, box, 8 - box, 8 - box)
+                exepected_sub_raster = expected_raster[box:8, box:8]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # anchored top right
-            actual_raster = layer.read_array(box, 0, 8 - box, box)
-            exepected_sub_raster = expected_raster[0:box, box:8]
-            assert (exepected_sub_raster == actual_raster).all()
+                # anchored top right
+                actual_raster = layer.read_array(box, 0, 8 - box, box)
+                exepected_sub_raster = expected_raster[0:box, box:8]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # anchored bottom left
-            actual_raster = layer.read_array(0, box,  box, 8 - box)
-            exepected_sub_raster = expected_raster[box:8, 0:box]
-            assert (exepected_sub_raster == actual_raster).all()
+                # anchored bottom left
+                actual_raster = layer.read_array(0, box,  box, 8 - box)
+                exepected_sub_raster = expected_raster[box:8, 0:box]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # columns
-            actual_raster = layer.read_array(box, 0, 1, 8)
-            exepected_sub_raster = expected_raster[0:8, box:box+1]
-            assert (exepected_sub_raster == actual_raster).all()
+                # columns
+                actual_raster = layer.read_array(box, 0, 1, 8)
+                exepected_sub_raster = expected_raster[0:8, box:box+1]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # rows
-            actual_raster = layer.read_array(0, box, 8, 1)
-            exepected_sub_raster = expected_raster[box:box+1, 0:8]
-            assert (exepected_sub_raster == actual_raster).all()
+                # rows
+                actual_raster = layer.read_array(0, box, 8, 1)
+                exepected_sub_raster = expected_raster[box:box+1, 0:8]
+                assert (exepected_sub_raster == actual_raster).all()
 
 def test_scaling_down_pixels() -> None:
     # data has top left and bottom right quarters as 0
@@ -104,64 +104,64 @@ def test_scaling_down_pixels() -> None:
     data[0:4,4:8] = 1
     data[4:8,0:4] = 1
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
-    raster = RasterLayer(dataset)
+    with RasterLayer(dataset) as raster:
 
-    target_pixel_scale = PixelScale(2.0, -2.0)
-    with RescaledRasterLayer(raster, target_pixel_scale) as layer:
-        assert layer.area == Area(0, 0, 8, -8)
-        assert layer.pixel_scale == target_pixel_scale
-        assert layer.geo_transform == (0.0, 2.0, 0.0, 0.0, 0.0, -2.0)
-        assert layer.window == Window(0, 0, 4, 4)
+        target_pixel_scale = PixelScale(2.0, -2.0)
+        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+            assert layer.area == Area(0, 0, 8, -8)
+            assert layer.pixel_scale == target_pixel_scale
+            assert layer.geo_transform == (0.0, 2.0, 0.0, 0.0, 0.0, -2.0)
+            assert layer.window == Window(0, 0, 4, 4)
 
-        actual_raster = layer.read_array(0, 0, 4, 4)
-        expected_raster = np.zeros((4, 4))
-        expected_raster[0:2,2:4] = 1
-        expected_raster[2:4,0:2] = 1
-        assert (expected_raster == actual_raster).all()
+            actual_raster = layer.read_array(0, 0, 4, 4)
+            expected_raster = np.zeros((4, 4))
+            expected_raster[0:2,2:4] = 1
+            expected_raster[2:4,0:2] = 1
+            assert (expected_raster == actual_raster).all()
 
-        # Try getting just the quads
-        expected_quad_raster = np.zeros((2, 2))
-        actual_raster = layer.read_array(0, 0, 2, 2)
-        assert (expected_quad_raster == actual_raster).all()
-        actual_raster = layer.read_array(2, 2, 2, 2)
-        assert (expected_quad_raster == actual_raster).all()
+            # Try getting just the quads
+            expected_quad_raster = np.zeros((2, 2))
+            actual_raster = layer.read_array(0, 0, 2, 2)
+            assert (expected_quad_raster == actual_raster).all()
+            actual_raster = layer.read_array(2, 2, 2, 2)
+            assert (expected_quad_raster == actual_raster).all()
 
-        expected_quad_raster = np.ones((2, 2))
-        actual_raster = layer.read_array(0, 2, 2, 2)
-        assert (expected_quad_raster == actual_raster).all()
-        actual_raster = layer.read_array(2, 0, 2, 2)
-        assert (expected_quad_raster == actual_raster).all()
+            expected_quad_raster = np.ones((2, 2))
+            actual_raster = layer.read_array(0, 2, 2, 2)
+            assert (expected_quad_raster == actual_raster).all()
+            actual_raster = layer.read_array(2, 0, 2, 2)
+            assert (expected_quad_raster == actual_raster).all()
 
-        for box in range(1, 3):
-            # anchored top left
-            actual_raster = layer.read_array(0, 0, box, box)
-            exepected_sub_raster = expected_raster[0:box, 0:box]
-            assert (exepected_sub_raster == actual_raster).all()
+            for box in range(1, 3):
+                # anchored top left
+                actual_raster = layer.read_array(0, 0, box, box)
+                exepected_sub_raster = expected_raster[0:box, 0:box]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # anchored bottom right
-            actual_raster = layer.read_array(box, box, 4 - box, 4 - box)
-            exepected_sub_raster = expected_raster[box:4, box:4]
-            assert (exepected_sub_raster == actual_raster).all()
+                # anchored bottom right
+                actual_raster = layer.read_array(box, box, 4 - box, 4 - box)
+                exepected_sub_raster = expected_raster[box:4, box:4]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # anchored top right
-            actual_raster = layer.read_array(box, 0, 4 - box, box)
-            exepected_sub_raster = expected_raster[0:box, box:4]
-            assert (exepected_sub_raster == actual_raster).all()
+                # anchored top right
+                actual_raster = layer.read_array(box, 0, 4 - box, box)
+                exepected_sub_raster = expected_raster[0:box, box:4]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # anchored bottom left
-            actual_raster = layer.read_array(0, box,  box, 4 - box)
-            exepected_sub_raster = expected_raster[box:4, 0:box]
-            assert (exepected_sub_raster == actual_raster).all()
+                # anchored bottom left
+                actual_raster = layer.read_array(0, box,  box, 4 - box)
+                exepected_sub_raster = expected_raster[box:4, 0:box]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # columns
-            actual_raster = layer.read_array(box, 0, 1, 4)
-            exepected_sub_raster = expected_raster[0:4, box:box+1]
-            assert (exepected_sub_raster == actual_raster).all()
+                # columns
+                actual_raster = layer.read_array(box, 0, 1, 4)
+                exepected_sub_raster = expected_raster[0:4, box:box+1]
+                assert (exepected_sub_raster == actual_raster).all()
 
-            # rows
-            actual_raster = layer.read_array(0, box, 4, 1)
-            exepected_sub_raster = expected_raster[box:box+1, 0:4]
-            assert (exepected_sub_raster == actual_raster).all()
+                # rows
+                actual_raster = layer.read_array(0, box, 4, 1)
+                exepected_sub_raster = expected_raster[box:box+1, 0:4]
+                assert (exepected_sub_raster == actual_raster).all()
 
 def test_rescaled_up_in_operation() -> None:
     data1 = np.zeros((8, 8))
@@ -206,3 +206,51 @@ def test_rescaled_down_in_operation() -> None:
     calc = rescaled + raster2
     calc.ystep = 1
     assert calc.sum() == (4 * 4)
+
+def test_rescaled_up_with_window_set() -> None:
+    # data has top left and bottom right quarters as 0
+    # and the remaining quarters as 1
+    data = np.zeros((4, 4))
+    data[0:2,2:4] = 1
+    data[2:4,0:2] = 1
+    dataset = gdal_dataset_with_data((0, 0), 1.0, data)
+    with RasterLayer(dataset) as raster:
+
+        target_pixel_scale = PixelScale(0.5, -0.5)
+        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+            assert layer.area == Area(0.0, 0.0, 4.0, -4.0)
+
+            layer.set_window_for_intersection(Area(1.0, -1.0, 3.0, -3.0))
+            assert layer.area == Area(1.0, -1.0, 3.0, -3.0)
+            assert layer.window == Window(2, 2, 4, 4)
+
+            actual_raster = layer.read_array(0, 0, 4, 4)
+            expected_raster = np.zeros((4, 4))
+            expected_raster[0:2,2:4] = 1
+            expected_raster[2:4,0:2] = 1
+
+            assert (actual_raster == expected_raster).all()
+
+def test_rescaled_down_with_window_set() -> None:
+    # data has top left and bottom right quarters as 0
+    # and the remaining quarters as 1
+    data = np.zeros((8, 8))
+    data[0:4,4:8] = 1
+    data[4:8,0:4] = 1
+    dataset = gdal_dataset_with_data((0, 0), 1.0, data)
+    with RasterLayer(dataset) as raster:
+
+        target_pixel_scale = PixelScale(2.0, -2.0)
+        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+            assert layer.area == Area(0.0, 0.0, 8.0, -8.0)
+
+            layer.set_window_for_intersection(Area(2.0, -2.0, 6.0, -6.0))
+            assert layer.area == Area(2.0, -2.0, 6.0, -6.0)
+            assert layer.window == Window(1, 1, 2, 2)
+
+            actual_raster = layer.read_array(0, 0, 2, 2)
+            expected_raster = np.zeros((2, 2))
+            expected_raster[0:1,1:2] = 1
+            expected_raster[1:2,0:1] = 1
+
+            assert (actual_raster == expected_raster).all()

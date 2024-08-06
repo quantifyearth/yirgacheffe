@@ -46,6 +46,9 @@ class RescaledRasterLayer(YirgacheffeLayer):
         # to avoid aliasing issues, we try to scale to the nearest pixel
         # and recrop when scaling bigger
 
+        xoffset = xoffset + self.window.xoff
+        yoffset = yoffset + self.window.yoff
+
         src_x_offset = floor(xoffset / self._x_scale)
         src_y_offset = floor(yoffset / self._y_scale)
 
