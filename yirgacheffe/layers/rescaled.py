@@ -42,6 +42,15 @@ class RescaledRasterLayer(YirgacheffeLayer):
         self._x_scale = src._pixel_scale.xstep / pixel_scale.xstep
         self._y_scale = src._pixel_scale.ystep / pixel_scale.ystep
 
+    def close(self):
+        self._src.close()
+
+    def _park(self):
+        self._src._park()
+
+    def _unpark(self):
+        self._src._unpark()
+
     def read_array(self, xoffset, yoffset, xsize, ysize) -> Any:
         # to avoid aliasing issues, we try to scale to the nearest pixel
         # and recrop when scaling bigger
