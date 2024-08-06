@@ -231,6 +231,34 @@ def test_rescaled_up_with_window_set() -> None:
 
             assert (actual_raster == expected_raster).all()
 
+def test_rescaled_up_with_window_set_2() -> None:
+    # data has top left and bottom right quarters as 0
+    # and the remaining quarters as 1
+    data = np.zeros((4, 4))
+    data[0:2,2:4] = 1
+    data[2:4,0:2] = 1
+    dataset = gdal_dataset_with_data((0, 0), 1.0, data)
+    with RasterLayer(dataset) as raster:
+
+        target_pixel_scale = PixelScale(0.5, -0.5)
+        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+            assert layer.area == Area(0.0, 0.0, 4.0, -4.0)
+
+            expected_raster = np.zeros((6, 6))
+            expected_raster[0:3,3:6] = 1
+            expected_raster[3:6,0:3] = 1
+
+            # Try get the intended data without the window offset first
+            actual_raster = layer.read_array(1, 1, 6, 6)
+            assert (actual_raster == expected_raster).all()
+
+            layer.set_window_for_intersection(Area(0.5, -0.5, 3.5, -3.5))
+            assert layer.area == Area(0.5, -0.5, 3.5, -3.5)
+            assert layer.window == Window(1, 1, 6, 6)
+
+            actual_raster = layer.read_array(0, 0, 6, 6)
+            assert (actual_raster == expected_raster).all()
+
 def test_rescaled_down_with_window_set() -> None:
     # data has top left and bottom right quarters as 0
     # and the remaining quarters as 1

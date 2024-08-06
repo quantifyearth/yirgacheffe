@@ -55,8 +55,8 @@ class RescaledRasterLayer(YirgacheffeLayer):
         diff_x = floor(((xoffset / self._x_scale) - src_x_offset) * self._x_scale)
         diff_y = floor(((yoffset / self._x_scale) - src_y_offset) * self._x_scale)
 
-        src_x_width = ceil(xsize / self._x_scale)
-        src_y_width = ceil(ysize / self._y_scale)
+        src_x_width = ceil((xsize + diff_x) / self._x_scale)
+        src_y_width = ceil((ysize + diff_y) / self._y_scale)
 
         # Get the matching src data
         src_data = self._src.read_array(
