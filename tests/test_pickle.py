@@ -9,7 +9,7 @@ import pytest
 
 from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe.window import Area, PixelScale, Window
-from yirgacheffe.layers import ConstantLayer, GroupLayer, RasterLayer, UniformAreaLayer, VectorLayer
+from yirgacheffe.layers import ConstantLayer, GroupLayer, RasterLayer, RescaledRasterLayer, UniformAreaLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
 
 def test_pickle_raster_layer() -> None:
@@ -161,3 +161,21 @@ def test_pickle_func_calc() -> None:
         restore = pickle.loads(p)
 
         assert calc.sum() == restore.sum()
+
+def test_pickle_rescaled_raster_layer() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        area = Area(-10, 10, 10, -10)
+        raster = RasterLayer(gdal_dataset_of_region(area, 0.02, filename=path))
+        layer = RescaledRasterLayer(raster, PixelScale(0.01, -0.01))
+
+        p = pickle.dumps(layer)
+        restore = pickle.loads(p)
+
+        assert restore.area == area
+        assert restore.pixel_scale == (0.01, -0.01)
+        assert restore.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
+        assert restore.window == Window(0, 0, 2000, 2000)
+
+        expected = restore.read_array(0, 0, 100, 100)
+        assert np.sum(expected) != 0 # just check there is meaninful data
