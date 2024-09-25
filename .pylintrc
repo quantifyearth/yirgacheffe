@@ -4,7 +4,7 @@ good-names=x, y
 [FORMAT]
 max-line-length=120
 
-disable=C0114, C0115, C0116, W0212, W0231, W0511, R0801, R0902, R0903, R0912, R0913, R0914, R0915, R1705
+disable=C0114, C0115, C0116, W0212, W0231, W0511, R0801, R0902, R0903, R0912, R0913, R0914, R0915, R0917, R1705
 
 [TYPECHECK]
 # Seems pylint doesn't like mixins :/

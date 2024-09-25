@@ -1,4 +1,4 @@
-from ghcr.io/osgeo/gdal:ubuntu-small-latest
+from ghcr.io/osgeo/gdal:ubuntu-small-3.9.2
 
 RUN apt-get update -qqy && \
 	apt-get install -qy \
@@ -10,7 +10,8 @@ RUN apt-get update -qqy && \
 COPY ./ /root/
 WORKDIR /root/
 
-RUN pip install numpy
+RUN pip config set global.break-system-packages true
+RUN pip install "numpy<2" gdal[numpy] scikit-image
 RUN pip install pylint mypy pytest types-setuptools
 RUN pip install h3==4.0.0b5
 

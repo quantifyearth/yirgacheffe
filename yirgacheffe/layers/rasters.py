@@ -237,12 +237,16 @@ class RasterLayer(YirgacheffeLayer):
         self._raster_ysize = dataset.RasterYSize
 
     def close(self):
-        if self._dataset:
-            try:
-                self._dataset.Close()
-            except AttributeError:
-                pass
-            del self._dataset
+        try:
+            if self._dataset:
+                try:
+                    self._dataset.Close()
+                except AttributeError:
+                    pass
+                del self._dataset
+        except AttributeError:
+            # Don't error if close was already called
+            pass
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)

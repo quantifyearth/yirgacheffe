@@ -8,28 +8,24 @@ from yirgacheffe.window import Area, PixelScale, Window
 def test_simple_scale_down() -> None:
     area = Area(-10, 10, 10, -10)
     dataset = gdal_dataset_of_region(area, 0.02)
-    raster = RasterLayer(dataset)
-
-    target_pixel_scale = PixelScale(0.01, -0.01)
-
-    with RescaledRasterLayer(raster, target_pixel_scale) as layer:
-        assert layer.area == area
-        assert layer.pixel_scale == target_pixel_scale
-        assert layer.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
-        assert layer.window == Window(0, 0, 2000, 2000)
+    with RasterLayer(dataset) as raster:
+        target_pixel_scale = PixelScale(0.01, -0.01)
+        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+            assert layer.area == area
+            assert layer.pixel_scale == target_pixel_scale
+            assert layer.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
+            assert layer.window == Window(0, 0, 2000, 2000)
 
 def test_simple_scale_up() -> None:
     area = Area(-10, 10, 10, -10)
     dataset = gdal_dataset_of_region(area, 0.02)
-    raster = RasterLayer(dataset)
-
-    target_pixel_scale = PixelScale(0.04, -0.04)
-
-    with RescaledRasterLayer(raster, target_pixel_scale) as layer:
-        assert layer.area == area
-        assert layer.pixel_scale == target_pixel_scale
-        assert layer.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
-        assert layer.window == Window(0, 0, 500, 500)
+    with RasterLayer(dataset) as raster:
+        target_pixel_scale = PixelScale(0.04, -0.04)
+        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+            assert layer.area == area
+            assert layer.pixel_scale == target_pixel_scale
+            assert layer.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
+            assert layer.window == Window(0, 0, 500, 500)
 
 def test_scaling_up_pixels() -> None:
     # data has top left and bottom right quarters as 0
