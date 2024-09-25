@@ -1,0 +1,41 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Python CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ghcr.io/osgeo/gdal:ubuntu-small-3.9.2
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install system
+        run: |
+          apt-get update -qqy
+          apt-get install -y git python3-pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "numpy<2" gdal[numpy] scikit-image "h3==4.0.0b5"
+          python -m pip install pylint mypy pytest types-setuptools
+      - name: Lint with pylint
+        run: |
+          python3 -m pylint yirgacheffe
+      - name: Test with pytest
+        run: |
+          python3 -m pytest -vv
