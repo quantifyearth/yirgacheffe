@@ -41,7 +41,7 @@ class GroupLayer(YirgacheffeLayer):
         rasters = [RasterLayer.layer_from_file(x) for x in filenames]
         return cls(rasters, name)
 
-    def __init__(self, layers: List[YirgacheffeLayer], name: Optional[str] = None) -> GroupLayerT:
+    def __init__(self, layers: List[YirgacheffeLayer], name: Optional[str] = None) -> None:
         if not layers:
             raise GroupLayerEmpty("Expected one or more layers")
         if not are_pixel_scales_equal_enough([x.pixel_scale for x in layers]):

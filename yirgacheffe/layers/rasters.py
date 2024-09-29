@@ -279,11 +279,14 @@ class RasterLayer(YirgacheffeLayer):
     def datatype(self) -> int:
         if self._dataset is None:
             self._unpark()
+        assert self._dataset
         return self._dataset.GetRasterBand(1).DataType
 
     def read_array(self, xoffset, yoffset, xsize, ysize) -> Any:
         if self._dataset is None:
             self._unpark()
+        assert self._dataset
+
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
