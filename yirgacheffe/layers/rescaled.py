@@ -39,8 +39,11 @@ class RescaledRasterLayer(YirgacheffeLayer):
         self._src = src
         self._nearest_neighbour = nearest_neighbour
 
-        self._x_scale = src._pixel_scale.xstep / pixel_scale.xstep
-        self._y_scale = src._pixel_scale.ystep / pixel_scale.ystep
+        src_pixel_scale = src.pixel_scale
+        assert src_pixel_scale # from raster we should always have one
+
+        self._x_scale = src_pixel_scale.xstep / pixel_scale.xstep
+        self._y_scale = src_pixel_scale.ystep / pixel_scale.ystep
 
     def close(self):
         self._src.close()
