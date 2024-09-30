@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 import numpy as np
 import pytest
 
@@ -38,7 +41,7 @@ def test_add_byte_layers_with_callback(skip, expected_steps) -> None:
     comp = layer1 + layer2
     comp.ystep = skip
     comp.save(result, callback=lambda x: callback_possitions.append(x))
-    
+
     expected = data1 + data2
     actual = result.read_array(0, 0, 4, 2)
 
@@ -467,3 +470,24 @@ def test_add_to_float_layer_by_np_array() -> None:
     actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
+
+def test_write_mulitband_raster() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    layers = [layer1, layer2]
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        filename = os.path.join(tempdir, "test.tif")
+        with RasterLayer.empty_raster_layer_like(layer1, filename=filename, bands=2) as result:
+            for i in range(2):
+                layers[i].save(result, band=i+1)
+
+        for i in range(2):
+            layer = RasterLayer.layer_from_file(filename, band=i+1)
+            expected = layers[i].read_array(0, 0, 4, 2)
+            actual = layer.read_array(0, 0, 4, 2)
+
+            assert (expected == actual).all()
