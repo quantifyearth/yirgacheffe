@@ -1,9 +1,9 @@
 from osgeo import gdal
-from pkg_resources import get_distribution, DistributionNotFound
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
-    pass  # package is not installed
+    from importlib import metadata
+    __version__ = metadata.version(__name__)
+except ModuleNotFoundError:
+    __version__ = "unknown"
 
 gdal.UseExceptions()
 
