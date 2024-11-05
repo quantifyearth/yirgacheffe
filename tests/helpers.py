@@ -65,9 +65,37 @@ def gdal_dataset_of_layer(layer: YirgacheffeLayer, filename: Optional[str]=None)
     dataset.SetProjection(layer.projection)
     return dataset
 
+def numpy_to_gdal_type(val: np.array) -> int:
+    match val.dtype:
+        case np.float32:
+            return gdal.GDT_Float32
+        case np.float64:
+            return gdal.GDT_Float64
+        case np.int8:
+            return gdal.GDT_Byte
+        case np.int16:
+            return gdal.GDT_Int16
+        case np.int32:
+            return gdal.GDT_Int32
+        case np.int64:
+            return gdal.GDT_Int64
+        case np.uint8:
+            return gdal.GDT_Byte
+        case np.uint16:
+            return gdal.GDT_UInt16
+        case np.uint32:
+            return gdal.GDT_UInt32
+        case np.uint64:
+            return gdal.GDT_UInt64
+        case _:
+            raise ValueError
+
+
 def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: np.array, filename: Optional[str]=None) -> gdal.Dataset:
     assert data.ndim == 2
-    datatype = gdal.GDT_Byte
+
+    datatype = numpy_to_gdal_type(data)
+
     if isinstance(data[0][0], float):
         datatype = gdal.GDT_Float64
     if filename:

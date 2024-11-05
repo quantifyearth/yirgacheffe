@@ -9,11 +9,9 @@ import numpy as np
 from osgeo import gdal
 from dill import dumps, loads
 
+from . import constants
 from .window import Window
 
-
-
-YSTEP = 512
 
 class LayerConstant:
     def __init__(self, val):
@@ -93,7 +91,7 @@ class LayerMathMixin:
 class LayerOperation(LayerMathMixin):
 
     def __init__(self, lhs, operator=None, rhs=None):
-        self.ystep = YSTEP
+        self.ystep = constants.YSTEP
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -162,6 +160,10 @@ class LayerOperation(LayerMathMixin):
             return self.operator(lhs_data)
 
     def sum(self):
+        # The result accumulator is float64, and for precision reasons
+        # we force the sum to be done in float64 also. Otherwise we
+        # see variable results depending on chunk size, as different parts
+        # of the sum are done in different types.
         res = 0.0
         computation_window = self.window
         for yoffset in range(0, computation_window.ysize, self.ystep):
@@ -169,7 +171,7 @@ class LayerOperation(LayerMathMixin):
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(yoffset, step)
-            res += np.sum(chunk)
+            res += np.sum(chunk.astype(np.float64))
         return res
 
     def min(self):

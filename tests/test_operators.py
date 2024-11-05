@@ -1,10 +1,13 @@
 import os
+import random
 import tempfile
 
 import numpy as np
 import pytest
+from osgeo import gdal
 
 from helpers import gdal_dataset_with_data
+import yirgacheffe
 from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe.operators import LayerOperation
 
@@ -491,3 +494,26 @@ def test_write_mulitband_raster() -> None:
             actual = layer.read_array(0, 0, 4, 2)
 
             assert (expected == actual).all()
+
+def test_sum_float32(monkeypatch) -> None:
+
+    random.seed(42)
+    data = []
+    for _ in range(10):
+        row = []
+        for _ in range(10):
+            row.append(random.random())
+        data.append(row)
+
+    data1 = np.array(data, dtype=np.float32)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    assert layer1.datatype == gdal.GDT_Float32
+
+    # Sum forces things to float64
+    expected = np.sum(data1.astype(np.float64))
+
+    with monkeypatch.context() as m:
+        for blocksize in range(1,11):
+            m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+            actual = layer1.sum()
+            assert expected == actual
