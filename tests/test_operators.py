@@ -12,12 +12,15 @@ from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe.operators import LayerOperation
 
 def test_add_byte_layers() -> None:
-    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]]).astype(np.uint8)
+    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]]).astype(np.uint8)
 
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
+
+    assert layer1.datatype == gdal.GDT_Byte
+    assert layer2.datatype == gdal.GDT_Byte
 
     comp = layer1 + layer2
     comp.save(result)
@@ -32,12 +35,15 @@ def test_add_byte_layers() -> None:
     (2, [0.0, 1.0]),
 ])
 def test_add_byte_layers_with_callback(skip, expected_steps) -> None:
-    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]]).astype(np.uint8)
+    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]]).astype(np.uint8)
 
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
+
+    assert layer1.datatype == gdal.GDT_Byte
+    assert layer2.datatype == gdal.GDT_Byte
 
     callback_possitions = []
 
@@ -517,3 +523,79 @@ def test_sum_float32(monkeypatch) -> None:
             m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
             actual = layer1.sum()
             assert expected == actual
+
+def test_and_byte_layers() -> None:
+    data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]]).astype(np.uint8)
+    data2 = np.array([[1, 1, 0, 0], [2, 2, 2, 2]]).astype(np.uint8)
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    assert layer1.datatype == gdal.GDT_Byte
+    assert layer2.datatype == gdal.GDT_Byte
+
+    comp = layer1 & layer2
+    comp.save(result)
+
+    expected = data1 & data2
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_or_byte_layers() -> None:
+    data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]]).astype(np.uint8)
+    data2 = np.array([[1, 1, 0, 0], [2, 2, 2, 2]]).astype(np.uint8)
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    assert layer1.datatype == gdal.GDT_Byte
+    assert layer2.datatype == gdal.GDT_Byte
+
+    comp = layer1 | layer2
+    comp.save(result)
+
+    expected = data1 | data2
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_and_int_layers() -> None:
+    data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]]).astype(np.int16)
+    data2 = np.array([[1, 1, 0, 0], [2, 2, 2, 2]]).astype(np.int16)
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    assert layer1.datatype == gdal.GDT_Int16
+    assert layer2.datatype == gdal.GDT_Int16
+
+    comp = layer1 & layer2
+    comp.save(result)
+
+    expected = data1 & data2
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_or_int_layers() -> None:
+    data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]]).astype(np.int16)
+    data2 = np.array([[1, 1, 0, 0], [2, 2, 2, 2]]).astype(np.int16)
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    assert layer1.datatype == gdal.GDT_Int16
+    assert layer2.datatype == gdal.GDT_Int16
+
+    comp = layer1 | layer2
+    comp.save(result)
+
+    expected = data1 | data2
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
