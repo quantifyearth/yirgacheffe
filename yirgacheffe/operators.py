@@ -59,6 +59,12 @@ class LayerMathMixin:
     def __ge__(self, other):
         return LayerOperation(self, np.ndarray.__ge__, other)
 
+    def __and__(self, other):
+        return LayerOperation(self, np.ndarray.__and__, other)
+
+    def __or__(self, other):
+        return LayerOperation(self, np.ndarray.__or__, other)
+
     def _eval(self, index, step, target_window=None):
         try:
             window = self.window

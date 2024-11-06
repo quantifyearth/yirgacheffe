@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yirgacheffe"
-version = "0.8.5"
+version = "0.8.6"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
