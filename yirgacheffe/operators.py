@@ -243,7 +243,7 @@ class LayerOperation(LayerMathMixin):
                 yoffset + destination_window.yoff,
             )
             if and_sum:
-                total += np.sum(chunk)
+                total += np.sum(chunk.astype(np.float64))
         if callback:
             callback(1.0)
 
@@ -316,7 +316,6 @@ class LayerOperation(LayerMathMixin):
             gdal.GDT_UInt64:  np.dtype('uint64'),
         }[band.DataType]
 
-
         with multiprocessing.Manager() as manager:
             with SharedMemoryManager() as smm:
 
@@ -375,7 +374,7 @@ class LayerOperation(LayerMathMixin):
                         yoffset + destination_window.yoff,
                     )
                     if and_sum:
-                        total += np.sum(arr[0:step])
+                        total += np.sum(np.array(arr[0:step]).astype(np.float64))
                     sem.release()
                     retired_blocks += 1
                     if callback:
