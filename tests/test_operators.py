@@ -648,3 +648,29 @@ def test_or_int_layers() -> None:
     actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
+
+def test_nan_to_num() -> None:
+    data1 = np.array([[float('nan'), float('nan'), float('nan'), float('nan')], [1, 2, 3, 0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.nan_to_num(nan=42)
+    comp.save(result)
+
+    expected = np.array([[42, 42, 42, 42], [1, 2, 3, 0]])
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_nan_to_num_default() -> None:
+    data1 = np.array([[float('nan'), float('nan'), float('nan'), float('nan')], [1, 2, 3, 0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.nan_to_num()
+    comp.save(result)
+
+    expected = np.array([[0, 0, 0, 0], [1, 2, 3, 0]])
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()

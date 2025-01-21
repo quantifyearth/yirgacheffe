@@ -72,6 +72,13 @@ class LayerMathMixin:
         except AttributeError:
             return self.read_array(0, index, target_window.xsize if target_window else 1, step)
 
+    def nan_to_num(self, nan=0, posinf=None, neginf=None):
+        return LayerOperation(
+            self,
+            lambda c: np.nan_to_num(c, copy=False, nan=nan, posinf=posinf, neginf=neginf),
+            None,
+        )
+
     def numpy_apply(self, func, other=None):
         return LayerOperation(self, func, other)
 
