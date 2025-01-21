@@ -72,6 +72,20 @@ class LayerMathMixin:
         except AttributeError:
             return self.read_array(0, index, target_window.xsize if target_window else 1, step)
 
+    def nan_to_num(self, nan=0, posinf=None, neginf=None):
+        return LayerOperation(
+            self,
+            lambda c: np.nan_to_num(c, copy=False, nan=nan, posinf=posinf, neginf=neginf),
+            None,
+        )
+
+    def isin(self, vals):
+        return LayerOperation(
+            self,
+            lambda c: np.isin(c, vals),
+            None,
+        )
+
     def numpy_apply(self, func, other=None):
         return LayerOperation(self, func, other)
 
@@ -96,7 +110,16 @@ class LayerMathMixin:
 
 class LayerOperation(LayerMathMixin):
 
-    def __init__(self, lhs, operator=None, rhs=None):
+    @staticmethod
+    def where(cond, a, b):
+        return LayerOperation(
+            cond,
+            np.where,
+            rhs=a,
+            other=b
+        )
+
+    def __init__(self, lhs, operator=None, rhs=None, other=None):
         self.ystep = constants.YSTEP
 
         if lhs is None:
@@ -117,6 +140,19 @@ class LayerOperation(LayerMathMixin):
                 self.rhs = rhs
         else:
             self.rhs = None
+
+        if other is not None:
+            if isinstance(other, (float, int)):
+                self.other = LayerConstant(other)
+            elif isinstance(other, (np.ndarray)):
+                if other.shape == ():
+                    self.rhs = LayerConstant(other.item())
+                else:
+                    raise ValueError("Numpy arrays are no allowed")
+            else:
+                self.other = other
+        else:
+            self.other = None
 
     def __str__(self):
         try:
@@ -159,11 +195,17 @@ class LayerOperation(LayerMathMixin):
         if self.operator is None:
             return lhs_data
 
+        if self.other is not None:
+            assert self.rhs is not None
+            rhs_data = self.rhs._eval(index, step)
+            other_data = self.other._eval(index, step)
+            return self.operator(lhs_data, rhs_data, other_data)
+
         if self.rhs is not None:
             rhs_data = self.rhs._eval(index, step)
             return self.operator(lhs_data, rhs_data)
-        else:
-            return self.operator(lhs_data)
+
+        return self.operator(lhs_data)
 
     def sum(self):
         # The result accumulator is float64, and for precision reasons
@@ -279,6 +321,10 @@ class LayerOperation(LayerMathMixin):
             pass
         try:
             self.rhs._park()
+        except AttributeError:
+            pass
+        try:
+            self.other._park()
         except AttributeError:
             pass
 
