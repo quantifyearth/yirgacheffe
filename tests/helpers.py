@@ -170,7 +170,7 @@ def make_vectors_with_id(identifier: int, areas: Set[Area], filename: str) -> No
     feature.SetField("id_no", identifier)
     layer.CreateFeature(feature)
 
-    package.Destroy()
+    package.Close()
 
 def make_vectors_with_mutlile_ids(areas: Set[Tuple[Area,int]], filename: str) -> None:
     srs = ogr.osr.SpatialReference()
@@ -203,7 +203,7 @@ def make_vectors_with_mutlile_ids(areas: Set[Tuple[Area,int]], filename: str) ->
         feature.SetField("id_no", identifier)
         layer.CreateFeature(feature)
 
-    package.Destroy()
+    package.Close()
 
 def generate_child_tile(xoffset: int, yoffset: int, width: int, height: int, outer_width: int, outer_height: int) -> np.ndarray:
     data = np.zeros((height, width))
@@ -248,4 +248,4 @@ def make_vectors_with_empty_feature(areas: Set[Tuple[Area,int]], filename: str) 
     feature = ogr.Feature(feature_definition)
     layer.CreateFeature(feature)
 
-    package.Destroy()
+    package.Close()
