@@ -706,4 +706,16 @@ def test_where_layers() -> None:
     expected = np.where(data1 > 0, data_a, data_b)
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
-    
+
+def test_isin_simple() -> None:
+    data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.isin([2, 3])
+    comp.ystep = 1
+    comp.save(result)
+
+    expected = np.isin(data1, [2, 3])
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()

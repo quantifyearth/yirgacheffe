@@ -79,6 +79,13 @@ class LayerMathMixin:
             None,
         )
 
+    def isin(self, vals):
+        return LayerOperation(
+            self,
+            lambda c: np.isin(c, vals),
+            None,
+        )
+
     def numpy_apply(self, func, other=None):
         return LayerOperation(self, func, other)
 
