@@ -655,6 +655,7 @@ def test_nan_to_num() -> None:
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1.nan_to_num(nan=42)
+    comp.ystep = 1
     comp.save(result)
 
     expected = np.array([[42, 42, 42, 42], [1, 2, 3, 0]])
@@ -668,9 +669,41 @@ def test_nan_to_num_default() -> None:
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1.nan_to_num()
+    comp.ystep = 1
     comp.save(result)
 
     expected = np.array([[0, 0, 0, 0], [1, 2, 3, 0]])
     actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
+
+def test_where_simple() -> None:
+    data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.where(layer1 > 0, 1, 2)
+    comp.ystep = 1
+    comp.save(result)
+
+    expected = np.where(data1 > 0, 1, 2)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_where_layers() -> None:
+    data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]])
+    data_a = np.array([[10, 10, 10, 10], [20, 20, 20, 20]])
+    data_b = np.array([[100, 100, 100, 100], [200, 200, 200, 200]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer_a = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data_a))
+    layer_b = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data_b))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.where(layer1 > 0, layer_a, layer_b)
+    comp.ystep = 1
+    comp.save(result)
+
+    expected = np.where(data1 > 0, data_a, data_b)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+    
