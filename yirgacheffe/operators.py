@@ -75,15 +75,43 @@ class LayerMathMixin:
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(
             self,
-            lambda c: np.nan_to_num(c, copy=False, nan=nan, posinf=posinf, neginf=neginf),
-            None,
+            lambda c: np.nan_to_num(c, copy=False, nan=nan, posinf=posinf, neginf=neginf)
         )
 
     def isin(self, vals):
         return LayerOperation(
             self,
-            lambda c: np.isin(c, vals),
-            None,
+            lambda c: np.isin(c, vals)
+        )
+
+    def log(self):
+        return LayerOperation(
+            self,
+            np.log
+        )
+
+    def log2(self):
+        return LayerOperation(
+            self,
+            np.log2
+        )
+
+    def log10(self):
+        return LayerOperation(
+            self,
+            np.log10
+        )
+
+    def exp(self):
+        return LayerOperation(
+            self,
+            np.exp
+        )
+
+    def exp2(self):
+        return LayerOperation(
+            self,
+            np.exp2
         )
 
     def numpy_apply(self, func, other=None):
