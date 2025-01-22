@@ -849,3 +849,63 @@ def test_layer_greater_than_or_equal_to_layer() -> None:
     expected = data1 >= data2
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
+
+def test_log() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.log()
+    comp.save(result)
+
+    expected = np.log(data1)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_log2() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.log2()
+    comp.save(result)
+
+    expected = np.log2(data1)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_log10() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.log10()
+    comp.save(result)
+
+    expected = np.log10(data1)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_exp() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.exp()
+    comp.save(result)
+
+    expected = np.exp(data1)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_exp2() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.exp2()
+    comp.save(result)
+
+    expected = np.exp2(data1)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
