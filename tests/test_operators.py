@@ -719,3 +719,133 @@ def test_isin_simple() -> None:
     expected = np.isin(data1, [2, 3])
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
+
+def test_layer_comparison_to_value() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 == 2.0
+    comp.save(result)
+
+    expected = data1 == 2.0
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_layer_less_than_value() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 < 2.0
+    comp.save(result)
+
+    expected = data1 < 2.0
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_layer_less_than_or_equal_to_value() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 <= 2.0
+    comp.save(result)
+
+    expected = data1 <= 2.0
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_layer_greater_than_value() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 > 2.0
+    comp.save(result)
+
+    expected = data1 > 2.0
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_layer_greater_than_or_equal_to_value() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 >= 2.0
+    comp.save(result)
+
+    expected = data1 >= 2.0
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_layer_comparison_to_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    data2 = np.array([[3.0, 2.0, 1.0, 4.0], [7.0, 2.0, 5.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 == layer2
+    comp.save(result)
+
+    expected = data1 == data2
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_layer_less_than_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    data2 = np.array([[3.0, 2.0, 1.0, 4.0], [7.0, 2.0, 5.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 < layer2
+    comp.save(result)
+
+    expected = data1 < data2
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_layer_less_than_or_equal_to_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    data2 = np.array([[3.0, 2.0, 1.0, 4.0], [7.0, 2.0, 5.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 <= layer2
+    comp.save(result)
+
+    expected = data1 <= data2
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_layer_greater_than_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    data2 = np.array([[3.0, 2.0, 1.0, 4.0], [7.0, 2.0, 5.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 > layer2
+    comp.save(result)
+
+    expected = data1 > data2
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_layer_greater_than_or_equal_to_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    data2 = np.array([[3.0, 2.0, 1.0, 4.0], [7.0, 2.0, 5.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 >= layer2
+    comp.save(result)
+
+    expected = data1 >= data2
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
