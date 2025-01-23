@@ -147,6 +147,22 @@ class LayerOperation(LayerMathMixin):
             other=b
         )
 
+    @staticmethod
+    def maximum(a, b):
+        return LayerOperation(
+            a,
+            np.maximum,
+            b,
+        )
+
+    @staticmethod
+    def minimum(a, b):
+        return LayerOperation(
+            a,
+            np.minimum,
+            rhs=b,
+        )
+
     def __init__(self, lhs, operator=None, rhs=None, other=None):
         self.ystep = constants.YSTEP
 
@@ -507,3 +523,7 @@ class ShaderStyleOperation(LayerOperation):
                     result[yoffset][xoffset] = self.operator(lhs_val)
 
         return result
+
+where = LayerOperation.where
+minumum = LayerOperation.minimum
+maximum = LayerOperation.maximum
