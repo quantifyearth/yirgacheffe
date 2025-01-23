@@ -2,6 +2,7 @@ import os
 from math import ceil, floor
 from typing import Any, Optional, Tuple, Union
 
+import mlx.core as mx
 from osgeo import gdal, ogr
 
 from ..window import Area, PixelScale
@@ -367,4 +368,4 @@ class VectorLayer(YirgacheffeLayer):
             raise ValueError("Burn value for layer should be number or field name")
 
         res = dataset.ReadAsArray(0, 0, xsize, ysize)
-        return res
+        return mx.array(res)

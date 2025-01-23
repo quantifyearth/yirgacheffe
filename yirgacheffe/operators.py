@@ -6,6 +6,7 @@ from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
 
 import numpy as np
+import mlx.core as mx
 from osgeo import gdal
 from dill import dumps, loads
 
@@ -27,43 +28,43 @@ class LayerConstant:
 class LayerMathMixin:
 
     def __add__(self, other):
-        return LayerOperation(self, np.ndarray.__add__, other)
+        return LayerOperation(self, mx.array.__add__, other)
 
     def __sub__(self, other):
-        return LayerOperation(self, np.ndarray.__sub__, other)
+        return LayerOperation(self, mx.array.__sub__, other)
 
     def __mul__(self, other):
-        return LayerOperation(self, np.ndarray.__mul__, other)
+        return LayerOperation(self, mx.multiply, other, stream=mx.gpu)
 
     def __truediv__(self, other):
-        return LayerOperation(self, np.ndarray.__truediv__, other)
+        return LayerOperation(self, mx.array.__truediv__, other)
 
     def __pow__(self, other):
-        return LayerOperation(self, np.ndarray.__pow__, other)
+        return LayerOperation(self, mx.array.__pow__, other)
 
     def __eq__(self, other):
-        return LayerOperation(self, np.ndarray.__eq__, other)
+        return LayerOperation(self, mx.array.__eq__, other)
 
     def __ne__(self, other):
-        return LayerOperation(self, np.ndarray.__ne__, other)
+        return LayerOperation(self, mx.array.__ne__, other)
 
     def __lt__(self, other):
-        return LayerOperation(self, np.ndarray.__lt__, other)
+        return LayerOperation(self, mx.array.__lt__, other)
 
     def __le__(self, other):
-        return LayerOperation(self, np.ndarray.__le__, other)
+        return LayerOperation(self, mx.array.__le__, other)
 
     def __gt__(self, other):
-        return LayerOperation(self, np.ndarray.__gt__, other)
+        return LayerOperation(self, mx.array.__gt__, other)
 
     def __ge__(self, other):
-        return LayerOperation(self, np.ndarray.__ge__, other)
+        return LayerOperation(self, mx.array.__ge__, other)
 
     def __and__(self, other):
-        return LayerOperation(self, np.ndarray.__and__, other)
+        return LayerOperation(self, mx.array.__and__, other)
 
     def __or__(self, other):
-        return LayerOperation(self, np.ndarray.__or__, other)
+        return LayerOperation(self, mx.array.__or__, other)
 
     def _eval(self, index, step, target_window=None):
         try:
@@ -75,13 +76,13 @@ class LayerMathMixin:
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(
             self,
-            lambda c: np.nan_to_num(c, copy=False, nan=nan, posinf=posinf, neginf=neginf)
+            lambda c: mx.nan_to_num(c, copy=False, nan=nan, posinf=posinf, neginf=neginf)
         )
 
     def isin(self, vals):
         return LayerOperation(
             self,
-            lambda c: np.isin(c, vals)
+            lambda c: mx.isin(c, vals)
         )
 
     def log(self):
@@ -142,13 +143,30 @@ class LayerOperation(LayerMathMixin):
     def where(cond, a, b):
         return LayerOperation(
             cond,
-            np.where,
+            mx.where,
             rhs=a,
             other=b
         )
+    
+    @staticmethod
+    def maximum(a, b):
+        return LayerOperation(
+            a,
+            mx.maximum,
+            b,
+        )
+        
+    @staticmethod
+    def minimum(a, b):
+        return LayerOperation(
+            a,
+            mx.minimum,
+            rhs=b,
+        )
 
-    def __init__(self, lhs, operator=None, rhs=None, other=None):
+    def __init__(self, lhs, operator=None, rhs=None, other=None, **kwargs):
         self.ystep = constants.YSTEP
+        self.kwargs = kwargs
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -159,7 +177,7 @@ class LayerOperation(LayerMathMixin):
         if rhs is not None:
             if isinstance(rhs, (float, int)):
                 self.rhs = LayerConstant(rhs)
-            elif isinstance(rhs, (np.ndarray)):
+            elif isinstance(rhs, (mx.array)):
                 if rhs.shape == ():
                     self.rhs = LayerConstant(rhs.item())
                 else:
@@ -172,7 +190,7 @@ class LayerOperation(LayerMathMixin):
         if other is not None:
             if isinstance(other, (float, int)):
                 self.other = LayerConstant(other)
-            elif isinstance(other, (np.ndarray)):
+            elif isinstance(other, (mx.array)):
                 if other.shape == ():
                     self.rhs = LayerConstant(other.item())
                 else:
@@ -231,7 +249,7 @@ class LayerOperation(LayerMathMixin):
 
         if self.rhs is not None:
             rhs_data = self.rhs._eval(index, step)
-            return self.operator(lhs_data, rhs_data)
+            return self.operator(lhs_data, rhs_data, **self.kwargs)
 
         return self.operator(lhs_data)
 
@@ -247,8 +265,8 @@ class LayerOperation(LayerMathMixin):
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(yoffset, step)
-            res += np.sum(chunk.astype(np.float64))
-        return res
+            res += mx.sum(chunk)
+        return np.float64(res)
 
     def min(self):
         res = None
@@ -261,7 +279,7 @@ class LayerOperation(LayerMathMixin):
             chunk_min = np.min(chunk)
             if (res is None) or (res > chunk_min):
                 res = chunk_min
-        return res
+        return mx.eval(res)
 
     def max(self):
         res = None
@@ -274,7 +292,7 @@ class LayerOperation(LayerMathMixin):
             chunk_max = np.max(chunk)
             if (res is None) or (chunk_max > res):
                 res = chunk_max
-        return res
+        return mx.eval(res)
 
     def save(self, destination_layer, and_sum=False, callback=None, band=1):
         """
@@ -288,7 +306,7 @@ class LayerOperation(LayerMathMixin):
             band = destination_layer._dataset.GetRasterBand(band)
         except AttributeError as exc:
             raise ValueError("Layer must be a raster backed layer") from exc
-
+        print(self)
         computation_window = self.window
         destination_window = destination_layer.window
 
@@ -308,19 +326,19 @@ class LayerOperation(LayerMathMixin):
             if isinstance(chunk, (float, int)):
                 chunk = np.full((step, destination_window.xsize), chunk)
             band.WriteArray(
-                chunk,
+                np.array(chunk, copy=False),
                 destination_window.xoff,
                 yoffset + destination_window.yoff,
             )
             if and_sum:
-                total += np.sum(chunk.astype(np.float64))
+                total += mx.sum(chunk.astype(mx.float32))
         if callback:
             callback(1.0)
 
-        return total if and_sum else None
+        return np.float64(total) if and_sum else None
 
     def _parallel_worker(self, index, shared_mem, sem, np_dtype, width, input_queue, output_queue):
-        arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
+        arr = mx.array((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
 
         while True:
             # We aquire the lock so we know we have somewhere to put the
@@ -507,3 +525,7 @@ class ShaderStyleOperation(LayerOperation):
                     result[yoffset][xoffset] = self.operator(lhs_val)
 
         return result
+
+where = LayerOperation.where
+maximum = LayerOperation.maximum
+minumum = LayerOperation.minumum
