@@ -75,13 +75,18 @@ class LayerMathMixin:
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(
             self,
-            lambda c: np.nan_to_num(c, copy=False, nan=nan, posinf=posinf, neginf=neginf)
+            np.nan_to_num,
+            copy=False,
+            nan=nan,
+            posinf=posinf,
+            neginf=neginf,
         )
 
-    def isin(self, vals):
+    def isin(self, test_elements):
         return LayerOperation(
             self,
-            lambda c: np.isin(c, vals)
+            np.isin,
+            test_elements=test_elements,
         )
 
     def log(self):
@@ -112,6 +117,18 @@ class LayerMathMixin:
         return LayerOperation(
             self,
             np.exp2
+        )
+
+    def clip(self, min=None, max=None): # pylint: disable=W0622
+        # In the numpy 1 API np.clip(array) used a_max, a_min arguments and array.clip() used max and min as arguments
+        # In numpy 2 they moved so that max and min worked on both, but still support a_max, and a_min on np.clip.
+        # For now I'm only going to support the newer max/min everywhere notion, but I have to internally call
+        # a_max, a_min so that yirgacheffe can work on older numpy installs.
+        return LayerOperation(
+            self,
+            np.clip,
+            a_min=min,
+            a_max=max,
         )
 
     def numpy_apply(self, func, other=None):
@@ -163,8 +180,9 @@ class LayerOperation(LayerMathMixin):
             rhs=b,
         )
 
-    def __init__(self, lhs, operator=None, rhs=None, other=None):
+    def __init__(self, lhs, operator=None, rhs=None, other=None, **kwargs):
         self.ystep = constants.YSTEP
+        self.kwargs = kwargs
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -243,13 +261,13 @@ class LayerOperation(LayerMathMixin):
             assert self.rhs is not None
             rhs_data = self.rhs._eval(index, step)
             other_data = self.other._eval(index, step)
-            return self.operator(lhs_data, rhs_data, other_data)
+            return self.operator(lhs_data, rhs_data, other_data, **self.kwargs)
 
         if self.rhs is not None:
             rhs_data = self.rhs._eval(index, step)
-            return self.operator(lhs_data, rhs_data)
+            return self.operator(lhs_data, rhs_data, **self.kwargs)
 
-        return self.operator(lhs_data)
+        return self.operator(lhs_data, **self.kwargs)
 
     def sum(self):
         # The result accumulator is float64, and for precision reasons
@@ -498,9 +516,9 @@ class ShaderStyleOperation(LayerOperation):
         # be nicer to promote them to arrays sooner?
         if isinstance(lhs_data, (int, float)):
             if rhs_data is None:
-                return self.operator(lhs_data)
+                return self.operator(lhs_data, **self.kwargs)
             if isinstance(rhs_data, (int, float)):
-                return self.operator(lhs_data, rhs_data)
+                return self.operator(lhs_data, rhs_data, **self.kwargs)
             else:
                 result = np.empty_like(rhs_data)
         else:
@@ -518,12 +536,21 @@ class ShaderStyleOperation(LayerOperation):
                         rhs_val = rhs_data[yoffset][xoffset]
                     except TypeError:
                         rhs_val = rhs_data
-                    result[yoffset][xoffset] = self.operator(lhs_val, rhs_val)
+                    result[yoffset][xoffset] = self.operator(lhs_val, rhs_val, **self.kwargs)
                 else:
-                    result[yoffset][xoffset] = self.operator(lhs_val)
+                    result[yoffset][xoffset] = self.operator(lhs_val, **self.kwargs)
 
         return result
 
+# We provide these module level accessors as it's often nicer to write `log(x/y)` rather than `(x/y).log()`
 where = LayerOperation.where
 minumum = LayerOperation.minimum
 maximum = LayerOperation.maximum
+clip = LayerOperation.clip
+log = LayerOperation.log
+log2 = LayerOperation.log2
+log10 = LayerOperation.log10
+exp = LayerOperation.exp
+exp2 = LayerOperation.exp2
+nan_to_num = LayerOperation.nan_to_num
+isin = LayerOperation.isin

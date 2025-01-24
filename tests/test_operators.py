@@ -707,12 +707,25 @@ def test_where_layers() -> None:
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
 
-def test_isin_simple() -> None:
+def test_isin_simple_method() -> None:
     data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1.isin([2, 3])
+    comp.ystep = 1
+    comp.save(result)
+
+    expected = np.isin(data1, [2, 3])
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_isin_simple_module() -> None:
+    data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.isin(layer1, [2, 3])
     comp.ystep = 1
     comp.save(result)
 
@@ -850,12 +863,24 @@ def test_layer_greater_than_or_equal_to_layer() -> None:
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
 
-def test_log() -> None:
+def test_log_method() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1.log()
+    comp.save(result)
+
+    expected = np.log(data1)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_log_module() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.log(layer1)
     comp.save(result)
 
     expected = np.log(data1)
@@ -886,12 +911,24 @@ def test_log10() -> None:
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
 
-def test_exp() -> None:
+def test_exp_method() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     comp = layer1.exp()
+    comp.save(result)
+
+    expected = np.exp(data1)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_exp_module() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.exp(layer1)
     comp.save(result)
 
     expected = np.exp(data1)
@@ -935,5 +972,77 @@ def test_maximum_layers() -> None:
     comp.save(result)
 
     expected = np.maximum(data1, data2)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_clip_both_method() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.clip(3.0, 6.0)
+    comp.save(result)
+
+    expected = data1.clip(3.0, 6.0)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_clip_both_module() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.clip(layer1, 3.0, 6.0)
+    comp.save(result)
+
+    expected = np.clip(data1, 3.0, 6.0)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_clip_upper_method() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.clip(max=6.0)
+    comp.save(result)
+
+    expected = data1.clip(max=6.0)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_clip_upper_module() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.clip(layer1, max=6.0)
+    comp.save(result)
+
+    expected = np.clip(data1, a_min=None, a_max=6.0)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_clip_lower_method() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.clip(min=3.0)
+    comp.save(result)
+
+    expected = data1.clip(min=3.0)
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_clip_lower_module() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.clip(layer1, min=3.0)
+    comp.save(result)
+
+    expected = np.clip(data1, a_min=3.0, a_max=None)
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()

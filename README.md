@@ -86,7 +86,7 @@ Yirgacheffe is work in progress, so things planned but not supported currently:
 
 * Dynamic pixel scale adjustment - all raster layers must be provided at the same pixel scale currently  *NOW IN EXPERIMENTAL TESTING, SEE BELOW*
 * A fold operation
-* CUPY support
+* CUDA/Metal support via CUPY/MLX
 * Dispatching work across multiple CPUs *NOW IN EXPERIMENTAL TESTING, SEE BELOW*
 
 
@@ -251,6 +251,14 @@ with RasterLayer.layer_from_file('test1.tif') as layer1:
         calc.save(result)
 ```
 
+### Boolean testing
+
+Testing for equality, less than, less than or equal, greater than, and greater than or equal are supported on layers, along with logical or and logical and, as per this example, where `elevation_upper` and `elevation_lower` are scalar values:
+
+```
+filtered_elevation = (min_elevation_map <= elevation_upper) & (max_elevation_map >= elevation_lower)
+```
+
 ### Power
 
 Pixel-wise raising to a constant power:
@@ -260,6 +268,35 @@ with RasterLayer.layer_from_file('test1.tif') as layer1:
     with RasterLayer.empty_raster_layer_like(layer1, 'result.tif') as result:
         calc = layer1 ** 0.65
         calc.save(result)
+```
+
+### Log, Exp, Clip, etc.
+
+The following math operators common to numpy and other libraries are currently supported:
+
+* clip
+* exp
+* exp2
+* isin
+* log
+* log2
+* log10
+* maximum
+* minimum
+* nan_to_num
+
+Typically these can be invoked either on a layer as a method:
+
+```python
+calc = layer1.log10()
+```
+
+Or via the operators module, as it's sometimes nicer to do it this way when chaining together operations in a single expression:
+
+```python
+import yirgaceffe.operators as yo
+
+calc = yo.log10(layer1 / layer2)
 ```
 
 
@@ -384,6 +421,6 @@ Because of the number of tricks that Python plays under the hood this feature ne
 
 ## Thanks
 
-Thanks to discussion and feedback from the 4C team, particularly Alison Eyres, Patrick Ferris, Amelia Holcomb, and Anil Madhavapeddy.
+Thanks to discussion and feedback from my colleagues, particularly Alison Eyres, Patrick Ferris, Amelia Holcomb, and Anil Madhavapeddy.
 
 Inspired by the work of Daniele Baisero in his AoH library.
