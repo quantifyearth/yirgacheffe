@@ -1019,7 +1019,7 @@ def test_clip_upper_module() -> None:
     comp = LayerOperation.clip(layer1, max=6.0)
     comp.save(result)
 
-    expected = np.clip(data1, max=6.0)
+    expected = np.clip(data1, a_min=None, a_max=6.0)
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
 
@@ -1043,6 +1043,6 @@ def test_clip_lower_module() -> None:
     comp = LayerOperation.clip(layer1, min=3.0)
     comp.save(result)
 
-    expected = np.clip(data1, min=3.0)
+    expected = np.clip(data1, a_min=3.0, a_max=None)
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
