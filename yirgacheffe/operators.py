@@ -120,11 +120,15 @@ class LayerMathMixin:
         )
 
     def clip(self, min=None, max=None): # pylint: disable=W0622
+        # In the numpy 1 API np.clip(array) used a_max, a_min arguments and array.clip() used max and min as arguments
+        # In numpy 2 they moved so that max and min worked on both, but still support a_max, and a_min on np.clip.
+        # For now I'm only going to support the newer max/min everywhere notion, but I have to internally call
+        # a_max, a_min so that yirgacheffe can work on older numpy installs.
         return LayerOperation(
             self,
             np.clip,
-            min=min,
-            max=max,
+            a_min=min,
+            a_max=max,
         )
 
     def numpy_apply(self, func, other=None):
