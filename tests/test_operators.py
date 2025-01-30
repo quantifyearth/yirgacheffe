@@ -745,15 +745,21 @@ def test_isin_simple_module() -> None:
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
 
-def test_layer_comparison_to_value() -> None:
+@pytest.mark.parametrize("val", [
+    (float(2.0)),
+    (int(2)),
+    (np.uint16(2)),
+    (np.float32(2.0)),
+])
+def test_layer_comparison_to_value(val) -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 2.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = layer1 == 2.0
+    comp = layer1 == val
     comp.save(result)
 
-    expected = data1 == 2.0
+    expected = data1 == val
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
 
