@@ -122,15 +122,21 @@ def test_mult_float_layers() -> None:
 
     assert (expected == actual).all()
 
-def test_add_to_float_layer_by_const() -> None:
+@pytest.mark.parametrize("c", [
+    (float(2.5)),
+    (int(2)),
+    (np.uint16(2)),
+    (np.float32(2.5)),
+])
+def test_add_to_float_layer_by_const(c) -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = layer1 + 2.5
+    comp = layer1 + c
     comp.save(result)
 
-    expected = data1 + 2.5
+    expected = data1 + c
     actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
@@ -677,16 +683,22 @@ def test_nan_to_num_default() -> None:
 
     assert (expected == actual).all()
 
-def test_where_simple() -> None:
+@pytest.mark.parametrize("ct", [
+    float,
+    int,
+    np.uint16,
+    np.float32,
+])
+def test_where_simple(ct) -> None:
     data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.where(layer1 > 0, 1, 2)
+    comp = LayerOperation.where(layer1 > 0, ct(1), ct(2))
     comp.ystep = 1
     comp.save(result)
 
-    expected = np.where(data1 > 0, 1, 2)
+    expected = np.where(data1 > 0, ct(1), ct(2))
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
 

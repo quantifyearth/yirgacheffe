@@ -56,9 +56,9 @@ def test_pickle_uniform_area_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
         area = Area(
-            math.floor(-180 / pixel_scale) * pixel_scale, 
-            math.ceil(90 / pixel_scale) * pixel_scale, 
-            (math.floor(-180 / pixel_scale) * pixel_scale) + pixel_scale, 
+            math.floor(-180 / pixel_scale) * pixel_scale,
+            math.ceil(90 / pixel_scale) * pixel_scale,
+            (math.floor(-180 / pixel_scale) * pixel_scale) + pixel_scale,
             math.floor(-90 / pixel_scale) * pixel_scale
         )
         dataset = gdal_dataset_of_region(area, pixel_scale, filename=path)
@@ -73,15 +73,15 @@ def test_pickle_uniform_area_layer() -> None:
 
         assert restore.pixel_scale == (pixel_scale, -pixel_scale)
         assert restore.area == Area(
-            math.floor(-180 / pixel_scale) * pixel_scale, 
-            math.ceil(90 / pixel_scale) * pixel_scale, 
-            math.ceil(180 / pixel_scale) * pixel_scale, 
+            math.floor(-180 / pixel_scale) * pixel_scale,
+            math.ceil(90 / pixel_scale) * pixel_scale,
+            math.ceil(180 / pixel_scale) * pixel_scale,
             math.floor(-90 / pixel_scale) * pixel_scale
         )
         assert restore.window == Window(
             0,
             0,
-            math.ceil((restore.area.right - restore.area.left) / pixel_scale), 
+            math.ceil((restore.area.right - restore.area.left) / pixel_scale),
             math.ceil((restore.area.top - restore.area.bottom) / pixel_scale)
         )
 
@@ -105,24 +105,36 @@ def test_pickle_group_layer() -> None:
         result = restore.read_array(0, 0, 100, 100)
         assert (expected == result).all()
 
-def test_pickle_constant_layer() -> None:
-    layer = ConstantLayer(42.0)
+@pytest.mark.parametrize("c", [
+    (float(2.5)),
+    (int(2)),
+    (np.uint16(2)),
+    (np.float32(2.5)),
+])
+def test_pickle_constant_layer(c) -> None:
+    layer = ConstantLayer(c)
 
     p = pickle.dumps(layer)
     restore = pickle.loads(p)
 
     result = restore.read_array(0, 0, 1, 1)
-    assert (result == np.array([[42.0]])).all()
+    assert (result == np.array([[c]])).all()
 
-def test_pickle_simple_calc() -> None:
+@pytest.mark.parametrize("c", [
+    (float(2.5)),
+    (int(2)),
+    (np.uint16(2)),
+    (np.float32(2.5)),
+])
+def test_pickle_simple_calc(c) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10)
         layer = RasterLayer(gdal_dataset_of_region(area, 0.2, filename=path))
 
-        calc = layer * 2.0
+        calc = layer * c
         assert calc.sum() != 0
-        assert calc.sum() == layer.sum() * 2
+        assert calc.sum() == layer.sum() * c
 
         p = pickle.dumps(calc)
         restore = pickle.loads(p)

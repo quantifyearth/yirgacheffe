@@ -191,7 +191,7 @@ class LayerOperation(LayerMathMixin):
         self.operator = operator
 
         if rhs is not None:
-            if isinstance(rhs, (float, int)):
+            if np.isscalar(rhs):
                 self.rhs = LayerConstant(rhs)
             elif isinstance(rhs, (np.ndarray)):
                 if rhs.shape == ():
@@ -204,7 +204,7 @@ class LayerOperation(LayerMathMixin):
             self.rhs = None
 
         if other is not None:
-            if isinstance(other, (float, int)):
+            if np.isscalar(other):
                 self.other = LayerConstant(other)
             elif isinstance(other, (np.ndarray)):
                 if other.shape == ():
