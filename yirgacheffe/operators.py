@@ -2,16 +2,27 @@ import sys
 import time
 import multiprocessing
 import types
+from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
+
+
+from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
+
 
 import numpy as np
 from osgeo import gdal
 from dill import dumps, loads
 
 from . import constants
-from .window import Window
+from .window import Area, PixelScale, Window
 
+class WindowOperation(Enum):
+    NONE = 1
+    UNION = 2
+    INTERSECTION = 3
+    LEFT = 4
+    RIGHT = 5
 
 class LayerConstant:
     def __init__(self, val):
@@ -27,43 +38,43 @@ class LayerConstant:
 class LayerMathMixin:
 
     def __add__(self, other):
-        return LayerOperation(self, np.ndarray.__add__, other)
+        return LayerOperation(self, np.ndarray.__add__, other, window_op=WindowOperation.UNION)
 
     def __sub__(self, other):
-        return LayerOperation(self, np.ndarray.__sub__, other)
+        return LayerOperation(self, np.ndarray.__sub__, other, window_op=WindowOperation.UNION)
 
     def __mul__(self, other):
-        return LayerOperation(self, np.ndarray.__mul__, other)
+        return LayerOperation(self, np.ndarray.__mul__, other, window_op=WindowOperation.INTERSECTION)
 
     def __truediv__(self, other):
-        return LayerOperation(self, np.ndarray.__truediv__, other)
+        return LayerOperation(self, np.ndarray.__truediv__, other, window_op=WindowOperation.INTERSECTION)
 
     def __pow__(self, other):
-        return LayerOperation(self, np.ndarray.__pow__, other)
+        return LayerOperation(self, np.ndarray.__pow__, other, window_op=WindowOperation.UNION)
 
     def __eq__(self, other):
-        return LayerOperation(self, np.ndarray.__eq__, other)
+        return LayerOperation(self, np.ndarray.__eq__, other, window_op=WindowOperation.INTERSECTION)
 
     def __ne__(self, other):
-        return LayerOperation(self, np.ndarray.__ne__, other)
+        return LayerOperation(self, np.ndarray.__ne__, other, window_op=WindowOperation.UNION)
 
     def __lt__(self, other):
-        return LayerOperation(self, np.ndarray.__lt__, other)
+        return LayerOperation(self, np.ndarray.__lt__, other, window_op=WindowOperation.UNION)
 
     def __le__(self, other):
-        return LayerOperation(self, np.ndarray.__le__, other)
+        return LayerOperation(self, np.ndarray.__le__, other, window_op=WindowOperation.UNION)
 
     def __gt__(self, other):
-        return LayerOperation(self, np.ndarray.__gt__, other)
+        return LayerOperation(self, np.ndarray.__gt__, other, window_op=WindowOperation.UNION)
 
     def __ge__(self, other):
-        return LayerOperation(self, np.ndarray.__ge__, other)
+        return LayerOperation(self, np.ndarray.__ge__, other, window_op=WindowOperation.UNION)
 
     def __and__(self, other):
-        return LayerOperation(self, np.ndarray.__and__, other)
+        return LayerOperation(self, np.ndarray.__and__, other, window_op=WindowOperation.INTERSECTION)
 
     def __or__(self, other):
-        return LayerOperation(self, np.ndarray.__or__, other)
+        return LayerOperation(self, np.ndarray.__or__, other, window_op=WindowOperation.UNION)
 
     def _eval(self, index, step, target_window=None):
         try:
@@ -76,6 +87,7 @@ class LayerMathMixin:
         return LayerOperation(
             self,
             np.nan_to_num,
+            window_op=WindowOperation.NONE,
             copy=False,
             nan=nan,
             posinf=posinf,
@@ -86,37 +98,43 @@ class LayerMathMixin:
         return LayerOperation(
             self,
             np.isin,
+            window_op=WindowOperation.NONE,
             test_elements=test_elements,
         )
 
     def log(self):
         return LayerOperation(
             self,
-            np.log
+            np.log,
+            window_op=WindowOperation.NONE,
         )
 
     def log2(self):
         return LayerOperation(
             self,
-            np.log2
+            np.log2,
+            window_op=WindowOperation.NONE,
         )
 
     def log10(self):
         return LayerOperation(
             self,
-            np.log10
+            np.log10,
+            window_op=WindowOperation.NONE,
         )
 
     def exp(self):
         return LayerOperation(
             self,
-            np.exp
+            np.exp,
+            window_op=WindowOperation.NONE,
         )
 
     def exp2(self):
         return LayerOperation(
             self,
-            np.exp2
+            np.exp2,
+            window_op=WindowOperation.NONE,
         )
 
     def clip(self, min=None, max=None): # pylint: disable=W0622
@@ -127,6 +145,7 @@ class LayerMathMixin:
         return LayerOperation(
             self,
             np.clip,
+            window_op=WindowOperation.NONE,
             a_min=min,
             a_max=max,
         )
@@ -170,6 +189,7 @@ class LayerOperation(LayerMathMixin):
             a,
             np.maximum,
             b,
+            window_op=WindowOperation.UNION,
         )
 
     @staticmethod
@@ -178,11 +198,13 @@ class LayerOperation(LayerMathMixin):
             a,
             np.minimum,
             rhs=b,
+            window_op=WindowOperation.UNION,
         )
 
-    def __init__(self, lhs, operator=None, rhs=None, other=None, **kwargs):
+    def __init__(self, lhs, operator=None, rhs=None, other=None, window_op=WindowOperation.NONE, **kwargs):
         self.ystep = constants.YSTEP
         self.kwargs = kwargs
+        self.window_op = window_op
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -199,6 +221,8 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
+                if not are_pixel_scales_equal_enough([lhs.pixel_scale, rhs.pixel_scale]):
+                    raise ValueError("Not all layers are at the same pixel scale")
                 self.rhs = rhs
         else:
             self.rhs = None
@@ -212,6 +236,8 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
+                if not are_pixel_scales_equal_enough([lhs.pixel_scale, other.pixel_scale]):
+                    raise ValueError("Not all layers are at the same pixel scale")
                 self.other = other
         else:
             self.other = None
@@ -242,14 +268,81 @@ class LayerOperation(LayerMathMixin):
         self.__dict__.update(state)
 
     @property
-    def window(self) -> Window:
+    def area(self) -> Area:
+        import yirgacheffe.layers as yl
+        lhs_area = self.lhs.area if not isinstance(self.lhs, yl.ConstantLayer) else None
         try:
-            return self.lhs.window
+            rhs_area = self.rhs.area if self.rhs is not None and not isinstance(self.rhs, yl.ConstantLayer) else None
         except AttributeError:
-            # If neither side had a window attribute then
-            # the operation doesn't have anything useful to
-            # say, so let the exception propagate up
-            return self.rhs.window
+            rhs_area = None
+        try:
+            other_area = self.other.area if self.other is not None and not isinstance(self.other, yl.ConstantLayer)  else None
+        except AttributeError:
+            other_area = None
+
+        all_areas = []
+        if lhs_area is not None:
+            all_areas.append(lhs_area)
+        if rhs_area is not None:
+            all_areas.append(rhs_area)
+        if other_area is not None:
+            all_areas.append(other_area)
+
+        match self.window_op:
+            case WindowOperation.NONE:
+                return all_areas[0]
+            case WindowOperation.LEFT:
+                return lhs_area
+            case WindowOperation.RIGHT:
+                assert rhs_area is not None
+                return rhs_area
+            case WindowOperation.INTERSECTION:
+                intersection = Area(
+                    left=max(x.left for x in all_areas),
+                    top=min(x.top for x in all_areas),
+                    right=min(x.right for x in all_areas),
+                    bottom=max(x.bottom for x in all_areas)
+                )
+                if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
+                    raise ValueError('No intersection possible')
+                return intersection
+            case WindowOperation.UNION:
+                return Area(
+                    left=min(x.left for x in all_areas),
+                    top=max(x.top for x in all_areas),
+                    right=max(x.right for x in all_areas),
+                    bottom=min(x.bottom for x in all_areas)
+                )
+
+    @property
+    def pixel_scale(self) -> PixelScale:
+        # Because we test at construction that pixel scales for RHS/other are roughly equal,
+        # I believe this should be sufficient...
+        try:
+            pixel_scale = self.lhs.pixel_scale
+        except AttributeError:
+            pixel_scale = None
+
+        if pixel_scale is None:
+            return self.rhs.pixel_scale
+        return pixel_scale
+
+    @property
+    def window(self) -> Window:
+        pixel_scale = self.pixel_scale
+        area = self.area
+
+        return Window(
+            xoff=round_down_pixels(area.left / pixel_scale.xstep, pixel_scale.xstep),
+            yoff=round_down_pixels(area.top / (pixel_scale.ystep * -1.0), pixel_scale.ystep * -1.0),
+            xsize=round_up_pixels(
+                (area.right - area.left) / pixel_scale.xstep, pixel_scale.xstep
+            ),
+            ysize=round_up_pixels(
+                (area.top - area.bottom) / (pixel_scale.ystep * -1.0),
+                (pixel_scale.ystep * -1.0)
+            ),
+        )
 
     def _eval(self, index, step): # pylint: disable=W0221
         lhs_data = self.lhs._eval(index, step)
