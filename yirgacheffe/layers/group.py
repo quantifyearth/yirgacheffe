@@ -89,7 +89,8 @@ class GroupLayer(YirgacheffeLayer):
         except AttributeError:
             pass # called from Base constructor before we've added the extra field
 
-    def read_array(self, xoffset: int, yoffset: int, xsize: int, ysize: int) -> Any:
+    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
+
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
@@ -97,8 +98,8 @@ class GroupLayer(YirgacheffeLayer):
         assert scale is not None
 
         target_window = Window(
-            self.window.xoff + xoffset,
-            self.window.yoff + yoffset,
+            window.xoff + xoffset,
+            window.yoff + yoffset,
             xsize,
             ysize
         )
@@ -138,8 +139,8 @@ class GroupLayer(YirgacheffeLayer):
                 intersection.xsize,
                 intersection.ysize
             )
-            result_x_offset = (intersection.xoff - xoffset) - self.window.xoff
-            result_y_offset = (intersection.yoff - yoffset) - self.window.yoff
+            result_x_offset = (intersection.xoff - xoffset) - window.xoff
+            result_y_offset = (intersection.yoff - yoffset) - window.yoff
             result[
                 result_y_offset:result_y_offset + intersection.ysize,
                 result_x_offset:result_x_offset + intersection.xsize
@@ -198,8 +199,7 @@ class TiledGroupLayer(GroupLayer):
     * You can have missing tiles, and it'll fill in zeros.
     * The tiles can overlap - e.g., JRC Annual Change tiles all overlap by a few pixels on all edges.
     """
-
-    def read_array(self, xoffset: int, yoffset: int, xsize: int, ysize: int) -> Any:
+    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
@@ -207,8 +207,8 @@ class TiledGroupLayer(GroupLayer):
         assert scale is not None
 
         target_window = Window(
-            self.window.xoff + xoffset,
-            self.window.yoff + yoffset,
+            window.xoff + xoffset,
+            window.yoff + yoffset,
             xsize,
             ysize
         )
@@ -233,8 +233,8 @@ class TiledGroupLayer(GroupLayer):
                 intersection.xsize,
                 intersection.ysize
             )
-            result_x_offset = (intersection.xoff - xoffset) - self.window.xoff
-            result_y_offset = (intersection.yoff - yoffset) - self.window.yoff
+            result_x_offset = (intersection.xoff - xoffset) - window.xoff
+            result_y_offset = (intersection.yoff - yoffset) - window.yoff
             partials.append(TileData(data, result_x_offset, result_y_offset))
 
         sorted_partials = sorted(partials)

@@ -81,7 +81,7 @@ class RasterLayer(YirgacheffeLayer):
 
     @staticmethod
     def empty_raster_layer_like(
-        layer: YirgacheffeLayer,
+        layer: Any,
         filename: Optional[str]=None,
         area: Optional[Area]=None,
         datatype: Optional[int]=None,
@@ -93,17 +93,19 @@ class RasterLayer(YirgacheffeLayer):
     ) -> RasterLayerT:
         width = layer.window.xsize
         height = layer.window.ysize
-        geo_transform = layer.geo_transform
-        if area is not None:
-            scale = layer.pixel_scale
-            if scale is None:
-                raise ValueError("Can not work out area without explicit pixel scale")
-            abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
-            width = round_up_pixels((area.right - area.left) / abs_xstep, abs_xstep)
-            height = round_up_pixels((area.top - area.bottom) / abs_ystep, abs_ystep)
-            geo_transform = (
-                area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep
-            )
+        if area is None:
+            area = layer.area
+        assert area is not None
+
+        scale = layer.pixel_scale
+        if scale is None:
+            raise ValueError("Can not work out area without explicit pixel scale")
+        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+        width = round_up_pixels((area.right - area.left) / abs_xstep, abs_xstep)
+        height = round_up_pixels((area.top - area.bottom) / abs_ystep, abs_ystep)
+        geo_transform = (
+            area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep
+        )
 
         options = []
         if threads is not None:
@@ -282,7 +284,7 @@ class RasterLayer(YirgacheffeLayer):
         assert self._dataset
         return self._dataset.GetRasterBand(1).DataType
 
-    def read_array(self, xoffset, yoffset, xsize, ysize) -> Any:
+    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
         if self._dataset is None:
             self._unpark()
         assert self._dataset
@@ -293,8 +295,8 @@ class RasterLayer(YirgacheffeLayer):
         # if we're dealing with an intersection, we can just read the data directly,
         # otherwise we need to read the data into another array with suitable padding
         target_window = Window(
-            self.window.xoff + xoffset,
-            self.window.yoff + yoffset,
+            window.xoff + xoffset,
+            window.yoff + yoffset,
             xsize,
             ysize
         )
@@ -320,12 +322,12 @@ class RasterLayer(YirgacheffeLayer):
                 subset,
                 (
                     (
-                        (intersection.yoff - self.window.yoff) - yoffset,
-                        (ysize - ((intersection.yoff - self.window.yoff) + intersection.ysize)) + yoffset,
+                        (intersection.yoff - window.yoff) - yoffset,
+                        (ysize - ((intersection.yoff - window.yoff) + intersection.ysize)) + yoffset,
                     ),
                     (
-                        (intersection.xoff - self.window.xoff) - xoffset,
-                        xsize - ((intersection.xoff - self.window.xoff) + intersection.xsize) + xoffset,
+                        (intersection.xoff - window.xoff) - xoffset,
+                        xsize - ((intersection.xoff - window.xoff) + intersection.xsize) + xoffset,
                     )
                 ),
                 'constant'

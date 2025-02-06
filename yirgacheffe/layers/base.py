@@ -211,8 +211,29 @@ class YirgacheffeLayer(LayerMathMixin):
         self._window = new_window
         self._active_area = new_area
 
-    def read_array(self, _x: int, _y: int, _xsize: int, _ysize: int) -> Any:
+    def read_array_with_window(self, _x: int, _y: int, _xsize: int, _ysize: int, window: Window) -> Any:
         raise NotImplementedError("Must be overridden by subclass")
+
+    def read_array_for_area(self, target_area: Area, x: int, y: int, width: int, height: int) -> Any:
+
+        target_window = Window(
+            xoff=round_down_pixels((target_area.left - self._underlying_area.left) / self._pixel_scale.xstep,
+                self._pixel_scale.xstep),
+            yoff=round_down_pixels((self._underlying_area.top - target_area.top) / (self._pixel_scale.ystep * -1.0),
+                self._pixel_scale.ystep * -1.0),
+            xsize=round_up_pixels(
+                (target_area.right - target_area.left) / self._pixel_scale.xstep,
+                self._pixel_scale.xstep
+            ),
+            ysize=round_up_pixels(
+                (target_area.top - target_area.bottom) / (self._pixel_scale.ystep * -1.0),
+                (self._pixel_scale.ystep * -1.0)
+            ),
+        )
+        return self.read_array_with_window(x, y, width, height, target_window)
+
+    def read_array(self, x: int, y: int, width: int, height: int) -> Any:
+        return self.read_array_with_window(x, y, width, height, self.window)
 
     def latlng_for_pixel(self, x_coord: int, y_coord: int) -> Tuple[float,float]:
         """Get geo coords for pixel. This is relative to the set view window."""

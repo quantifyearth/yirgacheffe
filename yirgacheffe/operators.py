@@ -6,15 +6,12 @@ from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
 
-
-from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
-
-
 import numpy as np
 from osgeo import gdal
 from dill import dumps, loads
 
 from . import constants
+from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
 from .window import Area, PixelScale, Window
 
 class WindowOperation(Enum):
@@ -31,7 +28,7 @@ class LayerConstant:
     def __str__(self):
         return str(self.val)
 
-    def _eval(self, _index, _step):
+    def _eval(self, _area, _index, _step, _target_window):
         return self.val
 
 
@@ -76,12 +73,12 @@ class LayerMathMixin:
     def __or__(self, other):
         return LayerOperation(self, np.ndarray.__or__, other, window_op=WindowOperation.UNION)
 
-    def _eval(self, index, step, target_window=None):
+    def _eval(self, area, index, step, target_window=None):
         try:
-            window = self.window
-            return self.read_array(0, index, window.xsize, step)
+            window = self.window if target_window is None else target_window
+            return self.read_array_for_area(area, 0, index, window.xsize, step)
         except AttributeError:
-            return self.read_array(0, index, target_window.xsize if target_window else 1, step)
+            return self.read_array_for_area(area, 0, index, target_window.xsize if target_window else 1, step)
 
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(
@@ -269,14 +266,14 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def area(self) -> Area:
-        import yirgacheffe.layers as yl
-        lhs_area = self.lhs.area if not isinstance(self.lhs, yl.ConstantLayer) else None
+        # The type().__name__ here is to avoid a circular import dependancy
+        lhs_area = self.lhs.area if not type(self.lhs).__name__ == "ConstantLayer" else None
         try:
-            rhs_area = self.rhs.area if self.rhs is not None and not isinstance(self.rhs, yl.ConstantLayer) else None
+            rhs_area = self.rhs.area if not type(self.rhs).__name__ == "ConstantLayer" else None
         except AttributeError:
             rhs_area = None
         try:
-            other_area = self.other.area if self.other is not None and not isinstance(self.other, yl.ConstantLayer)  else None
+            other_area = self.other.area if not type(self.other).__name__ == "ConstantLayer" else None
         except AttributeError:
             other_area = None
 
@@ -344,20 +341,32 @@ class LayerOperation(LayerMathMixin):
             ),
         )
 
-    def _eval(self, index, step): # pylint: disable=W0221
-        lhs_data = self.lhs._eval(index, step)
+    @property
+    def datatype(self):
+        # TODO: Work out how to indicate type promotion via numpy
+        return self.lhs.datatype
+
+    @property
+    def projection(self):
+        try:
+            return self.lhs.projection
+        except AttributeError:
+            return self.rhs.projection
+
+    def _eval(self, area, index, step, target_window=None):
+        lhs_data = self.lhs._eval(area, index, step, target_window)
 
         if self.operator is None:
             return lhs_data
 
         if self.other is not None:
             assert self.rhs is not None
-            rhs_data = self.rhs._eval(index, step)
-            other_data = self.other._eval(index, step)
+            rhs_data = self.rhs._eval(area, index, step, target_window)
+            other_data = self.other._eval(area, index, step, target_window)
             return self.operator(lhs_data, rhs_data, other_data, **self.kwargs)
 
         if self.rhs is not None:
-            rhs_data = self.rhs._eval(index, step)
+            rhs_data = self.rhs._eval(area, index, step, target_window)
             return self.operator(lhs_data, rhs_data, **self.kwargs)
 
         return self.operator(lhs_data, **self.kwargs)
@@ -373,7 +382,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(yoffset, step)
+            chunk = self._eval(self.area, yoffset, step, computation_window)
             res += np.sum(chunk.astype(np.float64))
         return res
 
@@ -384,7 +393,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(yoffset, step)
+            chunk = self._eval(self.area, yoffset, step, computation_window)
             chunk_min = np.min(chunk)
             if (res is None) or (res > chunk_min):
                 res = chunk_min
@@ -397,7 +406,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(yoffset, step)
+            chunk = self._eval(self.area, yoffset, step, computation_window)
             chunk_max = np.max(chunk)
             if (res is None) or (chunk_max > res):
                 res = chunk_max
@@ -431,7 +440,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(yoffset, step)
+            chunk = self._eval(self.area, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
                 chunk = np.full((step, destination_window.xsize), chunk)
             band.WriteArray(
@@ -465,7 +474,7 @@ class LayerOperation(LayerMathMixin):
                 break
             yoffset, step = task
 
-            arr[:step] = self._eval(yoffset, step)
+            arr[:step] = self._eval(self.area, yoffset, step)
 
             output_queue.put((index, yoffset, step))
 
@@ -598,10 +607,12 @@ class LayerOperation(LayerMathMixin):
 
 class ShaderStyleOperation(LayerOperation):
 
-    def _eval(self, index, step):
-        lhs_data = self.lhs._eval(index, step, self.window)
+    def _eval(self, area, index, step, target_window=None):
+        if target_window is None:
+            target_window = self.window
+        lhs_data = self.lhs._eval(area, index, step, target_window)
         if self.rhs is not None:
-            rhs_data = self.rhs._eval(index, step, self.window)
+            rhs_data = self.rhs._eval(area, index, step, target_window)
         else:
             rhs_data = None
 

@@ -1,6 +1,7 @@
 import os
 from math import ceil, floor
 from typing import Any, Optional, Tuple, Union
+from typing_extensions import NotRequired
 
 from osgeo import gdal, ogr
 
@@ -331,18 +332,18 @@ class VectorLayer(YirgacheffeLayer):
     def datatype(self) -> int:
         return self._datatype
 
-    def read_array(self, xoffset, yoffset, xsize, ysize):
+    def read_array_for_area(self, target_area: Area, x: int, y: int, width: int, height: int) -> Any:
         if self._original is None:
             self._unpark()
-        if (xsize <= 0) or (ysize <= 0):
+        if (width <= 0) or (height <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
         # I did try recycling this object to save allocation/dealloction, but in practice it
         # seemed to only make things slower (particularly as you need to zero the memory each time yourself)
         dataset = gdal.GetDriverByName('mem').Create(
             'mem',
-            xsize,
-            ysize,
+            width,
+            height,
             1,
             self.datatype,
             []
@@ -352,10 +353,10 @@ class VectorLayer(YirgacheffeLayer):
 
         dataset.SetProjection(self._projection)
         dataset.SetGeoTransform([
-            self._active_area.left + (xoffset * self._pixel_scale.xstep),
+            target_area.left + (x * self._pixel_scale.xstep),
             self._pixel_scale.xstep,
             0.0,
-            self._active_area.top + (yoffset * self._pixel_scale.ystep),
+            target_area.top + (y * self._pixel_scale.ystep),
             0.0,
             self._pixel_scale.ystep
         ])
@@ -366,5 +367,11 @@ class VectorLayer(YirgacheffeLayer):
         else:
             raise ValueError("Burn value for layer should be number or field name")
 
-        res = dataset.ReadAsArray(0, 0, xsize, ysize)
+        res = dataset.ReadAsArray(0, 0, width, height)
         return res
+
+    def read_array_with_window(self, _x, _y, _width, _height, _window) -> Any:
+        assert NotRequired
+
+    def read_array(self, x: int, y: int, width: int, height: int) -> Any:
+        return self.read_array_for_area(self._active_area, x, y, width, height)
