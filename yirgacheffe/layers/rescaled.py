@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 from skimage import transform
 
-from ..window import PixelScale
+from ..window import PixelScale, Window
 from .rasters import RasterLayer, YirgacheffeLayer
 
 
@@ -54,12 +54,13 @@ class RescaledRasterLayer(YirgacheffeLayer):
     def _unpark(self):
         self._src._unpark()
 
-    def read_array(self, xoffset, yoffset, xsize, ysize) -> Any:
+    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
+
         # to avoid aliasing issues, we try to scale to the nearest pixel
         # and recrop when scaling bigger
 
-        xoffset = xoffset + self.window.xoff
-        yoffset = yoffset + self.window.yoff
+        xoffset = xoffset + window.xoff
+        yoffset = yoffset + window.yoff
 
         src_x_offset = floor(xoffset / self._x_scale)
         src_y_offset = floor(yoffset / self._y_scale)

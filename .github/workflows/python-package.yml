@@ -32,10 +32,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install "numpy<2" gdal[numpy]==3.9.2 scikit-image "h3==4.0.0b5"
-          python -m pip install pylint mypy pytest types-setuptools
+          python -m pip install pylint mypy pytest types-setuptools pytest-cov
       - name: Lint with pylint
         run: |
           python3 -m pylint yirgacheffe
       - name: Test with pytest
         run: |
-          python3 -m pytest -vv
+          python3 -m pytest --cov=yirgacheffe -vv

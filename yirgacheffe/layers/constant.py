@@ -3,7 +3,7 @@ from typing import Any, Union
 import numpy as np
 from osgeo import gdal
 
-from ..window import Area, PixelScale
+from ..window import Area, PixelScale, Window
 from .base import YirgacheffeLayer
 from .. import WGS_84_PROJECTION
 
@@ -31,5 +31,11 @@ class ConstantLayer(YirgacheffeLayer):
     def set_window_for_intersection(self, _intersection: Area) -> None:
         pass
 
-    def read_array(self, _x: int, _y: int, xsize: int, ysize: int) -> Any:
-        return np.full((ysize, xsize), self.value)
+    def read_array(self, _x: int, _y: int, width: int, height: int) -> Any:
+        return np.full((height, width), self.value)
+
+    def read_array_with_window(self, _x: int, _y: int, width: int, height: int, _window: Window) -> Any:
+        return np.full((height, width), self.value)
+
+    def read_array_for_area(self, _target_area: Area, x: int, y: int, width: int, height: int) -> Any:
+        return self.read_array(x, y, width, height)

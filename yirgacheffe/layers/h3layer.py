@@ -1,4 +1,5 @@
 from math import ceil, floor
+from typing import Any
 
 import h3
 import numpy as np
@@ -77,7 +78,7 @@ class H3CellLayer(YirgacheffeLayer):
     def datatype(self) -> int:
         return gdal.GDT_CFloat64
 
-    def read_array(self, xoffset, yoffset, xsize, ysize):
+    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
@@ -87,8 +88,8 @@ class H3CellLayer(YirgacheffeLayer):
         if max_width_projection < 180:
 
             target_window = Window(
-                self.window.xoff + xoffset,
-                self.window.yoff + yoffset,
+                window.xoff + xoffset,
+                window.yoff + yoffset,
                 xsize,
                 ysize
             )

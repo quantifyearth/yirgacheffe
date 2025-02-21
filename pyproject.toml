@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yirgacheffe"
-version = "0.9.4"
+version = "1.0.0"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
@@ -25,7 +25,7 @@ dependencies = [
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
-dev = ["mypy", "pylint", "pytest", "h3"]
+dev = ["mypy", "pylint", "pytest", "h3", "pytest-cov"]
 
 [project.urls]
 Homepage = "https://github.com/quantifyearth/yirgacheffe"

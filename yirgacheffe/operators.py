@@ -2,6 +2,7 @@ import sys
 import time
 import multiprocessing
 import types
+from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
 
@@ -10,8 +11,15 @@ from osgeo import gdal
 from dill import dumps, loads
 
 from . import constants
-from .window import Window
+from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
+from .window import Area, PixelScale, Window
 
+class WindowOperation(Enum):
+    NONE = 1
+    UNION = 2
+    INTERSECTION = 3
+    LEFT = 4
+    RIGHT = 5
 
 class LayerConstant:
     def __init__(self, val):
@@ -20,62 +28,63 @@ class LayerConstant:
     def __str__(self):
         return str(self.val)
 
-    def _eval(self, _index, _step):
+    def _eval(self, _area, _index, _step, _target_window):
         return self.val
 
 
 class LayerMathMixin:
 
     def __add__(self, other):
-        return LayerOperation(self, np.ndarray.__add__, other)
+        return LayerOperation(self, np.ndarray.__add__, other, window_op=WindowOperation.UNION)
 
     def __sub__(self, other):
-        return LayerOperation(self, np.ndarray.__sub__, other)
+        return LayerOperation(self, np.ndarray.__sub__, other, window_op=WindowOperation.UNION)
 
     def __mul__(self, other):
-        return LayerOperation(self, np.ndarray.__mul__, other)
+        return LayerOperation(self, np.ndarray.__mul__, other, window_op=WindowOperation.INTERSECTION)
 
     def __truediv__(self, other):
-        return LayerOperation(self, np.ndarray.__truediv__, other)
+        return LayerOperation(self, np.ndarray.__truediv__, other, window_op=WindowOperation.INTERSECTION)
 
     def __pow__(self, other):
-        return LayerOperation(self, np.ndarray.__pow__, other)
+        return LayerOperation(self, np.ndarray.__pow__, other, window_op=WindowOperation.UNION)
 
     def __eq__(self, other):
-        return LayerOperation(self, np.ndarray.__eq__, other)
+        return LayerOperation(self, np.ndarray.__eq__, other, window_op=WindowOperation.INTERSECTION)
 
     def __ne__(self, other):
-        return LayerOperation(self, np.ndarray.__ne__, other)
+        return LayerOperation(self, np.ndarray.__ne__, other, window_op=WindowOperation.UNION)
 
     def __lt__(self, other):
-        return LayerOperation(self, np.ndarray.__lt__, other)
+        return LayerOperation(self, np.ndarray.__lt__, other, window_op=WindowOperation.UNION)
 
     def __le__(self, other):
-        return LayerOperation(self, np.ndarray.__le__, other)
+        return LayerOperation(self, np.ndarray.__le__, other, window_op=WindowOperation.UNION)
 
     def __gt__(self, other):
-        return LayerOperation(self, np.ndarray.__gt__, other)
+        return LayerOperation(self, np.ndarray.__gt__, other, window_op=WindowOperation.UNION)
 
     def __ge__(self, other):
-        return LayerOperation(self, np.ndarray.__ge__, other)
+        return LayerOperation(self, np.ndarray.__ge__, other, window_op=WindowOperation.UNION)
 
     def __and__(self, other):
-        return LayerOperation(self, np.ndarray.__and__, other)
+        return LayerOperation(self, np.ndarray.__and__, other, window_op=WindowOperation.INTERSECTION)
 
     def __or__(self, other):
-        return LayerOperation(self, np.ndarray.__or__, other)
+        return LayerOperation(self, np.ndarray.__or__, other, window_op=WindowOperation.UNION)
 
-    def _eval(self, index, step, target_window=None):
+    def _eval(self, area, index, step, target_window=None):
         try:
-            window = self.window
-            return self.read_array(0, index, window.xsize, step)
+            window = self.window if target_window is None else target_window
+            return self.read_array_for_area(area, 0, index, window.xsize, step)
         except AttributeError:
-            return self.read_array(0, index, target_window.xsize if target_window else 1, step)
+            return self.read_array_for_area(area, 0, index, target_window.xsize if target_window else 1, step)
 
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(
             self,
             np.nan_to_num,
+            window_op=WindowOperation.NONE,
             copy=False,
             nan=nan,
             posinf=posinf,
@@ -86,37 +95,43 @@ class LayerMathMixin:
         return LayerOperation(
             self,
             np.isin,
+            window_op=WindowOperation.NONE,
             test_elements=test_elements,
         )
 
     def log(self):
         return LayerOperation(
             self,
-            np.log
+            np.log,
+            window_op=WindowOperation.NONE,
         )
 
     def log2(self):
         return LayerOperation(
             self,
-            np.log2
+            np.log2,
+            window_op=WindowOperation.NONE,
         )
 
     def log10(self):
         return LayerOperation(
             self,
-            np.log10
+            np.log10,
+            window_op=WindowOperation.NONE,
         )
 
     def exp(self):
         return LayerOperation(
             self,
-            np.exp
+            np.exp,
+            window_op=WindowOperation.NONE,
         )
 
     def exp2(self):
         return LayerOperation(
             self,
-            np.exp2
+            np.exp2,
+            window_op=WindowOperation.NONE,
         )
 
     def clip(self, min=None, max=None): # pylint: disable=W0622
@@ -127,6 +142,7 @@ class LayerMathMixin:
         return LayerOperation(
             self,
             np.clip,
+            window_op=WindowOperation.NONE,
             a_min=min,
             a_max=max,
         )
@@ -170,6 +186,7 @@ class LayerOperation(LayerMathMixin):
             a,
             np.maximum,
             b,
+            window_op=WindowOperation.UNION,
         )
 
     @staticmethod
@@ -178,11 +195,13 @@ class LayerOperation(LayerMathMixin):
             a,
             np.minimum,
             rhs=b,
+            window_op=WindowOperation.UNION,
         )
 
-    def __init__(self, lhs, operator=None, rhs=None, other=None, **kwargs):
+    def __init__(self, lhs, operator=None, rhs=None, other=None, window_op=WindowOperation.NONE, **kwargs):
         self.ystep = constants.YSTEP
         self.kwargs = kwargs
+        self.window_op = window_op
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -199,6 +218,8 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
+                if not are_pixel_scales_equal_enough([lhs.pixel_scale, rhs.pixel_scale]):
+                    raise ValueError("Not all layers are at the same pixel scale")
                 self.rhs = rhs
         else:
             self.rhs = None
@@ -212,6 +233,8 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
+                if not are_pixel_scales_equal_enough([lhs.pixel_scale, other.pixel_scale]):
+                    raise ValueError("Not all layers are at the same pixel scale")
                 self.other = other
         else:
             self.other = None
@@ -242,29 +265,108 @@ class LayerOperation(LayerMathMixin):
         self.__dict__.update(state)
 
     @property
-    def window(self) -> Window:
+    def area(self) -> Area:
+        # The type().__name__ here is to avoid a circular import dependancy
+        lhs_area = self.lhs.area if not type(self.lhs).__name__ == "ConstantLayer" else None
         try:
-            return self.lhs.window
+            rhs_area = self.rhs.area if not type(self.rhs).__name__ == "ConstantLayer" else None
         except AttributeError:
-            # If neither side had a window attribute then
-            # the operation doesn't have anything useful to
-            # say, so let the exception propagate up
-            return self.rhs.window
+            rhs_area = None
+        try:
+            other_area = self.other.area if not type(self.other).__name__ == "ConstantLayer" else None
+        except AttributeError:
+            other_area = None
 
-    def _eval(self, index, step): # pylint: disable=W0221
-        lhs_data = self.lhs._eval(index, step)
+        all_areas = []
+        if lhs_area is not None:
+            all_areas.append(lhs_area)
+        if rhs_area is not None:
+            all_areas.append(rhs_area)
+        if other_area is not None:
+            all_areas.append(other_area)
+
+        match self.window_op:
+            case WindowOperation.NONE:
+                return all_areas[0]
+            case WindowOperation.LEFT:
+                return lhs_area
+            case WindowOperation.RIGHT:
+                assert rhs_area is not None
+                return rhs_area
+            case WindowOperation.INTERSECTION:
+                intersection = Area(
+                    left=max(x.left for x in all_areas),
+                    top=min(x.top for x in all_areas),
+                    right=min(x.right for x in all_areas),
+                    bottom=max(x.bottom for x in all_areas)
+                )
+                if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
+                    raise ValueError('No intersection possible')
+                return intersection
+            case WindowOperation.UNION:
+                return Area(
+                    left=min(x.left for x in all_areas),
+                    top=max(x.top for x in all_areas),
+                    right=max(x.right for x in all_areas),
+                    bottom=min(x.bottom for x in all_areas)
+                )
+
+    @property
+    def pixel_scale(self) -> PixelScale:
+        # Because we test at construction that pixel scales for RHS/other are roughly equal,
+        # I believe this should be sufficient...
+        try:
+            pixel_scale = self.lhs.pixel_scale
+        except AttributeError:
+            pixel_scale = None
+
+        if pixel_scale is None:
+            return self.rhs.pixel_scale
+        return pixel_scale
+
+    @property
+    def window(self) -> Window:
+        pixel_scale = self.pixel_scale
+        area = self.area
+
+        return Window(
+            xoff=round_down_pixels(area.left / pixel_scale.xstep, pixel_scale.xstep),
+            yoff=round_down_pixels(area.top / (pixel_scale.ystep * -1.0), pixel_scale.ystep * -1.0),
+            xsize=round_up_pixels(
+                (area.right - area.left) / pixel_scale.xstep, pixel_scale.xstep
+            ),
+            ysize=round_up_pixels(
+                (area.top - area.bottom) / (pixel_scale.ystep * -1.0),
+                (pixel_scale.ystep * -1.0)
+            ),
+        )
+
+    @property
+    def datatype(self):
+        # TODO: Work out how to indicate type promotion via numpy
+        return self.lhs.datatype
+
+    @property
+    def projection(self):
+        try:
+            return self.lhs.projection
+        except AttributeError:
+            return self.rhs.projection
+
+    def _eval(self, area, index, step, target_window=None):
+        lhs_data = self.lhs._eval(area, index, step, target_window)
 
         if self.operator is None:
             return lhs_data
 
         if self.other is not None:
             assert self.rhs is not None
-            rhs_data = self.rhs._eval(index, step)
-            other_data = self.other._eval(index, step)
+            rhs_data = self.rhs._eval(area, index, step, target_window)
+            other_data = self.other._eval(area, index, step, target_window)
             return self.operator(lhs_data, rhs_data, other_data, **self.kwargs)
 
         if self.rhs is not None:
-            rhs_data = self.rhs._eval(index, step)
+            rhs_data = self.rhs._eval(area, index, step, target_window)
             return self.operator(lhs_data, rhs_data, **self.kwargs)
 
         return self.operator(lhs_data, **self.kwargs)
@@ -280,7 +382,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(yoffset, step)
+            chunk = self._eval(self.area, yoffset, step, computation_window)
             res += np.sum(chunk.astype(np.float64))
         return res
 
@@ -291,7 +393,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(yoffset, step)
+            chunk = self._eval(self.area, yoffset, step, computation_window)
             chunk_min = np.min(chunk)
             if (res is None) or (res > chunk_min):
                 res = chunk_min
@@ -304,7 +406,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(yoffset, step)
+            chunk = self._eval(self.area, yoffset, step, computation_window)
             chunk_max = np.max(chunk)
             if (res is None) or (chunk_max > res):
                 res = chunk_max
@@ -338,7 +440,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(yoffset, step)
+            chunk = self._eval(self.area, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
                 chunk = np.full((step, destination_window.xsize), chunk)
             band.WriteArray(
@@ -372,7 +474,7 @@ class LayerOperation(LayerMathMixin):
                 break
             yoffset, step = task
 
-            arr[:step] = self._eval(yoffset, step)
+            arr[:step] = self._eval(self.area, yoffset, step)
 
             output_queue.put((index, yoffset, step))
 
@@ -505,10 +607,12 @@ class LayerOperation(LayerMathMixin):
 
 class ShaderStyleOperation(LayerOperation):
 
-    def _eval(self, index, step):
-        lhs_data = self.lhs._eval(index, step, self.window)
+    def _eval(self, area, index, step, target_window=None):
+        if target_window is None:
+            target_window = self.window
+        lhs_data = self.lhs._eval(area, index, step, target_window)
         if self.rhs is not None:
-            rhs_data = self.rhs._eval(index, step, self.window)
+            rhs_data = self.rhs._eval(area, index, step, target_window)
         else:
             rhs_data = None
 
