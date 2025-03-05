@@ -54,6 +54,10 @@ class RescaledRasterLayer(YirgacheffeLayer):
     def _unpark(self):
         self._src._unpark()
 
+    @property
+    def datatype(self) -> int:
+        return self._src.datatype
+
     def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
 
         # to avoid aliasing issues, we try to scale to the nearest pixel

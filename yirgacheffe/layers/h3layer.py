@@ -76,7 +76,7 @@ class H3CellLayer(YirgacheffeLayer):
 
     @property
     def datatype(self) -> int:
-        return gdal.GDT_CFloat64
+        return gdal.GDT_Float64
 
     def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
         if (xsize <= 0) or (ysize <= 0):

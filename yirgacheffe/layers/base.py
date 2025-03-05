@@ -35,6 +35,10 @@ class YirgacheffeLayer(LayerMathMixin):
         self.close()
 
     @property
+    def datatype(self) -> int:
+        raise NotImplementedError("Must be overridden by subclass")
+
+    @property
     def projection(self) -> str:
         return self._projection
 
