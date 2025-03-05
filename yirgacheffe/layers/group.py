@@ -70,6 +70,10 @@ class GroupLayer(YirgacheffeLayer):
             except AttributeError:
                 pass
 
+    @property
+    def datatype(self):
+        return self.layers[0].datatype
+
     def set_window_for_intersection(self, new_area: Area) -> None:
         super().set_window_for_intersection(new_area)
 

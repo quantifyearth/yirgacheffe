@@ -161,13 +161,15 @@ class VectorLayer(YirgacheffeLayer):
     def layer_from_file_like(
         cls,
         filename: str,
-        where_filter: Optional[str],
         other_layer: YirgacheffeLayer,
+        where_filter: Optional[str]=None,
         datatype: Optional[int] = None,
         burn_value: Union[int,float,str] = 1,
     ):
         if other_layer is None:
             raise ValueError("like layer can not be None")
+        if other_layer.pixel_scale is None:
+            raise ValueError("Reference layer must have pixel scale")
 
         vectors = ogr.Open(filename)
         if vectors is None:
