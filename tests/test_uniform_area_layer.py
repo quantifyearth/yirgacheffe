@@ -50,6 +50,12 @@ def test_open_uniform_area_layer(pixel_scale: float) -> None:
             ceil((layer.area.top - layer.area.bottom) / pixel_scale)
         )
 
+def test_incorrect_tiff_for_uniform_area() -> None:
+    area = Area(-10, 10, 10, -10)
+    dataset = gdal_dataset_of_region(area, 1.0)
+    with pytest.raises(ValueError):
+        _ = UniformAreaLayer(dataset)
+
 def test_set_intersection() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")

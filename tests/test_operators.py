@@ -30,6 +30,26 @@ def test_add_byte_layers() -> None:
 
     assert (expected == actual).all()
 
+def test_error_of_pixel_scale_wrong() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]]).astype(np.uint8)
+    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]]).astype(np.uint8)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.01, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+
+    with pytest.raises(ValueError):
+        _ = layer1 + layer2
+
+def test_error_of_pixel_scale_wrong_three_param() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]]).astype(np.uint8)
+    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]]).astype(np.uint8)
+    data3 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]]).astype(np.uint8)
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    layer3 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.01, data3))
+
+    with pytest.raises(ValueError):
+        _ = LayerOperation.where(layer1, layer2, layer3)
+
 @pytest.mark.parametrize("skip,expected_steps", [
     (1, [0.0, 0.5, 1.0]),
     (2, [0.0, 1.0]),
