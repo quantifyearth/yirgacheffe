@@ -11,16 +11,16 @@ demote_scalar = np.float64
 
 eval_op = mx.eval
 
-add_op = mx.array.__add__
+add_op = lambda a, b: mx.add(a, b, stream=mx.gpu)
 sub_op = mx.array.__sub__
 truediv_op = mx.array.__truediv__
 pow_op = mx.array.__pow__
 eq_op = mx.array.__eq__
-ne_op = mx.array.__ne__
-lt_op = mx.array.__lt__
-le_op = mx.array.__le__
-gt_op = mx.array.__gt__
-ge_op = mx.array.__ge__
+ne_op =mx.array.__ne__
+lt_op = lambda a, b: mx.less(a, b, stream=mx.gpu)
+le_op = lambda a, b: mx.less_equal(a, b, stream=mx.gpu)
+gt_op = lambda a, b: mx.greater(a, b, stream=mx.gpu)
+ge_op = lambda a, b: mx.greater_equal(a, b, stream=mx.gpu)
 and_op = mx.array.__and__
 or_op = mx.array.__or__
 log = mx.log
@@ -43,11 +43,12 @@ def sum_op(a):
     # There are weird issues around how MLX overflows int8, so just promote the data ahead of summing
     match a.dtype:
         case mx.int8:
-            return mx.sum(a.astype(mx.int32))
+            res = mx.sum(a.astype(mx.int32), stream=mx.gpu)
         case mx.uint8:
-            return mx.sum(a.astype(mx.uint32))
+            res = mx.sum(a.astype(mx.uint32), stream=mx.gpu)
         case _:
-            return mx.sum(a)
+            res = mx.sum(a, stream=mx.gpu)
+    return demote_scalar(res)
 
 def _is_float(x):
     if isinstance(x, float):
@@ -68,7 +69,6 @@ def mul_op(a, b):
     # numpy will promote an operation between float and int to float, whereas it looks like mlx does the inverse
     # and so for consistency with the numpy path, we do some fiddling here if necessary
     if _is_float(b):
-        print("okay")
         match a.dtype:
             case mx.int8 | mx.int32 | mx.uint8 | mx.uint32:
                 a = a.astype(mx.float32)
