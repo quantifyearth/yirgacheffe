@@ -11,6 +11,8 @@ from helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe.window import Area, PixelScale, Window
 from yirgacheffe.layers import ConstantLayer, GroupLayer, RasterLayer, RescaledRasterLayer, UniformAreaLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
+from yirgacheffe.backends import backend
+
 
 def test_pickle_raster_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -94,7 +96,7 @@ def test_pickle_group_layer() -> None:
 
         group = GroupLayer.layer_from_directory(tempdir)
         expected = group.read_array(0, 0, 100, 100)
-        assert np.sum(expected) != 0 # just check there is meaninful data
+        assert backend.sum_op(expected) != 0 # just check there is meaningful data
 
         p = pickle.dumps(group)
         restore = pickle.loads(p)
@@ -190,4 +192,4 @@ def test_pickle_rescaled_raster_layer() -> None:
         assert restore.window == Window(0, 0, 2000, 2000)
 
         expected = restore.read_array(0, 0, 100, 100)
-        assert np.sum(expected) != 0 # just check there is meaninful data
+        assert backend.sum_op(expected) != 0 # just check there is meaningful data

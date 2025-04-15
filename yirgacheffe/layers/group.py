@@ -9,6 +9,7 @@ from ..rounding import are_pixel_scales_equal_enough, round_down_pixels
 from ..window import Area, Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
+from ..backends import backend
 
 GroupLayerT = TypeVar("GroupLayerT", bound="GroupLayer")
 
@@ -150,7 +151,7 @@ class GroupLayer(YirgacheffeLayer):
                 result_x_offset:result_x_offset + intersection.xsize
             ] = data
 
-        return result
+        return backend.promote(result)
 
 class TileData:
     """This class exists just to let me sort the tiles into the correct order for processing."""
@@ -353,4 +354,4 @@ class TiledGroupLayer(GroupLayer):
             data = np.vstack((data, np.zeros((ysize - (last_y_offset + last_y_height), xsize))))
 
         assert data.shape == (ysize, xsize)
-        return data
+        return backend.promote(data)

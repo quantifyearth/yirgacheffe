@@ -31,11 +31,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "numpy<2" gdal[numpy]==3.9.2 scikit-image "h3==4.0.0b5"
+          python -m pip install "numpy<2" gdal[numpy]==3.9.2 scikit-image "h3==4.0.0b5" mlx
           python -m pip install pylint mypy pytest types-setuptools pytest-cov
       - name: Lint with pylint
         run: |
           python3 -m pylint yirgacheffe
-      - name: Test with pytest
+      - name: Test with numpy backend
         run: |
           python3 -m pytest --cov=yirgacheffe -vv
+      - name: Test with mlx backend
+        run: |
+          YIRGACHEFFE_BACKED=MLX python3 -m pytest --cov=yirgacheffe -vv

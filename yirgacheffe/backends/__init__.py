@@ -1,6 +1,6 @@
 import os
 
-BACKEND = os.environ.get("YIRGACHEFFE_BACKEND", "NUMPY")
+BACKEND = os.environ.get("YIRGACHEFFE_BACKEND", "NUMPY").upper()
 
 match BACKEND:
     case "MLX":

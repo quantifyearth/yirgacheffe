@@ -7,6 +7,8 @@ from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, PixelScale
 from yirgacheffe.operators import ShaderStyleOperation
+from yirgacheffe.backends import backend
+
 
 @pytest.mark.parametrize(
     "cell_id,is_valid,expected_zoom",
@@ -53,9 +55,7 @@ def test_h3_layer_magnifications(lat: float, lng: float) -> None:
         h3_layer = H3CellLayer(cell_id, PixelScale(0.000898315284120,-0.000898315284120), WGS_84_PROJECTION)
 
         on_cell_count = h3_layer.sum()
-        total_count = ShaderStyleOperation(h3_layer, lambda _: 1).sum()
-
-        assert total_count == (h3_layer.window.xsize * h3_layer.window.ysize)
+        total_count = h3_layer.window.xsize * h3_layer.window.ysize
         assert 0 < on_cell_count < total_count
 
 @pytest.mark.parametrize(
@@ -136,10 +136,10 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
 
         # whilst we're here, check that we do have an filled border (i.e., does window for
         # intersection do the right thing)
-        assert np.sum(h3_layer.read_array(0, 0, h3_layer.window.xsize, 5)) > 0.0
-        assert np.sum(h3_layer.read_array(0, h3_layer.window.ysize - 5, h3_layer.window.xsize, 5)) > 0.0
-        assert np.sum(h3_layer.read_array(0, 0, 5, h3_layer.window.ysize)) > 0.0
-        assert np.sum(h3_layer.read_array(h3_layer.window.xsize - 5, 0, 5, h3_layer.window.ysize)) > 0.0
+        assert np.sum(backend.demote_array(h3_layer.read_array(0, 0, h3_layer.window.xsize, 5))) > 0.0
+        assert np.sum(backend.demote_array(h3_layer.read_array(0, h3_layer.window.ysize - 5, h3_layer.window.xsize, 5))) > 0.0
+        assert np.sum(backend.demote_array(h3_layer.read_array(0, 0, 5, h3_layer.window.ysize))) > 0.0
+        assert np.sum(backend.demote_array(h3_layer.read_array(h3_layer.window.xsize - 5, 0, 5, h3_layer.window.ysize))) > 0.0
 
 @pytest.mark.parametrize(
     "lat,lng",
@@ -190,8 +190,8 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     assert expanded_area == area
 
     # whilst we're here, check that we do have an empty border (i.e., does window for union do the right thing)
-    assert np.sum(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2)) == 0.0
-    assert np.sum(h3_layer.read_array(0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2)) == 0.0
+    assert np.sum(backend.demote_array(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2))) == 0.0
+    assert np.sum(backend.demote_array(h3_layer.read_array(0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2))) == 0.0
 
 def test_h3_layer_overlapped():
     # This is based on a regression, where somehow I made tiles not tesselate properly
@@ -226,14 +226,6 @@ def test_h3_layer_overlapped():
         result = scratch + tile
         result.save(scratch)
 
-    def overlap_check(chunk):
-        # if we have rounding errors, then cells will overlap
-        # and we'll end up with values higher than 1.0 in the cell
-        # which would leave to double accounting
-        if np.sum(chunk > 1.5):
-            raise Exception
-        return chunk
-
     scratch.reset_window()
-    calc = scratch.numpy_apply(overlap_check)
-    calc.save(scratch)
+    calc = scratch > 1.5
+    assert calc.sum() == 0

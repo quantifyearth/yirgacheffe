@@ -2,6 +2,7 @@ from math import ceil, floor
 from typing import Any
 
 import h3
+import numpy as np
 from osgeo import gdal
 
 from ..rounding import round_up_pixels
@@ -104,7 +105,7 @@ class H3CellLayer(YirgacheffeLayer):
             except ValueError:
                 return 0.0
 
-            subset = backend.zeros((intersection.ysize, intersection.xsize), dtype=backend.float_t)
+            subset = np.zeros((intersection.ysize, intersection.xsize))
 
             start_x = self._active_area.left + ((intersection.xoff - self.window.xoff) * self._pixel_scale.xstep)
             start_y = self._active_area.top + ((intersection.yoff - self.window.yoff) * self._pixel_scale.ystep)
@@ -163,7 +164,7 @@ class H3CellLayer(YirgacheffeLayer):
                             subset[ypixel][xpixel] = 1.0
 
             return backend.pad(
-                subset,
+                backend.promote(subset),
                 (
                     (
                         (intersection.yoff - self.window.yoff) - yoffset,
@@ -178,7 +179,7 @@ class H3CellLayer(YirgacheffeLayer):
             )
         else:
             # This handles the case where the cell wraps over 180˚ longitude
-            res = backend.zeros((ysize, xsize), dtype=backend.float_t)
+            res = np.zeros((ysize, xsize))
 
             left = min(x[1] for x in self.cell_boundary if x[1] > 0.0)
             right = max(x[1] for x in self.cell_boundary if x[1] < 0.0) + 360.0
@@ -199,4 +200,4 @@ class H3CellLayer(YirgacheffeLayer):
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
                         res[ypixel - yoffset][xpixel - xoffset] = 1.0
-            return res
+            return backend.promote(res)

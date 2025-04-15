@@ -385,7 +385,7 @@ class LayerOperation(LayerMathMixin):
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(self.area, yoffset, step, computation_window)
-            res += backend.sum_op(chunk.astype(backend.float_t))
+            res += backend.sum_op(chunk)
         return res
 
     def min(self):
@@ -444,24 +444,24 @@ class LayerOperation(LayerMathMixin):
                 step = computation_window.ysize - yoffset
             chunk = self._eval(self.area, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
-                chunk = np.full((step, destination_window.xsize), chunk)
+                chunk = backend.full((step, destination_window.xsize), chunk)
             band.WriteArray(
-                chunk,
+                backend.demote_array(chunk),
                 destination_window.xoff,
                 yoffset + destination_window.yoff,
             )
             if and_sum:
-                total += backend.sum_op(chunk.astype(backend.float_t))
+                total += backend.sum_op(chunk)
         if callback:
             callback(1.0)
 
         return total if and_sum else None
 
     def _parallel_worker(self, index, shared_mem, sem, np_dtype, width, input_queue, output_queue):
-        arr = backend.array_t((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
+        arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
 
         while True:
-            # We aquire the lock so we know we have somewhere to put the
+            # We acquire the lock so we know we have somewhere to put the
             # result before we take work. This is because in practice
             # it seems the writing to GeoTIFF is the bottleneck, and
             # we had workers taking a task, then waiting for somewhere to
@@ -476,7 +476,10 @@ class LayerOperation(LayerMathMixin):
                 break
             yoffset, step = task
 
-            arr[:step] = self._eval(self.area, yoffset, step)
+            result = self._eval(self.area, yoffset, step)
+            backend.eval_op(result)
+
+            arr[:step] = backend.demote_array(result)
 
             output_queue.put((index, yoffset, step))
 

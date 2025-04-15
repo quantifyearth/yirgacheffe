@@ -314,11 +314,11 @@ class RasterLayer(YirgacheffeLayer):
 
         if target_window == intersection:
             # The target window is a subset of or equal to the source, so we can just ask for the data
-            data = self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args)
+            data = backend.promote(self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args))
             return data
         else:
             # We should read the intersection from the array, and the rest should be zeros
-            subset = self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args)
+            subset = backend.promote(self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args))
             data = backend.pad(
                 subset,
                 (
