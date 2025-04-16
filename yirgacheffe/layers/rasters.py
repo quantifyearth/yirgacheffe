@@ -2,13 +2,14 @@ import math
 import os
 from typing import Any, Optional, TypeVar, Union
 
-import numpy
+
 from osgeo import gdal
 
 from .. import WGS_84_PROJECTION
 from ..window import Area, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
+from ..backends import backend
 
 # Still to early to require Python 3.11 :/
 RasterLayerT = TypeVar("RasterLayerT", bound="RasterLayer")
@@ -309,16 +310,16 @@ class RasterLayer(YirgacheffeLayer):
         try:
             intersection = Window.find_intersection([source_window, target_window])
         except ValueError:
-            return numpy.zeros((ysize, xsize))
+            return backend.zeros((ysize, xsize))
 
         if target_window == intersection:
             # The target window is a subset of or equal to the source, so we can just ask for the data
-            data = self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args)
+            data = backend.promote(self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args))
             return data
         else:
             # We should read the intersection from the array, and the rest should be zeros
-            subset = self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args)
-            data = numpy.pad(
+            subset = backend.promote(self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args))
+            data = backend.pad(
                 subset,
                 (
                     (

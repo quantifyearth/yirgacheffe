@@ -5,6 +5,7 @@ from skimage import transform
 
 from ..window import PixelScale, Window
 from .rasters import RasterLayer, YirgacheffeLayer
+from ..backends import backend
 
 
 class RescaledRasterLayer(YirgacheffeLayer):
@@ -76,12 +77,12 @@ class RescaledRasterLayer(YirgacheffeLayer):
         src_y_width = ceil((ysize + diff_y) / self._y_scale)
 
         # Get the matching src data
-        src_data = self._src.read_array(
+        src_data = backend.demote_array(self._src.read_array(
             src_x_offset,
             src_y_offset,
             src_x_width,
             src_y_width
-        )
+        ))
 
         scaled = transform.resize(
             src_data,
@@ -90,4 +91,4 @@ class RescaledRasterLayer(YirgacheffeLayer):
             anti_aliasing=(not self._nearest_neighbour)
         )
 
-        return scaled[diff_y:(diff_y + ysize),diff_x:(diff_x + xsize)]
+        return backend.promote(scaled[diff_y:(diff_y + ysize),diff_x:(diff_x + xsize)])

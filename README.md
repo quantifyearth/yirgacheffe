@@ -416,6 +416,15 @@ calc.parallel_save(result, parallelism=4)
 
 Because of the number of tricks that Python plays under the hood this feature needs a bunch of testing to let us remove the experimental flag, but in order to get that testing we need to put it out there! Hopefully in the next release we can remove the experimental warning.
 
+## GPU support
+
+Yirgacheffe has multiple backends, with more planned. Currently you can set the `YIRGACHEFFE_BACKEND` environmental variable to select which one to use. The default is `NUMPY`:
+
+* NUMPY: CPU based calculation using [numpy](https://numpy.org/)
+* MLX: Apple/Intel GPU support with CPU fallback based on [MLX](https://ml-explore.github.io/mlx/build/html/index.html)
+
+Note that GPU isn't always faster than CPU - it very much depends on the workload, so testing your particular use-case is important.
+
 ## Thanks
 
 Thanks to discussion and feedback from my colleagues, particularly Alison Eyres, Patrick Ferris, Amelia Holcomb, and Anil Madhavapeddy.

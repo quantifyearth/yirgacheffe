@@ -8,6 +8,7 @@ from osgeo import gdal, ogr
 from ..window import Area, PixelScale
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
+from ..backends import backend
 
 def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> int: # pylint: disable=R0911
     if isinstance(burn_value, str):
@@ -369,7 +370,7 @@ class VectorLayer(YirgacheffeLayer):
         else:
             raise ValueError("Burn value for layer should be number or field name")
 
-        res = dataset.ReadAsArray(0, 0, width, height)
+        res = backend.promote(dataset.ReadAsArray(0, 0, width, height))
         return res
 
     def read_array_with_window(self, _x, _y, _width, _height, _window) -> Any:

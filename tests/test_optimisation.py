@@ -7,6 +7,7 @@ from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
 from yirgacheffe.layers import PixelScale, ConstantLayer, RasterLayer
 from yirgacheffe.window import Area
+import yirgacheffe.operators as yo
 
 class NaiveH3CellLayer(H3CellLayer):
     """h3.latlng_to_cell is quite expensive when you call it thousands of times
@@ -150,20 +151,10 @@ def test_cells_dont_overlap(cell_id):
     for layer in layers:
         layer.set_window_for_union(union)
 
-    result = RasterLayer.empty_raster_layer(union, layers[0].pixel_scale, layers[0].datatype)
-
-    def combine(lhs, rhs):
-        val = lhs + rhs
-        # if we have rounding errors, then cells will overlap
-        # and we'll end up with values higher than 1.0 in the cell
-        # which would leave to double accounting
-        if np.sum(val > 1.5):
-            raise Exception
-        return val
-
-    for layer in layers:
-        const = ConstantLayer(1.0)
-        calc = result.numpy_apply(combine, (layer * const))
-        calc.save(result)
+    calc = layers[0]
+    for layer in layers[1:]:
+        calc += layer
+    calc = yo.where(calc > 1, 1, 0)
+    assert calc.sum() == 0
 
     # If we didn't get an exception, then there's no over drawing

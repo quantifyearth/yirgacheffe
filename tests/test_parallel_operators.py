@@ -4,10 +4,22 @@ import tempfile
 import numpy as np
 import pytest
 
+import yirgacheffe
 from helpers import gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe.operators import LayerOperation
 
+# These tests are marked skip for MLX, because there seems to be a problem with
+# calling mx.eval in the tests for parallel save on Linux (which is what we use
+# for github actions for instance). They do pass on macOS - but that could also
+# just be down to Python versions. To add further complication, if I just run
+# this file along on linux with MLX it passes fine 🤦
+#
+# It seems that under the hood MLX is doing some threading of its own and my
+# guess is that that's interacting with the Python threading here.
+
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_add_byte_layers() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")
@@ -32,6 +44,7 @@ def test_add_byte_layers() -> None:
 
         assert (expected == actual).all()
 
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 @pytest.mark.parametrize("skip,expected_steps", [
     (1, [0.0, 0.5, 1.0]),
     (2, [0.0, 1.0]),
@@ -65,6 +78,41 @@ def test_parallel_with_different_skip(skip, expected_steps) -> None:
 
         assert callback_possitions == expected_steps
 
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_parallel_equality() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path1 = os.path.join(tempdir, "test1.tif")
+        data1 = np.array([[1, 2, 3, 4], [4, 3, 2, 1]])
+        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+        dataset1.Close()
+        with RasterLayer.layer_from_file(path1) as layer1:
+            with RasterLayer.empty_raster_layer_like(layer1) as result:
+                comp = layer1 == 2
+                comp.parallel_save(result)
+
+                expected = np.array([[0, 1, 0, 0], [0, 0, 1, 0]])
+                actual = result.read_array(0, 0, 4, 2)
+
+                assert (expected == actual).all()
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_parallel_equality_to_file() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path1 = os.path.join(tempdir, "test1.tif")
+        path2 = os.path.join(tempdir, "result.tif")
+        data1 = np.array([[1, 2, 3, 4], [4, 3, 2, 1]])
+        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+        dataset1.Close()
+        with RasterLayer.layer_from_file(path1) as layer1:
+            comp = layer1 == 2
+            with RasterLayer.empty_raster_layer_like(layer1, filename=path2) as result:
+                comp.parallel_save(result)
+        with RasterLayer.layer_from_file(path2) as actual_result:
+            expected = np.array([[0, 1, 0, 0], [0, 0, 1, 0]])
+            actual = actual_result.read_array(0, 0, 4, 2)
+            assert (expected == actual).all()
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_unary_numpy_apply_with_function() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")
@@ -87,6 +135,7 @@ def test_parallel_unary_numpy_apply_with_function() -> None:
 
         assert (expected == actual).all()
 
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_unary_numpy_apply_with_lambda() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")
@@ -106,6 +155,7 @@ def test_parallel_unary_numpy_apply_with_lambda() -> None:
 
         assert (expected == actual).all()
 
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_where_simple() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")
@@ -113,13 +163,13 @@ def test_parallel_where_simple() -> None:
         dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
         dataset1.Close()
         layer1 = RasterLayer.layer_from_file(path1)
-        
+
         result = RasterLayer.empty_raster_layer_like(layer1)
-    
+
         comp = LayerOperation.where(layer1 > 0, 1, 2)
         comp.ystep = 1
         comp.parallel_save(result)
-    
+
         expected = np.where(data1 > 0, 1, 2)
         actual = result.read_array(0, 0, 4, 2)
         assert (expected == actual).all()

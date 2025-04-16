@@ -1,6 +1,7 @@
+import logging
+import multiprocessing
 import sys
 import time
-import multiprocessing
 import types
 from enum import Enum
 from multiprocessing import Semaphore, Process
@@ -13,6 +14,11 @@ from dill import dumps, loads
 from . import constants
 from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
 from .window import Area, PixelScale, Window
+from .backends import backend
+from .backends.enumeration import operators as op
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 class WindowOperation(Enum):
     NONE = 1
@@ -35,43 +41,43 @@ class LayerConstant:
 class LayerMathMixin:
 
     def __add__(self, other):
-        return LayerOperation(self, np.ndarray.__add__, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.ADD, other, window_op=WindowOperation.UNION)
 
     def __sub__(self, other):
-        return LayerOperation(self, np.ndarray.__sub__, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.SUB, other, window_op=WindowOperation.UNION)
 
     def __mul__(self, other):
-        return LayerOperation(self, np.ndarray.__mul__, other, window_op=WindowOperation.INTERSECTION)
+        return LayerOperation(self, op.MUL, other, window_op=WindowOperation.INTERSECTION)
 
     def __truediv__(self, other):
-        return LayerOperation(self, np.ndarray.__truediv__, other, window_op=WindowOperation.INTERSECTION)
+        return LayerOperation(self, op.TRUEDIV, other, window_op=WindowOperation.INTERSECTION)
 
     def __pow__(self, other):
-        return LayerOperation(self, np.ndarray.__pow__, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.POW, other, window_op=WindowOperation.UNION)
 
     def __eq__(self, other):
-        return LayerOperation(self, np.ndarray.__eq__, other, window_op=WindowOperation.INTERSECTION)
+        return LayerOperation(self, op.EQ, other, window_op=WindowOperation.INTERSECTION)
 
     def __ne__(self, other):
-        return LayerOperation(self, np.ndarray.__ne__, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.NE, other, window_op=WindowOperation.UNION)
 
     def __lt__(self, other):
-        return LayerOperation(self, np.ndarray.__lt__, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.LT, other, window_op=WindowOperation.UNION)
 
     def __le__(self, other):
-        return LayerOperation(self, np.ndarray.__le__, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.LE, other, window_op=WindowOperation.UNION)
 
     def __gt__(self, other):
-        return LayerOperation(self, np.ndarray.__gt__, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.GT, other, window_op=WindowOperation.UNION)
 
     def __ge__(self, other):
-        return LayerOperation(self, np.ndarray.__ge__, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.GE, other, window_op=WindowOperation.UNION)
 
     def __and__(self, other):
-        return LayerOperation(self, np.ndarray.__and__, other, window_op=WindowOperation.INTERSECTION)
+        return LayerOperation(self, op.AND, other, window_op=WindowOperation.INTERSECTION)
 
     def __or__(self, other):
-        return LayerOperation(self, np.ndarray.__or__, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.OR, other, window_op=WindowOperation.UNION)
 
     def _eval(self, area, index, step, target_window=None):
         try:
@@ -83,7 +89,7 @@ class LayerMathMixin:
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(
             self,
-            np.nan_to_num,
+            op.NAN_TO_NUM,
             window_op=WindowOperation.NONE,
             copy=False,
             nan=nan,
@@ -94,7 +100,7 @@ class LayerMathMixin:
     def isin(self, test_elements):
         return LayerOperation(
             self,
-            np.isin,
+            op.ISIN,
             window_op=WindowOperation.NONE,
             test_elements=test_elements,
         )
@@ -102,35 +108,35 @@ class LayerMathMixin:
     def log(self):
         return LayerOperation(
             self,
-            np.log,
+            op.LOG,
             window_op=WindowOperation.NONE,
         )
 
     def log2(self):
         return LayerOperation(
             self,
-            np.log2,
+            op.LOG2,
             window_op=WindowOperation.NONE,
         )
 
     def log10(self):
         return LayerOperation(
             self,
-            np.log10,
+            op.LOG10,
             window_op=WindowOperation.NONE,
         )
 
     def exp(self):
         return LayerOperation(
             self,
-            np.exp,
+            op.EXP,
             window_op=WindowOperation.NONE,
         )
 
     def exp2(self):
         return LayerOperation(
             self,
-            np.exp2,
+            op.EXP2,
             window_op=WindowOperation.NONE,
         )
 
@@ -141,7 +147,7 @@ class LayerMathMixin:
         # a_max, a_min so that yirgacheffe can work on older numpy installs.
         return LayerOperation(
             self,
-            np.clip,
+            op.CLIP,
             window_op=WindowOperation.NONE,
             a_min=min,
             a_max=max,
@@ -175,7 +181,7 @@ class LayerOperation(LayerMathMixin):
     def where(cond, a, b):
         return LayerOperation(
             cond,
-            np.where,
+            op.WHERE,
             rhs=a,
             other=b
         )
@@ -184,7 +190,7 @@ class LayerOperation(LayerMathMixin):
     def maximum(a, b):
         return LayerOperation(
             a,
-            np.maximum,
+            op.MAXIMUM,
             b,
             window_op=WindowOperation.UNION,
         )
@@ -193,7 +199,7 @@ class LayerOperation(LayerMathMixin):
     def minimum(a, b):
         return LayerOperation(
             a,
-            np.minimum,
+            op.MINIMUM,
             rhs=b,
             window_op=WindowOperation.UNION,
         )
@@ -210,9 +216,9 @@ class LayerOperation(LayerMathMixin):
         self.operator = operator
 
         if rhs is not None:
-            if np.isscalar(rhs):
+            if backend.isscalar(rhs):
                 self.rhs = LayerConstant(rhs)
-            elif isinstance(rhs, (np.ndarray)):
+            elif isinstance(rhs, (backend.array_t)):
                 if rhs.shape == ():
                     self.rhs = LayerConstant(rhs.item())
                 else:
@@ -225,9 +231,9 @@ class LayerOperation(LayerMathMixin):
             self.rhs = None
 
         if other is not None:
-            if np.isscalar(other):
+            if backend.isscalar(other):
                 self.other = LayerConstant(other)
-            elif isinstance(other, (np.ndarray)):
+            elif isinstance(other, (backend.array_t)):
                 if other.shape == ():
                     self.rhs = LayerConstant(other.item())
                 else:
@@ -359,17 +365,23 @@ class LayerOperation(LayerMathMixin):
         if self.operator is None:
             return lhs_data
 
+        try:
+            operator = backend.operator_map[self.operator]
+        except KeyError:
+            # Handles things like `numpy_apply` where a custom operator is provided
+            operator = self.operator
+
         if self.other is not None:
             assert self.rhs is not None
             rhs_data = self.rhs._eval(area, index, step, target_window)
             other_data = self.other._eval(area, index, step, target_window)
-            return self.operator(lhs_data, rhs_data, other_data, **self.kwargs)
+            return operator(lhs_data, rhs_data, other_data, **self.kwargs)
 
         if self.rhs is not None:
             rhs_data = self.rhs._eval(area, index, step, target_window)
-            return self.operator(lhs_data, rhs_data, **self.kwargs)
+            return operator(lhs_data, rhs_data, **self.kwargs)
 
-        return self.operator(lhs_data, **self.kwargs)
+        return operator(lhs_data, **self.kwargs)
 
     def sum(self):
         # The result accumulator is float64, and for precision reasons
@@ -383,7 +395,7 @@ class LayerOperation(LayerMathMixin):
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(self.area, yoffset, step, computation_window)
-            res += np.sum(chunk.astype(np.float64))
+            res += backend.sum_op(chunk)
         return res
 
     def min(self):
@@ -394,7 +406,7 @@ class LayerOperation(LayerMathMixin):
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(self.area, yoffset, step, computation_window)
-            chunk_min = np.min(chunk)
+            chunk_min = backend.min_op(chunk)
             if (res is None) or (res > chunk_min):
                 res = chunk_min
         return res
@@ -407,7 +419,7 @@ class LayerOperation(LayerMathMixin):
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(self.area, yoffset, step, computation_window)
-            chunk_max = np.max(chunk)
+            chunk_max = backend.max_op(chunk)
             if (res is None) or (chunk_max > res):
                 res = chunk_max
         return res
@@ -442,14 +454,14 @@ class LayerOperation(LayerMathMixin):
                 step = computation_window.ysize - yoffset
             chunk = self._eval(self.area, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
-                chunk = np.full((step, destination_window.xsize), chunk)
+                chunk = backend.full((step, destination_window.xsize), chunk)
             band.WriteArray(
-                chunk,
+                backend.demote_array(chunk),
                 destination_window.xoff,
                 yoffset + destination_window.yoff,
             )
             if and_sum:
-                total += np.sum(chunk.astype(np.float64))
+                total += backend.sum_op(chunk)
         if callback:
             callback(1.0)
 
@@ -458,25 +470,34 @@ class LayerOperation(LayerMathMixin):
     def _parallel_worker(self, index, shared_mem, sem, np_dtype, width, input_queue, output_queue):
         arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
 
-        while True:
-            # We aquire the lock so we know we have somewhere to put the
-            # result before we take work. This is because in practice
-            # it seems the writing to GeoTIFF is the bottleneck, and
-            # we had workers taking a task, then waiting for somewhere to
-            # write to for ages when other workers were exiting because there
-            # was nothing to do.
-            sem.acquire()
+        try:
+            while True:
+                # We acquire the lock so we know we have somewhere to put the
+                # result before we take work. This is because in practice
+                # it seems the writing to GeoTIFF is the bottleneck, and
+                # we had workers taking a task, then waiting for somewhere to
+                # write to for ages when other workers were exiting because there
+                # was nothing to do.
+                sem.acquire()
 
-            task = input_queue.get()
-            if task is None:
-                sem.release()
-                output_queue.put(None)
-                break
-            yoffset, step = task
+                task = input_queue.get()
+                if task is None:
+                    sem.release()
+                    output_queue.put(None)
+                    break
+                yoffset, step = task
 
-            arr[:step] = self._eval(self.area, yoffset, step)
+                result = self._eval(self.area, yoffset, step)
+                backend.eval_op(result)
 
-            output_queue.put((index, yoffset, step))
+                arr[:step] = backend.demote_array(result)
+
+                output_queue.put((index, yoffset, step))
+
+        except Exception as e: # pylint: disable=W0718
+            logger.exception(e)
+            sem.release()
+            output_queue.put(None)
 
     def _park(self):
         try:
