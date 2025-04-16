@@ -1,6 +1,7 @@
+import logging
+import multiprocessing
 import sys
 import time
-import multiprocessing
 import types
 from enum import Enum
 from multiprocessing import Semaphore, Process
@@ -16,6 +17,8 @@ from .window import Area, PixelScale, Window
 from .backends import backend
 from .backends.enumeration import operators as op
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 class WindowOperation(Enum):
     NONE = 1
@@ -467,28 +470,34 @@ class LayerOperation(LayerMathMixin):
     def _parallel_worker(self, index, shared_mem, sem, np_dtype, width, input_queue, output_queue):
         arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
 
-        while True:
-            # We acquire the lock so we know we have somewhere to put the
-            # result before we take work. This is because in practice
-            # it seems the writing to GeoTIFF is the bottleneck, and
-            # we had workers taking a task, then waiting for somewhere to
-            # write to for ages when other workers were exiting because there
-            # was nothing to do.
-            sem.acquire()
+        try:
+            while True:
+                # We acquire the lock so we know we have somewhere to put the
+                # result before we take work. This is because in practice
+                # it seems the writing to GeoTIFF is the bottleneck, and
+                # we had workers taking a task, then waiting for somewhere to
+                # write to for ages when other workers were exiting because there
+                # was nothing to do.
+                sem.acquire()
 
-            task = input_queue.get()
-            if task is None:
-                sem.release()
-                output_queue.put(None)
-                break
-            yoffset, step = task
+                task = input_queue.get()
+                if task is None:
+                    sem.release()
+                    output_queue.put(None)
+                    break
+                yoffset, step = task
 
-            result = self._eval(self.area, yoffset, step)
-            backend.eval_op(result)
+                result = self._eval(self.area, yoffset, step)
+                backend.eval_op(result)
 
-            arr[:step] = backend.demote_array(result)
+                arr[:step] = backend.demote_array(result)
 
-            output_queue.put((index, yoffset, step))
+                output_queue.put((index, yoffset, step))
+
+        except Exception as e: # pylint: disable=W0718
+            logger.exception(e)
+            sem.release()
+            output_queue.put(None)
 
     def _park(self):
         try:
