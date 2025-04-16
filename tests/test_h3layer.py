@@ -31,7 +31,6 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
                 assert data.shape == (1, window.xsize)
                 one_count += data.sum()
             assert one_count != 0
-
     else:
         with pytest.raises(ValueError):
             with H3CellLayer(cell_id, PixelScale(0.001, -0.001), WGS_84_PROJECTION) as _layer:

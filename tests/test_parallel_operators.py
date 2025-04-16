@@ -9,7 +9,6 @@ from helpers import gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe.operators import LayerOperation
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_add_byte_layers() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")
@@ -34,7 +33,6 @@ def test_add_byte_layers() -> None:
 
         assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 @pytest.mark.parametrize("skip,expected_steps", [
     (1, [0.0, 0.5, 1.0]),
     (2, [0.0, 1.0]),
@@ -68,7 +66,6 @@ def test_parallel_with_different_skip(skip, expected_steps) -> None:
 
         assert callback_possitions == expected_steps
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_equality() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")
@@ -85,7 +82,6 @@ def test_parallel_equality() -> None:
 
                 assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_equality_to_file() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")
@@ -102,7 +98,6 @@ def test_parallel_equality_to_file() -> None:
             actual = actual_result.read_array(0, 0, 4, 2)
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_unary_numpy_apply_with_function() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")
@@ -125,7 +120,6 @@ def test_parallel_unary_numpy_apply_with_function() -> None:
 
         assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_unary_numpy_apply_with_lambda() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")
@@ -145,7 +139,6 @@ def test_parallel_unary_numpy_apply_with_lambda() -> None:
 
         assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_where_simple() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.tif")

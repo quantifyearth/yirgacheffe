@@ -14,6 +14,7 @@ from . import constants
 from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
 from .window import Area, PixelScale, Window
 from .backends import backend
+from .backends.enumeration import operators as op
 
 
 class WindowOperation(Enum):
@@ -37,43 +38,43 @@ class LayerConstant:
 class LayerMathMixin:
 
     def __add__(self, other):
-        return LayerOperation(self, backend.add_op, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.ADD, other, window_op=WindowOperation.UNION)
 
     def __sub__(self, other):
-        return LayerOperation(self, backend.sub_op, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.SUB, other, window_op=WindowOperation.UNION)
 
     def __mul__(self, other):
-        return LayerOperation(self, backend.mul_op, other, window_op=WindowOperation.INTERSECTION)
+        return LayerOperation(self, op.MUL, other, window_op=WindowOperation.INTERSECTION)
 
     def __truediv__(self, other):
-        return LayerOperation(self, backend.truediv_op, other, window_op=WindowOperation.INTERSECTION)
+        return LayerOperation(self, op.TRUEDIV, other, window_op=WindowOperation.INTERSECTION)
 
     def __pow__(self, other):
-        return LayerOperation(self, backend.pow_op, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.POW, other, window_op=WindowOperation.UNION)
 
     def __eq__(self, other):
-        return LayerOperation(self, backend.eq_op, other, window_op=WindowOperation.INTERSECTION)
+        return LayerOperation(self, op.EQ, other, window_op=WindowOperation.INTERSECTION)
 
     def __ne__(self, other):
-        return LayerOperation(self, backend.ne_op, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.NE, other, window_op=WindowOperation.UNION)
 
     def __lt__(self, other):
-        return LayerOperation(self, backend.lt_op, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.LT, other, window_op=WindowOperation.UNION)
 
     def __le__(self, other):
-        return LayerOperation(self, backend.le_op, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.LE, other, window_op=WindowOperation.UNION)
 
     def __gt__(self, other):
-        return LayerOperation(self, backend.gt_op, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.GT, other, window_op=WindowOperation.UNION)
 
     def __ge__(self, other):
-        return LayerOperation(self, backend.ge_op, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.GE, other, window_op=WindowOperation.UNION)
 
     def __and__(self, other):
-        return LayerOperation(self, backend.and_op, other, window_op=WindowOperation.INTERSECTION)
+        return LayerOperation(self, op.AND, other, window_op=WindowOperation.INTERSECTION)
 
     def __or__(self, other):
-        return LayerOperation(self, backend.or_op, other, window_op=WindowOperation.UNION)
+        return LayerOperation(self, op.OR, other, window_op=WindowOperation.UNION)
 
     def _eval(self, area, index, step, target_window=None):
         try:
@@ -85,7 +86,7 @@ class LayerMathMixin:
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(
             self,
-            backend.nan_to_num,
+            op.NAN_TO_NUM,
             window_op=WindowOperation.NONE,
             copy=False,
             nan=nan,
@@ -96,7 +97,7 @@ class LayerMathMixin:
     def isin(self, test_elements):
         return LayerOperation(
             self,
-            backend.isin,
+            op.ISIN,
             window_op=WindowOperation.NONE,
             test_elements=test_elements,
         )
@@ -104,35 +105,35 @@ class LayerMathMixin:
     def log(self):
         return LayerOperation(
             self,
-            backend.log,
+            op.LOG,
             window_op=WindowOperation.NONE,
         )
 
     def log2(self):
         return LayerOperation(
             self,
-            backend.log2,
+            op.LOG2,
             window_op=WindowOperation.NONE,
         )
 
     def log10(self):
         return LayerOperation(
             self,
-            backend.log10,
+            op.LOG10,
             window_op=WindowOperation.NONE,
         )
 
     def exp(self):
         return LayerOperation(
             self,
-            backend.exp,
+            op.EXP,
             window_op=WindowOperation.NONE,
         )
 
     def exp2(self):
         return LayerOperation(
             self,
-            backend.exp2,
+            op.EXP2,
             window_op=WindowOperation.NONE,
         )
 
@@ -143,7 +144,7 @@ class LayerMathMixin:
         # a_max, a_min so that yirgacheffe can work on older numpy installs.
         return LayerOperation(
             self,
-            backend.clip,
+            op.CLIP,
             window_op=WindowOperation.NONE,
             a_min=min,
             a_max=max,
@@ -177,7 +178,7 @@ class LayerOperation(LayerMathMixin):
     def where(cond, a, b):
         return LayerOperation(
             cond,
-            backend.where,
+            op.WHERE,
             rhs=a,
             other=b
         )
@@ -186,7 +187,7 @@ class LayerOperation(LayerMathMixin):
     def maximum(a, b):
         return LayerOperation(
             a,
-            backend.maximum,
+            op.MAXIMUM,
             b,
             window_op=WindowOperation.UNION,
         )
@@ -195,7 +196,7 @@ class LayerOperation(LayerMathMixin):
     def minimum(a, b):
         return LayerOperation(
             a,
-            backend.minimum,
+            op.MINIMUM,
             rhs=b,
             window_op=WindowOperation.UNION,
         )
@@ -361,17 +362,23 @@ class LayerOperation(LayerMathMixin):
         if self.operator is None:
             return lhs_data
 
+        try:
+            operator = backend.operator_map[self.operator]
+        except KeyError:
+            # Handles things like `numpy_apply` where a custom operator is provided
+            operator = self.operator
+
         if self.other is not None:
             assert self.rhs is not None
             rhs_data = self.rhs._eval(area, index, step, target_window)
             other_data = self.other._eval(area, index, step, target_window)
-            return self.operator(lhs_data, rhs_data, other_data, **self.kwargs)
+            return operator(lhs_data, rhs_data, other_data, **self.kwargs)
 
         if self.rhs is not None:
             rhs_data = self.rhs._eval(area, index, step, target_window)
-            return self.operator(lhs_data, rhs_data, **self.kwargs)
+            return operator(lhs_data, rhs_data, **self.kwargs)
 
-        return self.operator(lhs_data, **self.kwargs)
+        return operator(lhs_data, **self.kwargs)
 
     def sum(self):
         # The result accumulator is float64, and for precision reasons

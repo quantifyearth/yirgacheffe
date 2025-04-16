@@ -140,7 +140,6 @@ def test_pickle_simple_calc(c) -> None:
 
         p = pickle.dumps(calc)
         restore = pickle.loads(p)
-
         assert calc.sum() == restore.sum()
 
 def test_pickle_lambda_calc() -> None:

@@ -2,6 +2,8 @@
 import numpy as np
 import mlx.core as mx # pylint: disable=E0001,E0611
 
+from .enumeration import operators as op
+
 array_t = mx.array
 float_t = mx.float32
 
@@ -90,3 +92,33 @@ def isin(a, test_elements):
     # https://ml-explore.github.io/mlx/build/html/dev/custom_metal_kernels.html#using-shape-strides
     mx.eval(a)
     return promote(np.isin(a, test_elements))
+
+
+operator_map = {
+    op.ADD: mx.array.__add__,
+    op.SUB: mx.array.__sub__,
+    op.MUL: mul_op,
+    op.TRUEDIV: mx.array.__truediv__,
+    op.POW: mx.array.__pow__,
+    op.EQ: mx.array.__eq__,
+    op.NE: mx.array.__ne__,
+    op.LT: mx.array.__lt__,
+    op.LE: mx.array.__le__,
+    op.GT: mx.array.__gt__,
+    op.GE: mx.array.__ge__,
+    op.AND: mx.array.__and__,
+    op.OR: mx.array.__or__,
+    op.LOG: mx.log,
+    op.LOG2: mx.log2,
+    op.LOG10: mx.log10,
+    op.EXP: mx.exp,
+    op.EXP2: exp2,
+    op.CLIP: mx.clip,
+    op.WHERE: mx.where,
+    op.MIN: mx.min,
+    op.MAX:mx.max,
+    op.MINIMUM: mx.minimum,
+    op.MAXIMUM: mx.maximum,
+    op.NAN_TO_NUM: nan_to_num,
+    op.ISIN: isin,
+}
