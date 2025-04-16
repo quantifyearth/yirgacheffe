@@ -1,6 +1,6 @@
 
 import numpy as np
-import mlx.core as mx # pylint: disable=E0001,E0611
+import mlx.core as mx # pylint: disable=E0001,E0611,E0401
 
 from .enumeration import operators as op
 
