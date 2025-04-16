@@ -6,6 +6,8 @@ match BACKEND:
     case "MLX":
         from . import mlx
         backend = mlx
-    case _:
+    case "NUMPY":
         from . import numpy
         backend = numpy
+    case _:
+        raise NotImplementedError("Only NUMPY and MLX backends supported")

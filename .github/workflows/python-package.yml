@@ -45,5 +45,5 @@ jobs:
 
       - name: Test with mlx backend
         env:
-          YIRGACHEFFE_BACKED: MLX
+          YIRGACHEFFE_BACKEND: MLX
         run: python3 -m pytest --cov=yirgacheffe -vv
