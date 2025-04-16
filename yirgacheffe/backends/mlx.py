@@ -13,16 +13,16 @@ demote_scalar = np.float64
 
 eval_op = mx.eval
 
-add_op = lambda a, b: mx.add(a, b, stream=mx.gpu)
+add_op = mx.add
 sub_op = mx.array.__sub__
 truediv_op = mx.array.__truediv__
 pow_op = mx.array.__pow__
 eq_op = mx.array.__eq__
 ne_op =mx.array.__ne__
-lt_op = lambda a, b: mx.less(a, b, stream=mx.gpu)
-le_op = lambda a, b: mx.less_equal(a, b, stream=mx.gpu)
-gt_op = lambda a, b: mx.greater(a, b, stream=mx.gpu)
-ge_op = lambda a, b: mx.greater_equal(a, b, stream=mx.gpu)
+lt_op = mx.less
+le_op = mx.less_equal
+gt_op = mx.greater
+ge_op = mx.greater_equal
 and_op = mx.array.__and__
 or_op = mx.array.__or__
 log = mx.log
@@ -45,11 +45,11 @@ def sum_op(a):
     # There are weird issues around how MLX overflows int8, so just promote the data ahead of summing
     match a.dtype:
         case mx.int8:
-            res = mx.sum(a.astype(mx.int32), stream=mx.gpu)
+            res = mx.sum(a.astype(mx.int32))
         case mx.uint8:
-            res = mx.sum(a.astype(mx.uint32), stream=mx.gpu)
+            res = mx.sum(a.astype(mx.uint32))
         case _:
-            res = mx.sum(a, stream=mx.gpu)
+            res = mx.sum(a)
     return demote_scalar(res)
 
 def _is_float(x):
@@ -78,7 +78,7 @@ def mul_op(a, b):
                 a = a.astype(mx.float64)
             case _:
                 pass
-    return mx.multiply(a, b, stream=mx.gpu)
+    return mx.multiply(a, b)
 
 def exp2(a):
     mx.eval(a)
