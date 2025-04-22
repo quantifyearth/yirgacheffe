@@ -165,6 +165,9 @@ class LayerMathMixin:
     def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
         return LayerOperation(self).parallel_save(destination_layer, and_sum, callback, parallelism, band)
 
+    def parallel_sum(self, callback=None, parallelism=None, band=1):
+        return LayerOperation(self).parallel_sum(callback, parallelism, band)
+
     def sum(self):
         return LayerOperation(self).sum()
 
@@ -513,39 +516,42 @@ class LayerOperation(LayerMathMixin):
         except AttributeError:
             pass
 
-    def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
-        if destination_layer is None:
-            raise ValueError("Layer is required")
-        try:
-            band = destination_layer._dataset.GetRasterBand(band)
-        except AttributeError as exc:
-            raise ValueError("Layer must be a raster backed layer") from exc
-
+    def _parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
+        assert (destination_layer is not None) or and_sum
         computation_window = self.window
-        destination_window = destination_layer.window
+        if destination_layer is not None:
+            try:
+                band = destination_layer._dataset.GetRasterBand(band)
+            except AttributeError as exc:
+                raise ValueError("Layer must be a raster backed layer") from exc
+
+            destination_window = destination_layer.window
+
+            if (computation_window.xsize != destination_window.xsize) \
+                    or (computation_window.ysize != destination_window.ysize):
+                raise ValueError("Destination raster window size does not match input raster window size.")
+
+            np_dtype = {
+                gdal.GDT_Byte:    np.dtype('byte'),
+                gdal.GDT_Float32: np.dtype('float32'),
+                gdal.GDT_Float64: np.dtype('float64'),
+                gdal.GDT_Int8:    np.dtype('int8'),
+                gdal.GDT_Int16:   np.dtype('int16'),
+                gdal.GDT_Int32:   np.dtype('int32'),
+                gdal.GDT_Int64:   np.dtype('int64'),
+                gdal.GDT_UInt16:  np.dtype('uint16'),
+                gdal.GDT_UInt32:  np.dtype('uint32'),
+                gdal.GDT_UInt64:  np.dtype('uint64'),
+            }[band.DataType]
+        else:
+            band = None
+            np_dtype = np.dtype('float64')
 
         # The parallel save will cause a fork on linux, so we need to
         # remove all SWIG references
         self._park()
 
-        if (computation_window.xsize != destination_window.xsize) \
-                or (computation_window.ysize != destination_window.ysize):
-            raise ValueError("Destination raster window size does not match input raster window size.")
-
         total = 0.0
-
-        np_dtype = {
-            gdal.GDT_Byte:    np.dtype('byte'),
-            gdal.GDT_Float32: np.dtype('float32'),
-            gdal.GDT_Float64: np.dtype('float64'),
-            gdal.GDT_Int8:    np.dtype('int8'),
-            gdal.GDT_Int16:   np.dtype('int16'),
-            gdal.GDT_Int32:   np.dtype('int32'),
-            gdal.GDT_Int64:   np.dtype('int64'),
-            gdal.GDT_UInt16:  np.dtype('uint16'),
-            gdal.GDT_UInt32:  np.dtype('uint32'),
-            gdal.GDT_UInt64:  np.dtype('uint64'),
-        }[band.DataType]
 
         with multiprocessing.Manager() as manager:
             with SharedMemoryManager() as smm:
@@ -556,9 +562,9 @@ class LayerOperation(LayerMathMixin):
 
                 mem_sem_cast = []
                 for i in range(worker_count):
-                    shared_buf = smm.SharedMemory(size=np_dtype.itemsize * self.ystep * destination_window.xsize)
-                    cast_buf = np.ndarray((self.ystep, destination_window.xsize), dtype=np_dtype, buffer=shared_buf.buf)
-                    cast_buf[:] = np.zeros((self.ystep, destination_window.xsize), np_dtype)
+                    shared_buf = smm.SharedMemory(size=np_dtype.itemsize * self.ystep * computation_window.xsize)
+                    cast_buf = np.ndarray((self.ystep, computation_window.xsize), dtype=np_dtype, buffer=shared_buf.buf)
+                    cast_buf[:] = np.zeros((self.ystep, computation_window.xsize), np_dtype)
                     mem_sem_cast.append((shared_buf, Semaphore(), cast_buf))
 
                 source_queue = manager.Queue()
@@ -583,7 +589,7 @@ class LayerOperation(LayerMathMixin):
                     mem_sem_cast[i][0],
                     mem_sem_cast[i][1],
                     np_dtype,
-                    destination_window.xsize,
+                    computation_window.xsize,
                     source_queue,
                     result_queue
                 )) for i in range(worker_count)]
@@ -599,11 +605,12 @@ class LayerOperation(LayerMathMixin):
                         continue
                     index, yoffset, step = res
                     _, sem, arr = mem_sem_cast[index]
-                    band.WriteArray(
-                        arr[0:step],
-                        destination_window.xoff,
-                        yoffset + destination_window.yoff,
-                    )
+                    if band:
+                        band.WriteArray(
+                            arr[0:step],
+                            destination_window.xoff,
+                            yoffset + destination_window.yoff,
+                        )
                     if and_sum:
                         total += np.sum(np.array(arr[0:step]).astype(np.float64))
                     sem.release()
@@ -625,6 +632,13 @@ class LayerOperation(LayerMathMixin):
 
         return total if and_sum else None
 
+    def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
+        if destination_layer is None:
+            raise ValueError("Layer is required")
+        return self._parallel_save(destination_layer, and_sum, callback, parallelism, band)
+
+    def parallel_sum(self, callback=None, parallelism=None, band=1):
+        return self._parallel_save(None, True, callback, parallelism, band)
 
 class ShaderStyleOperation(LayerOperation):
 
