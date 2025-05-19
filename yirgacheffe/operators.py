@@ -52,6 +52,12 @@ class LayerMathMixin:
     def __truediv__(self, other):
         return LayerOperation(self, op.TRUEDIV, other, window_op=WindowOperation.INTERSECTION)
 
+    def __floordiv__(self, other):
+        return LayerOperation(self, op.FLOORDIV, other, window_op=WindowOperation.INTERSECTION)
+
+    def __mod__(self, other):
+        return LayerOperation(self, op.REMAINDER, other, window_op=WindowOperation.INTERSECTION)
+
     def __pow__(self, other):
         return LayerOperation(self, op.POW, other, window_op=WindowOperation.UNION)
 

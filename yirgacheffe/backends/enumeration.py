@@ -28,3 +28,5 @@ class operators(Enum):
     MAXIMUM = 25
     NAN_TO_NUM = 26
     ISIN = 27
+    REMAINDER = 28
+    FLOORDIV = 29
