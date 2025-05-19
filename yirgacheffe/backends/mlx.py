@@ -40,6 +40,8 @@ pad = mx.pad
 isscalar = np.isscalar
 full = mx.full
 allclose = mx.allclose
+remainder_op = mx.remainder
+floordiv_op = mx.array.__floordiv__
 
 def sum_op(a):
     # There are weird issues around how MLX overflows int8, so just promote the data ahead of summing
@@ -121,4 +123,6 @@ operator_map = {
     op.MAXIMUM: mx.maximum,
     op.NAN_TO_NUM: nan_to_num,
     op.ISIN: isin,
+    op.REMAINDER: mx.remainder,
+    op.FLOORDIV: mx.array.__floordiv__,
 }

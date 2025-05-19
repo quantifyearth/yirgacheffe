@@ -138,8 +138,64 @@ def test_mult_float_layers() -> None:
     comp = layer1 * layer2
     comp.save(result)
 
-    expected = data1 * data2
-    actual = result.read_array(0, 0, 4, 2)
+    expected = backend.promote(data1) * backend.promote(data2)
+    backend.eval_op(expected)
+
+    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
+
+    assert (expected == actual).all()
+
+def test_div_float_layers() -> None:
+    data1 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+    data2 = np.array([[1.0, 2.0, 3.0, 4.0], [5.5, 6.5, 7.5, 8.5]])
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 / layer2
+    comp.save(result)
+
+    expected = backend.promote(data1) / backend.promote(data2)
+    backend.eval_op(expected)
+
+    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
+
+    assert (expected == actual).all()
+
+def test_floor_div_float_layers() -> None:
+    data1 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+    data2 = np.array([[1.0, 2.0, 3.0, 4.0], [5.5, 6.5, 7.5, 8.5]])
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 // layer2
+    comp.save(result)
+
+    expected = backend.promote(data1) // backend.promote(data2)
+    backend.eval_op(expected)
+
+    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
+
+    assert (expected == actual).all()
+
+def test_remainder_float_layers() -> None:
+    data1 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+    data2 = np.array([[1.0, 2.0, 3.0, 4.0], [5.5, 6.5, 7.5, 8.5]])
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 % layer2
+    comp.save(result)
+
+    expected = backend.promote(data1) % backend.promote(data2)
+    backend.eval_op(expected)
+
+    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
 
     assert (expected == actual).all()
 
@@ -197,6 +253,36 @@ def test_div_float_layer_by_const() -> None:
     comp.save(result)
 
     expected = backend.promote(data1) / 2.5
+    backend.eval_op(expected)
+
+    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
+
+    assert (expected == actual).all()
+
+def test_floordiv_float_layer_by_const() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 // 2.5
+    comp.save(result)
+
+    expected = backend.promote(data1) // 2.5
+    backend.eval_op(expected)
+
+    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
+
+    assert (expected == actual).all()
+
+def test_remainder_float_layer_by_const() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1 % 2.5
+    comp.save(result)
+
+    expected = backend.promote(data1) % 2.5
     backend.eval_op(expected)
 
     actual = backend.demote_array(result.read_array(0, 0, 4, 2))

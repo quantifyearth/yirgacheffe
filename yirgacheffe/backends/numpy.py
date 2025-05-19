@@ -43,6 +43,8 @@ sum_op = lambda a: np.sum(a.astype(np.float64))
 isscalar = np.isscalar
 full = np.full
 allclose = np.allclose
+remainder_op = np.ndarray.__mod__
+floordiv_op = np.ndarray.__floordiv__
 
 operator_map = {
 	op.ADD: np.ndarray.__add__,
@@ -71,4 +73,24 @@ operator_map = {
 	op.MAXIMUM: np.maximum,
 	op.NAN_TO_NUM: np.nan_to_num,
 	op.ISIN: np.isin,
+	op.REMAINDER: np.ndarray.__mod__,
+	op.FLOORDIV: np.ndarray.__floordiv__,
+
+}
+
+operator_str_map = {
+	op.POW: "np.ndarray.__pow__(%s, %s)",
+	op.LOG: "np.log(%s)",
+	op.LOG2: "np.log2(%s)",
+	op.LOG10: "np.log10(%s)",
+	op.EXP: "np.exp(%s)",
+	op.EXP2: "np.exp2(%s)",
+	op.CLIP: "np.clip",
+	op.WHERE: "np.where(%s, %s, %s)",
+	op.MIN: "np.min(%s)",
+	op.MAX: "np.max(%s)",
+	op.MINIMUM: "np.minimum(%s)",
+	op.MAXIMUM: "np.maximum(%s)",
+	op.NAN_TO_NUM: "np.nan_to_num(%s)",
+	op.ISIN: "np.isin(%s, %s)",
 }
