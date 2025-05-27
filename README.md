@@ -307,7 +307,7 @@ blur_filter = np.array([
     [0.0, 0.1, 0.0],
     [0.1, 0.6, 0.1],
     [0.0, 0.1, 0.0],
-]).astype(np.float32)
+])
 with RasterLayer.layer_from_file('original.tif') as layer1:
     with RasterLayer.empty_raster_layer_like(layer1, 'blurred.tif') as result:
         calc = layer1.conv2d(blur_filter)

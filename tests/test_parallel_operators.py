@@ -236,10 +236,10 @@ def test_parallel_conv2d() -> None:
             [0.0, 0.1, 0.0],
             [0.1, 0.6, 0.1],
             [0.0, 0.1, 0.0],
-        ]).astype(np.float32)
+        ])
 
         conv = torch.nn.Conv2d(1, 1, 3, padding=1, bias=False)
-        conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights]])))
+        conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights.astype(np.float32)]])))
         tensorres = conv(torch.from_numpy(np.array([[data1]])))
         expected = tensorres.detach().numpy()[0][0]
 

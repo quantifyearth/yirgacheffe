@@ -1210,12 +1210,12 @@ def test_simple_conv2d_unity(skip) -> None:
         [0, 1, 1, 1, 0],
         [0, 0, 2, 0, 0],
     ]).astype(np.float32)
+    weights = np.array([
+        [0, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0],
+    ])
     with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1:
-        weights = np.array([
-            [0, 0, 0],
-            [0, 1, 0],
-            [0, 0, 0],
-        ]).astype(np.float32)
         calc = layer1.conv2d(weights)
         calc.ystep = skip
         with RasterLayer.empty_raster_layer_like(layer1) as res:
@@ -1240,10 +1240,10 @@ def test_simple_conv2d_blur(skip) -> None:
         [0.0, 0.1, 0.0],
         [0.1, 0.6, 0.1],
         [0.0, 0.1, 0.0],
-    ]).astype(np.float32)
+    ])
 
     conv = torch.nn.Conv2d(1, 1, 3, padding=1, bias=False)
-    conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights]])))
+    conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights.astype(np.float32)]])))
     tensorres = conv(torch.from_numpy(np.array([[data1]])))
     expected = tensorres.detach().numpy()[0][0]
 

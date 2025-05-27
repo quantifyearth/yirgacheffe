@@ -162,7 +162,7 @@ class LayerMathMixin:
 
     def conv2d(self, weights):
         # A set of limitations that are just down to implementation time restrictions
-        weights_width, weights_height = np.array(weights).shape
+        weights_width, weights_height = weights.shape
         if weights_width != weights_height:
             raise ValueError("Currently only square matrixes are supported for weights")
         padding = (weights_width - 1) / 2
@@ -174,7 +174,7 @@ class LayerMathMixin:
             op.CONV2D,
             window_op=WindowOperation.NONE,
             buffer_padding=padding,
-            weights=weights,
+            weights=weights.astype(np.float32),
         )
 
     def numpy_apply(self, func, other=None):
