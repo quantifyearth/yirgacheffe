@@ -4,6 +4,7 @@ import tempfile
 
 import numpy as np
 import pytest
+import torch
 from osgeo import gdal
 
 from helpers import gdal_dataset_with_data
@@ -1195,3 +1196,62 @@ def test_clip_lower_module() -> None:
     expected = np.clip(data1, a_min=3.0, a_max=None)
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
+
+@pytest.mark.parametrize("skip", [
+    1,
+    2,
+    5,
+])
+def test_simple_conv2d_unity(skip) -> None:
+    data1 = np.array([
+        [0, 0, 5, 0, 0],
+        [0, 1, 1, 1, 0],
+        [4, 1, 1, 1, 3],
+        [0, 1, 1, 1, 0],
+        [0, 0, 2, 0, 0],
+    ]).astype(np.float32)
+    with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1:
+        weights = np.array([
+            [0, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0],
+        ]).astype(np.float32)
+        calc = layer1.conv2d(weights)
+        calc.ystep = skip
+        with RasterLayer.empty_raster_layer_like(layer1) as res:
+            calc.save(res)
+            actual = res.read_array(0, 0, 5, 5)
+            assert (data1 == actual).all()
+
+@pytest.mark.parametrize("skip", [
+    1,
+    2,
+    5,
+])
+def test_simple_conv2d_blur(skip) -> None:
+    data1 = np.array([
+        [0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 0],
+        [0, 1, 1, 1, 0],
+        [0, 1, 1, 1, 0],
+        [0, 0, 0, 0, 0],
+    ]).astype(np.float32)
+    weights = np.array([
+        [0.0, 0.1, 0.0],
+        [0.1, 0.6, 0.1],
+        [0.0, 0.1, 0.0],
+    ]).astype(np.float32)
+
+    conv = torch.nn.Conv2d(1, 1, 3, padding=1, bias=False)
+    conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights]])))
+    tensorres = conv(torch.from_numpy(np.array([[data1]])))
+    expected = tensorres.detach().numpy()[0][0]
+
+    with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1:
+
+        calc = layer1.conv2d(weights)
+        calc.ystep = skip
+        with RasterLayer.empty_raster_layer_like(layer1) as res:
+            calc.save(res)
+            actual = res.read_array(0, 0, 5, 5)
+            assert (expected == actual).all()

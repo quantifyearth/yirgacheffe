@@ -2,7 +2,7 @@ import math
 import os
 from typing import Any, Optional, TypeVar, Union
 
-
+import numpy as np
 from osgeo import gdal
 
 from .. import WGS_84_PROJECTION
@@ -319,18 +319,15 @@ class RasterLayer(YirgacheffeLayer):
         else:
             # We should read the intersection from the array, and the rest should be zeros
             subset = backend.promote(self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args))
-            data = backend.pad(
-                subset,
+            region = np.array((
                 (
-                    (
-                        (intersection.yoff - window.yoff) - yoffset,
-                        (ysize - ((intersection.yoff - window.yoff) + intersection.ysize)) + yoffset,
-                    ),
-                    (
-                        (intersection.xoff - window.xoff) - xoffset,
-                        xsize - ((intersection.xoff - window.xoff) + intersection.xsize) + xoffset,
-                    )
+                    (intersection.yoff - window.yoff) - yoffset,
+                    (ysize - ((intersection.yoff - window.yoff) + intersection.ysize)) + yoffset,
                 ),
-                'constant'
-            )
+                (
+                    (intersection.xoff - window.xoff) - xoffset,
+                    xsize - ((intersection.xoff - window.xoff) + intersection.xsize) + xoffset,
+                )
+            )).astype(int)
+            data = backend.pad(subset, region, mode='constant')
             return data

@@ -1,5 +1,6 @@
 
 import numpy as np
+import torch
 
 from .enumeration import operators as op
 
@@ -46,6 +47,19 @@ allclose = np.allclose
 remainder_op = np.ndarray.__mod__
 floordiv_op = np.ndarray.__floordiv__
 
+def conv2d_op(data, weights):
+    # torch wants to process dimensions of channels of width of height
+    # Which is why both the data and weights get nested into two arrays here,
+    # and then we have to unpack it from that nesting.
+
+    preped_weights = np.array([[weights]])
+    conv = torch.nn.Conv2d(1, 1, weights.shape, bias=False)
+    conv.weight = torch.nn.Parameter(torch.from_numpy(preped_weights))
+    preped_data = torch.from_numpy(np.array([[data]]))
+
+    res = conv(preped_data)
+    return res.detach().numpy()[0][0]
+
 operator_map = {
 	op.ADD: np.ndarray.__add__,
 	op.SUB: np.ndarray.__sub__,
@@ -75,7 +89,7 @@ operator_map = {
 	op.ISIN: np.isin,
 	op.REMAINDER: np.ndarray.__mod__,
 	op.FLOORDIV: np.ndarray.__floordiv__,
-
+	op.CONV2D: conv2d_op,
 }
 
 operator_str_map = {

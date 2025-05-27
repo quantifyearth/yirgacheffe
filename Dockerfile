@@ -1,4 +1,4 @@
-from ghcr.io/osgeo/gdal:ubuntu-small-3.9.2
+from ghcr.io/osgeo/gdal:ubuntu-small-3.11.0
 
 RUN apt-get update -qqy && \
 	apt-get install -qy \
@@ -11,9 +11,9 @@ COPY ./ /root/
 WORKDIR /root/
 
 RUN pip config set global.break-system-packages true
-RUN pip install "numpy<2" gdal[numpy] scikit-image
+RUN pip install gdal[numpy] scikit-image torch
 RUN pip install pylint mypy pytest types-setuptools
-RUN pip install h3==4.0.0b5
+RUN pip install h3
 
 RUN python3 -m pytest -vv
 # RUN mypy yirgacheffe
