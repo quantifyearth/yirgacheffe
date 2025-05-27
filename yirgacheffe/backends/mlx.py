@@ -1,6 +1,7 @@
 
 import numpy as np
 import mlx.core as mx # pylint: disable=E0001,E0611,E0401
+import mlx.nn
 
 from .enumeration import operators as op
 
@@ -95,6 +96,32 @@ def isin(a, test_elements):
     mx.eval(a)
     return promote(np.isin(a, test_elements))
 
+def conv2d_op(data, weights):
+    # From numpy.py: torch wants to process dimensions of channels of width of height
+    # but mlx wants to process dimensions of width of height of channels, so we end up
+    # having to reshape the data, as we only ever use one channel.
+    # Which is why both the data and weights get nested into two arrays here,
+    # and then we have to unpack it from that nesting.
+
+    weights = mx.array(weights)
+
+    original_data_shape = data.shape
+    original_weights_shape = weights.shape
+
+    unshifted_preped_weights = np.array([[weights]])
+    conv_weights_shape = [1] + list(original_weights_shape) + [1]
+    preped_weights = mx.array(np.reshape(unshifted_preped_weights, conv_weights_shape))
+
+    conv = mlx.nn.Conv2d(1, 1, weights.shape, bias=False)
+    conv.weight = preped_weights
+
+    conv_data_shape = [1] + list(original_data_shape) + [1]
+    unshifted_data_shape = np.array([[data]])
+    preped_data = mx.array(np.reshape(unshifted_data_shape, conv_data_shape))
+
+    shifted_res = conv(preped_data)[0]
+    res = np.reshape(shifted_res, [1] + list(shifted_res.shape)[:-1])
+    return res[0]
 
 operator_map = {
     op.ADD: mx.array.__add__,
@@ -125,4 +152,5 @@ operator_map = {
     op.ISIN: isin,
     op.REMAINDER: mx.remainder,
     op.FLOORDIV: mx.array.__floordiv__,
+    op.CONV2D: conv2d_op,
 }

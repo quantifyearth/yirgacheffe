@@ -1254,4 +1254,6 @@ def test_simple_conv2d_blur(skip) -> None:
         with RasterLayer.empty_raster_layer_like(layer1) as res:
             calc.save(res)
             actual = res.read_array(0, 0, 5, 5)
-            assert (expected == actual).all()
+
+            # Torch and MLX give slightly different rounding
+            assert np.isclose(expected, actual).all()
