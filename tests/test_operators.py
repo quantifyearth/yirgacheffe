@@ -1257,3 +1257,50 @@ def test_simple_conv2d_blur(skip) -> None:
 
             # Torch and MLX give slightly different rounding
             assert np.isclose(expected, actual).all()
+
+@pytest.mark.parametrize("skip", [
+    1,
+    2,
+    5,
+])
+def test_simple_conv2d_over_calculated_result(skip) -> None:
+    # This test is interesting as it'll pull expanded data from the child calculation
+    # datasets
+    data1 = np.array([
+        [0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 0],
+        [0, 1, 1, 1, 0],
+        [0, 1, 1, 1, 0],
+        [0, 0, 0, 0, 0],
+    ]).astype(np.float32)
+    data2 = np.array([
+        [2, 0, 0, 0, 2],
+        [0, 2, 0, 2, 0],
+        [0, 0, 2, 0, 0],
+        [0, 2, 0, 2, 0],
+        [2, 0, 0, 0, 2],
+    ]).astype(np.float32)
+    weights = np.array([
+        [0.0, 0.1, 0.0],
+        [0.1, 0.6, 0.1],
+        [0.0, 0.1, 0.0],
+    ])
+
+    joined_data = data1 * data2
+
+    conv = torch.nn.Conv2d(1, 1, 3, padding=1, bias=False)
+    conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights.astype(np.float32)]])))
+    tensorres = conv(torch.from_numpy(np.array([[joined_data]])))
+    expected = tensorres.detach().numpy()[0][0]
+
+    with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1:
+        with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2)) as layer2:
+
+            calc = (layer1 * layer2).conv2d(weights)
+            calc.ystep = skip
+            with RasterLayer.empty_raster_layer_like(layer1) as res:
+                calc.save(res)
+                actual = res.read_array(0, 0, 5, 5)
+
+                # Torch and MLX give slightly different rounding
+                assert np.isclose(expected, actual).all()

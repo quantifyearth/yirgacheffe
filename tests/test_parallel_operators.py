@@ -225,31 +225,31 @@ def test_parallel_where_simple() -> None:
 
 @pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_conv2d() -> None:
-        data1 = np.array([
-            [0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 0],
-            [0, 1, 1, 1, 0],
-            [0, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0],
-        ]).astype(np.float32)
-        weights = np.array([
-            [0.0, 0.1, 0.0],
-            [0.1, 0.6, 0.1],
-            [0.0, 0.1, 0.0],
-        ])
+    data1 = np.array([
+        [0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 0],
+        [0, 1, 1, 1, 0],
+        [0, 1, 1, 1, 0],
+        [0, 0, 0, 0, 0],
+    ]).astype(np.float32)
+    weights = np.array([
+        [0.0, 0.1, 0.0],
+        [0.1, 0.6, 0.1],
+        [0.0, 0.1, 0.0],
+    ])
 
-        conv = torch.nn.Conv2d(1, 1, 3, padding=1, bias=False)
-        conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights.astype(np.float32)]])))
-        tensorres = conv(torch.from_numpy(np.array([[data1]])))
-        expected = tensorres.detach().numpy()[0][0]
+    conv = torch.nn.Conv2d(1, 1, 3, padding=1, bias=False)
+    conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights.astype(np.float32)]])))
+    tensorres = conv(torch.from_numpy(np.array([[data1]])))
+    expected = tensorres.detach().numpy()[0][0]
 
-        with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1:
+    with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1:
 
-            calc = layer1.conv2d(weights)
-            calc.ystep = 1
-            with RasterLayer.empty_raster_layer_like(layer1) as res:
-                calc.save(res)
-                actual = res.read_array(0, 0, 5, 5)
+        calc = layer1.conv2d(weights)
+        calc.ystep = 1
+        with RasterLayer.empty_raster_layer_like(layer1) as res:
+            calc.save(res)
+            actual = res.read_array(0, 0, 5, 5)
 
-                # Torch and MLX give slightly different rounding
-                assert np.isclose(expected, actual).all()
+            # Torch and MLX give slightly different rounding
+            assert np.isclose(expected, actual).all()
