@@ -6,6 +6,7 @@ import types
 from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
+from typing import Optional
 
 import numpy as np
 from osgeo import gdal
@@ -159,6 +160,23 @@ class LayerMathMixin:
             a_max=max,
         )
 
+    def conv2d(self, weights):
+        # A set of limitations that are just down to implementation time restrictions
+        weights_width, weights_height = weights.shape
+        if weights_width != weights_height:
+            raise ValueError("Currently only square matrixes are supported for weights")
+        padding = (weights_width - 1) / 2
+        if padding != int(padding):
+            raise ValueError("Currently weights dimensions must be odd")
+
+        return LayerOperation(
+            self,
+            op.CONV2D,
+            window_op=WindowOperation.NONE,
+            buffer_padding=padding,
+            weights=weights.astype(np.float32),
+        )
+
     def numpy_apply(self, func, other=None):
         return LayerOperation(self, func, other)
 
@@ -213,10 +231,20 @@ class LayerOperation(LayerMathMixin):
             window_op=WindowOperation.UNION,
         )
 
-    def __init__(self, lhs, operator=None, rhs=None, other=None, window_op=WindowOperation.NONE, **kwargs):
+    def __init__(
+        self,
+        lhs,
+        operator=None,
+        rhs=None,
+        other=None,
+        window_op=WindowOperation.NONE,
+        buffer_padding=0,
+        **kwargs
+    ):
         self.ystep = constants.YSTEP
         self.kwargs = kwargs
         self.window_op = window_op
+        self.buffer_padding = buffer_padding
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -368,7 +396,16 @@ class LayerOperation(LayerMathMixin):
         except AttributeError:
             return self.rhs.projection
 
-    def _eval(self, area, index, step, target_window=None):
+    def _eval(self, area: Area, index: int, step: int, target_window:Optional[Window]=None):
+
+        if self.buffer_padding:
+            if target_window:
+                target_window = target_window.grow(self.buffer_padding)
+            pixel_scale = self.pixel_scale
+            area = area.grow(self.buffer_padding * pixel_scale.xstep)
+            # The index doesn't need updating because we updated area/window
+            step += (2 * self.buffer_padding)
+
         lhs_data = self.lhs._eval(area, index, step, target_window)
 
         if self.operator is None:

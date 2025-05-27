@@ -30,3 +30,4 @@ class operators(Enum):
     ISIN = 27
     REMAINDER = 28
     FLOORDIV = 29
+    CONV2D = 30

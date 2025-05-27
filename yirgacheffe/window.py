@@ -86,6 +86,14 @@ class Window:
             ((self.xoff + self.xsize) >= (other.xoff + other.xsize)) and \
             ((self.yoff + self.ysize) >= (other.yoff + other.ysize))
 
+    def grow(self, pixels: int):
+        return Window(
+            xoff=self.xoff - pixels,
+            yoff=self.xoff - pixels,
+            xsize=self.xsize + (2 * pixels),
+            ysize=self.ysize + (2 * pixels),
+        )
+
     @staticmethod
     def find_intersection(windows: List) -> "Window":
         if not windows:

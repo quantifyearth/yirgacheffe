@@ -229,7 +229,7 @@ Once you have two layers, you can perform numerical analysis on them similar to 
 
 ### Add, subtract, multiple, divide
 
-Pixel-wise addition, subtraction, multiplication or division, either between arrays, or with constants:
+Pixel-wise addition, subtraction, multiplication or division (both true and floor division), and remainder. Either between arrays, or with constants:
 
 ```python
 with RasterLayer.layer_from_file('test1.tif') as layer1:
@@ -296,6 +296,23 @@ import yirgaceffe.operators as yo
 calc = yo.log10(layer1 / layer2)
 ```
 
+### 2D matrix convolution
+
+To facilitate image processing algorithms you can supply a weight matrix to generate a processed image. Currently this support only works for square weight matrices of an odd size.
+
+For example, to apply a blur function to a raster:
+
+```python
+blur_filter = np.array([
+    [0.0, 0.1, 0.0],
+    [0.1, 0.6, 0.1],
+    [0.0, 0.1, 0.0],
+])
+with RasterLayer.layer_from_file('original.tif') as layer1:
+    with RasterLayer.empty_raster_layer_like(layer1, 'blurred.tif') as result:
+        calc = layer1.conv2d(blur_filter)
+        calc.save(result)
+```
 
 ### Apply
 
