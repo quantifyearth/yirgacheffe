@@ -50,4 +50,7 @@ jobs:
         run: python3 -m build
 
       - name: Publish with twine
-        run: twine check dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TWINE_API_TOKEN }}
+        run: twine upload dist/*
