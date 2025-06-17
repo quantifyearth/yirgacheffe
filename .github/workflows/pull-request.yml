@@ -1,10 +1,10 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Python Publish CI
+name: Python Pull Request CI
 
 on:
-  push:
+  pull_request:
     branches: ["main"]
 
 jobs:
@@ -49,5 +49,5 @@ jobs:
       - name: Build pip package
         run: python3 -m build
 
-      - name: Publish with twine
+      - name: Check with twine
         run: twine check dist/*
