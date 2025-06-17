@@ -10,12 +10,7 @@ version = "1.2.0"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
-license = { file = "LICENSE" }
-classifiers = [
-    "License :: OSI Approved :: ISC License",
-    "Programming Language :: Python",
-    "Programming Language :: Python :: 3",
-]
+license = "ISC"
 keywords = ["gdal", "numpy", "math"]
 dependencies = [
     "numpy",
