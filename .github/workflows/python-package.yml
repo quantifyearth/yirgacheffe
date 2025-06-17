@@ -10,6 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: publishing
     container: ghcr.io/osgeo/gdal:ubuntu-small-3.11.0
     strategy:
       fail-fast: false
