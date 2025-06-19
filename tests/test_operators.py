@@ -1197,6 +1197,34 @@ def test_clip_lower_module() -> None:
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
 
+def test_abs_method() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [-1.0, -2.0, -3.0, -4.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.abs()
+    comp.save(result)
+
+    expected = backend.abs_op(backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_abs_module() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [-1.0, -2.0, -3.0, -4.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.abs(layer1)
+    comp.save(result)
+
+    expected = backend.abs_op(backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
 @pytest.mark.parametrize("skip", [
     1,
     2,

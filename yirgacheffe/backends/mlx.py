@@ -43,6 +43,7 @@ full = mx.full
 allclose = mx.allclose
 remainder_op = mx.remainder
 floordiv_op = mx.array.__floordiv__
+abs_op = mx.abs
 
 def sum_op(a):
     # There are weird issues around how MLX overflows int8, so just promote the data ahead of summing
@@ -153,4 +154,5 @@ operator_map = {
     op.REMAINDER: mx.remainder,
     op.FLOORDIV: mx.array.__floordiv__,
     op.CONV2D: conv2d_op,
+    op.ABS: mx.abs,
 }

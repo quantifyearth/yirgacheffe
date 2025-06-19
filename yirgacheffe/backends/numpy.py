@@ -46,6 +46,7 @@ full = np.full
 allclose = np.allclose
 remainder_op = np.ndarray.__mod__
 floordiv_op = np.ndarray.__floordiv__
+abs_op = np.abs
 
 def conv2d_op(data, weights):
     # torch wants to process dimensions of channels of width of height
@@ -90,6 +91,7 @@ operator_map = {
 	op.REMAINDER: np.ndarray.__mod__,
 	op.FLOORDIV: np.ndarray.__floordiv__,
 	op.CONV2D: conv2d_op,
+	op.ABS: np.abs,
 }
 
 operator_str_map = {
