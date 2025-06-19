@@ -271,6 +271,7 @@ with RasterLayer.layer_from_file('test1.tif') as layer1:
 
 The following math operators common to numpy and other libraries are currently supported:
 
+* abs
 * clip
 * exp
 * exp2

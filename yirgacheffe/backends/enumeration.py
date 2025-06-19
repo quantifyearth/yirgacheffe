@@ -31,3 +31,4 @@ class operators(Enum):
     REMAINDER = 28
     FLOORDIV = 29
     CONV2D = 30
+    ABS = 31

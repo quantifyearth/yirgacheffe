@@ -112,6 +112,13 @@ class LayerMathMixin:
             test_elements=test_elements,
         )
 
+    def abs(self):
+        return LayerOperation(
+            self,
+            op.ABS,
+            window_op=WindowOperation.NONE,
+        )
+
     def log(self):
         return LayerOperation(
             self,
@@ -736,3 +743,4 @@ exp = LayerOperation.exp
 exp2 = LayerOperation.exp2
 nan_to_num = LayerOperation.nan_to_num
 isin = LayerOperation.isin
+abs = LayerOperation.abs # pylint: disable=W0622
