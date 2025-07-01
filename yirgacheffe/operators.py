@@ -17,84 +17,10 @@ from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down
 from .window import Area, PixelScale, Window
 from .backends import backend
 from .backends.enumeration import operators as op
+from .backends.enumeration import dtype as DataType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
-
-class DataType(Enum):
-    # For historical reasons this has to match with GDAL
-    Float32 = gdal.GDT_Float32
-    Float64 = gdal.GDT_Float64
-    Byte = gdal.GDT_Byte
-    Int8 = gdal.GDT_Int8
-    Int16 = gdal.GDT_Int16
-    Int32 = gdal.GDT_Int32
-    Int64 = gdal.GDT_Int64
-    UInt8 = gdal.GDT_Byte
-    UInt16 = gdal.GDT_UInt16
-    UInt32 = gdal.GDT_UInt32
-    UInt64 = gdal.GDT_UInt64
-
-    def to_numpy(self):
-        match self:
-            case DataType.Float32:
-                return np.float32
-            case DataType.Float64:
-                return np.float64
-            case DataType.Byte:
-                return np.uint8
-            case DataType.Int8:
-                return np.int8
-            case DataType.Int16:
-                return np.int16
-            case DataType.Int32:
-                return np.int32
-            case DataType.Int64:
-                return np.int64
-            case DataType.UInt8:
-                return np.uint8
-            case DataType.UInt16:
-                return np.uint16
-            case DataType.UInt32:
-                return np.uint32
-            case DataType.UInt64:
-                return np.uint64
-            case _:
-                raise ValueError
-
-    @classmethod
-    def of_numpy(cls, val):
-        match val:
-            case np.float32:
-                return cls.Float32
-            case np.float64:
-                return cls.Float64
-            case np.int8:
-                return cls.Int8
-            case np.int16:
-                return cls.Int16
-            case np.int32:
-                return cls.Int32
-            case np.int64:
-                return cls.Int64
-            case np.uint8:
-                return cls.Byte
-            case np.uint16:
-                return cls.UInt16
-            case np.uint32:
-                return cls.UInt32
-            case np.uint64:
-                return cls.UInt64
-            case _:
-                raise ValueError
-
-    def to_gdal(self):
-        return self.value
-
-    @classmethod
-    def of_gdal(cls, val):
-        return cls(val)
-
 
 class WindowOperation(Enum):
     NONE = 1
@@ -282,6 +208,14 @@ class LayerMathMixin:
 
     def max(self):
         return LayerOperation(self).max()
+
+    def astype(self, datatype):
+        return LayerOperation(
+            self,
+            op.ASTYPE,
+            window_op=WindowOperation.NONE,
+            datatype=datatype
+        )
 
 
 class LayerOperation(LayerMathMixin):

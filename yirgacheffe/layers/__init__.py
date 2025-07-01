@@ -13,7 +13,6 @@ try:
 except ModuleNotFoundError:
     pass
 
-
 class Layer(RasterLayer):
     """A place holder for now, at some point I want to replace Layer with RasterLayer."""
 
