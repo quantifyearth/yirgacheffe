@@ -11,6 +11,14 @@ Example common use-cases:
 * Do the raster layers get big and take up large amounts of memory? Yirgacheffe will let you do simple numerical operations with layers directly and then worry about the memory management behind the scenes for you.
 
 
+## Installation
+
+Yirgacheffe is available via pypi, so can be installed with pip for example:
+
+```SystemShell
+$ pip install yirgacheffe
+```
+
 ## Basic usage
 
 They main unit of data in Yirgacheffe is a "layer", which wraps either a raster dataset or polygon data, and then you can do work on layers without having to worry (unless you choose to) about how they align - Yirgacheffe will work out all the details around overlapping

@@ -1,7 +1,7 @@
 
 from typing import Any, List, Optional, Tuple
 
-from ..operators import LayerMathMixin
+from ..operators import DataType, LayerMathMixin
 from ..rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
 from ..window import Area, PixelScale, Window
 
@@ -35,7 +35,7 @@ class YirgacheffeLayer(LayerMathMixin):
         self.close()
 
     @property
-    def datatype(self) -> int:
+    def datatype(self) -> DataType:
         raise NotImplementedError("Must be overridden by subclass")
 
     @property

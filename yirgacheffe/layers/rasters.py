@@ -9,6 +9,7 @@ from .. import WGS_84_PROJECTION
 from ..window import Area, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
+from ..operators import DataType
 from ..backends import backend
 
 # Still to early to require Python 3.11 :/
@@ -27,7 +28,7 @@ class RasterLayer(YirgacheffeLayer):
     def empty_raster_layer(
         area: Area,
         scale: PixelScale,
-        datatype: int,
+        datatype: Union[int, DataType],
         filename: Optional[str]=None,
         projection: str=WGS_84_PROJECTION,
         name: Optional[str]=None,
@@ -46,6 +47,10 @@ class RasterLayer(YirgacheffeLayer):
             top=math.ceil(area.top / abs_ystep) * abs_ystep,
             bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
         )
+
+        # This used to the the GDAL type, so we support that for legacy reasons
+        if isinstance(datatype, int):
+            datatype = DataType.of_gdal(datatype)
 
         options = []
         if threads is not None:
@@ -69,7 +74,7 @@ class RasterLayer(YirgacheffeLayer):
             round_up_pixels((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep, abs_xstep),
             round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
             bands,
-            datatype,
+            datatype.to_gdal(),
             options
         )
         dataset.SetGeoTransform([
@@ -85,7 +90,7 @@ class RasterLayer(YirgacheffeLayer):
         layer: Any,
         filename: Optional[str]=None,
         area: Optional[Area]=None,
-        datatype: Optional[int]=None,
+        datatype: Optional[Union[int, DataType]]=None,
         compress: bool=True,
         nodata: Optional[Union[float,int]]=None,
         nbits: Optional[int]=None,
@@ -97,6 +102,10 @@ class RasterLayer(YirgacheffeLayer):
         if area is None:
             area = layer.area
         assert area is not None
+
+        if datatype is not None:
+            if isinstance(datatype, int):
+                datatype = DataType.of_gdal(datatype)
 
         scale = layer.pixel_scale
         if scale is None:
@@ -130,7 +139,7 @@ class RasterLayer(YirgacheffeLayer):
             width,
             height,
             bands,
-            datatype if datatype is not None else layer.datatype,
+            (datatype if datatype is not None else layer.datatype).to_gdal(),
             options,
         )
         dataset.SetGeoTransform(geo_transform)
@@ -181,7 +190,7 @@ class RasterLayer(YirgacheffeLayer):
             new_width,
             new_height,
             1,
-            source.datatype,
+            source.datatype.to_gdal(),
             options
         )
         dataset.SetGeoTransform((
@@ -279,11 +288,11 @@ class RasterLayer(YirgacheffeLayer):
                 raise FileNotFoundError(f"Failed to open pickled raster {self._dataset_path}") from exc
 
     @property
-    def datatype(self) -> int:
+    def datatype(self) -> DataType:
         if self._dataset is None:
             self._unpark()
         assert self._dataset
-        return self._dataset.GetRasterBand(1).DataType
+        return DataType.of_gdal(self._dataset.GetRasterBand(1).DataType)
 
     def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
         if self._dataset is None:
