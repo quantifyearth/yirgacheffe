@@ -323,6 +323,18 @@ with RasterLayer.layer_from_file('original.tif') as layer1:
         calc.save(result)
 ```
 
+### Type conversion
+
+Similar to numpy and other Python numerical libraries, Yirgacheffe will automatically deal with simple type conversion where possible, however sometimes explicit conversion is either necessary or desired. Similar to numpy, there is an `astype` operator that lets you set the conversion:
+
+```python
+from yirgacheffe.operations import DataType
+
+
+with RasterLayer.layer_from_file('float_data.tif') as float_layer:
+    int_layer = float_layer.astype(DataType.Int32)
+```
+
 ### Apply
 
 You can specify a function that takes either data from one layer or from two layers, and returns the processed data. There's two version of this: one that lets you specify a numpy function that'll be applied to the layer data as an array, or one that is more shader like that lets you do pixel wise processing.
