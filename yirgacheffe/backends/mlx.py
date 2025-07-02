@@ -122,7 +122,7 @@ def conv2d_op(data, weights):
     preped_data = mx.array(np.reshape(unshifted_data_shape, conv_data_shape))
 
     shifted_res = conv(preped_data)[0]
-    res = np.reshape(shifted_res, [1] + list(shifted_res.shape)[:-1])
+    res = mx.reshape(shifted_res, [1] + list(shifted_res.shape)[:-1])
     return res[0]
 
 
