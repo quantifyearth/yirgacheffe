@@ -4,6 +4,7 @@ import mlx.core as mx # pylint: disable=E0001,E0611,E0401
 import mlx.nn
 
 from .enumeration import operators as op
+from .enumeration import dtype
 
 array_t = mx.array
 float_t = mx.float32
@@ -121,8 +122,62 @@ def conv2d_op(data, weights):
     preped_data = mx.array(np.reshape(unshifted_data_shape, conv_data_shape))
 
     shifted_res = conv(preped_data)[0]
-    res = np.reshape(shifted_res, [1] + list(shifted_res.shape)[:-1])
+    res = mx.reshape(shifted_res, [1] + list(shifted_res.shape)[:-1])
     return res[0]
+
+
+def dtype_to_backed(dt):
+    match dt:
+        case dtype.Float32:
+            return mx.float32
+        case dtype.Float64:
+            return mx.float32
+        case dtype.Byte:
+            return mx.uint8
+        case dtype.Int8:
+            return mx.int8
+        case dtype.Int16:
+            return mx.int16
+        case dtype.Int32:
+            return mx.int32
+        case dtype.Int64:
+            return mx.int64
+        case dtype.UInt8:
+            return mx.uint8
+        case dtype.UInt16:
+            return mx.uint16
+        case dtype.UInt32:
+            return mx.uint32
+        case dtype.UInt64:
+            return mx.uint64
+        case _:
+            raise ValueError
+
+def backend_to_dtype(val):
+    match val:
+        case mx.float32:
+            return dtype.Float32
+        case mx.int8:
+            return dtype.Int8
+        case mx.int16:
+            return dtype.Int16
+        case mx.int32:
+            return dtype.Int32
+        case mx.int64:
+            return dtype.Int64
+        case mx.uint8:
+            return dtype.Byte
+        case mx.uint16:
+            return dtype.UInt16
+        case mx.uint32:
+            return dtype.UInt32
+        case mx.uint64:
+            return dtype.UInt64
+        case _:
+            raise ValueError
+
+def astype_op(data, datatype):
+    return data.astype(dtype_to_backed(datatype))
 
 operator_map = {
     op.ADD: mx.array.__add__,
@@ -155,4 +210,5 @@ operator_map = {
     op.FLOORDIV: mx.array.__floordiv__,
     op.CONV2D: conv2d_op,
     op.ABS: mx.abs,
+    op.ASTYPE: astype_op,
 }

@@ -8,6 +8,7 @@ from helpers import make_vectors_with_mutlile_ids, make_vectors_with_id, make_ve
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, RasteredVectorLayer, VectorLayer, VectorRangeLayer, DynamicVectorRangeLayer
 from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe.operators import DataType
 
 def test_basic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -139,7 +140,7 @@ def test_vector_layers_with_default_burn_value(klass) -> None:
         assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
-        assert layer.datatype == gdal.GDT_Byte
+        assert layer.datatype == DataType.Byte
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half
@@ -256,13 +257,13 @@ def test_vector_layers_with_field_value(klass) -> None:
 @pytest.mark.parametrize(
     "value,expected",
     [
-        (1, gdal.GDT_Byte),
-        (42, gdal.GDT_Byte),
-        (-1, gdal.GDT_Int16),
-        (1024, gdal.GDT_UInt16),
-        (1024*1024, gdal.GDT_UInt32),
-        (-1024*1024, gdal.GDT_Int32),
-        (1.0, gdal.GDT_Float64),
+        (1, DataType.Byte),
+        (42, DataType.Byte),
+        (-1, DataType.Int16),
+        (1024, DataType.UInt16),
+        (1024*1024, DataType.UInt32),
+        (-1024*1024, DataType.Int32),
+        (1.0, DataType.Float64),
     ]
 )
 def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
@@ -294,14 +295,14 @@ def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
 @pytest.mark.parametrize(
     "value,datatype",
     [
-        (1, gdal.GDT_Byte),
-        (42, gdal.GDT_Byte),
-        (1, gdal.GDT_Int16),
-        (42, gdal.GDT_Int16),
-        (1024, gdal.GDT_Int16),
-        (1.0, gdal.GDT_Float32),
-        (0.5, gdal.GDT_Float32),
-        (1.0, gdal.GDT_Float64),
+        (1, DataType.Byte),
+        (42, DataType.Byte),
+        (1, DataType.Int16),
+        (42, DataType.Int16),
+        (1024, DataType.Int16),
+        (1.0, DataType.Float32),
+        (0.5, DataType.Float32),
+        (1.0, DataType.Float64),
     ]
 )
 def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
@@ -334,8 +335,8 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
 @pytest.mark.parametrize(
     "value,expected",
     [
-        (1, gdal.GDT_Int64),
-        (1.0, gdal.GDT_Float64),
+        (1, DataType.Int64),
+        (1.0, DataType.Float64),
     ]
 )
 def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None:
@@ -448,7 +449,7 @@ def test_vector_layers_with_empty_features(klass) -> None:
         assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
-        assert layer.datatype == gdal.GDT_Byte
+        assert layer.datatype == DataType.Byte
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half

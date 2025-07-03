@@ -4,6 +4,7 @@ import os
 from typing import Any, List, Optional, TypeVar
 
 import numpy as np
+from yirgacheffe.operators import DataType
 
 from ..rounding import are_pixel_scales_equal_enough, round_down_pixels
 from ..window import Area, Window
@@ -72,8 +73,8 @@ class GroupLayer(YirgacheffeLayer):
                 pass
 
     @property
-    def datatype(self):
-        return self.layers[0].datatype
+    def datatype(self) -> DataType:
+        return DataType.of_gdal(self.layers[0].datatype)
 
     def set_window_for_intersection(self, new_area: Area) -> None:
         super().set_window_for_intersection(new_area)

@@ -9,6 +9,7 @@ from helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data
 from yirgacheffe.window import Area, PixelScale, Window
 from yirgacheffe.layers import RasterLayer, InvalidRasterBand
 from yirgacheffe.rounding import round_up_pixels
+from yirgacheffe.operators import DataType
 
 
 # There is a lot of "del" in this file, due to a combination of gdal having no way
@@ -128,12 +129,12 @@ def test_empty_layer_from_raster_with_new_smaller_area():
 
 def test_empty_layer_from_raster_new_datatype():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
-    assert source.datatype == gdal.GDT_Byte
+    assert source.datatype == DataType.Byte
     empty = RasterLayer.empty_raster_layer_like(source, datatype=gdal.GDT_Float64)
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
     assert empty.window == source.window
-    assert empty.datatype == gdal.GDT_Float64
+    assert empty.datatype == DataType.Float64
 
 def test_empty_layer_from_raster_with_window():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))

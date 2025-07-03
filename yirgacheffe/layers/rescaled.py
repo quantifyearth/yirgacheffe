@@ -2,6 +2,7 @@ from math import floor, ceil
 from typing import Any, Optional
 
 from skimage import transform
+from yirgacheffe.operators import DataType
 
 from ..window import PixelScale, Window
 from .rasters import RasterLayer, YirgacheffeLayer
@@ -56,7 +57,7 @@ class RescaledRasterLayer(YirgacheffeLayer):
         self._src._unpark()
 
     @property
-    def datatype(self) -> int:
+    def datatype(self) -> DataType:
         return self._src.datatype
 
     def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:

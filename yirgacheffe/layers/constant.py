@@ -1,7 +1,6 @@
 from typing import Any, Union
 
-from osgeo import gdal
-
+from ..operators import DataType
 from ..window import Area, PixelScale, Window
 from .base import YirgacheffeLayer
 from ..backends import backend
@@ -22,8 +21,8 @@ class ConstantLayer(YirgacheffeLayer):
         self.value = float(value)
 
     @property
-    def datatype(self) -> int:
-        return gdal.GDT_Float64
+    def datatype(self) -> DataType:
+        return DataType.Float64
 
     def check_pixel_scale(self, _scale: PixelScale) -> bool:
         return True

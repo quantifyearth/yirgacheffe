@@ -5,6 +5,7 @@ from typing_extensions import NotRequired
 
 from osgeo import gdal, ogr
 
+from ..operators import DataType
 from ..window import Area, PixelScale
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
@@ -64,7 +65,7 @@ class RasteredVectorLayer(RasterLayer):
         where_filter: Optional[str],
         scale: PixelScale,
         projection: str,
-        datatype: Optional[int] = None,
+        datatype: Optional[Union[int, DataType]] = None,
         burn_value: Union[int,float,str] = 1,
     ): # pylint: disable=W0221
         vectors = ogr.Open(filename)
@@ -77,6 +78,9 @@ class RasteredVectorLayer(RasterLayer):
         estimated_datatype = _validate_burn_value(burn_value, layer)
         if datatype is None:
             datatype = estimated_datatype
+
+        if isinstance(datatype, int):
+            datatype = DataType.of_gdal(datatype)
 
         vector_layer = RasteredVectorLayer(
             layer,
@@ -97,7 +101,7 @@ class RasteredVectorLayer(RasterLayer):
         layer: ogr.Layer,
         scale: PixelScale,
         projection: str,
-        datatype: int = gdal.GDT_Byte,
+        datatype: Union[int, DataType] = DataType.Byte,
         burn_value: Union[int,float,str] = 1,
     ):
         if layer is None:
@@ -105,6 +109,9 @@ class RasteredVectorLayer(RasterLayer):
         self.layer = layer
 
         self._original = None
+
+        if isinstance(datatype, int):
+            datatype = DataType.of_gdal(datatype)
 
         # work out region for mask
         envelopes = []
@@ -135,7 +142,7 @@ class RasteredVectorLayer(RasterLayer):
             round((area.right - area.left) / abs_xstep),
             round((area.top - area.bottom) / abs_ystep),
             1,
-            datatype,
+            datatype.to_gdal(),
             []
         )
         if not dataset:
@@ -164,7 +171,7 @@ class VectorLayer(YirgacheffeLayer):
         filename: str,
         other_layer: YirgacheffeLayer,
         where_filter: Optional[str]=None,
-        datatype: Optional[int] = None,
+        datatype: Optional[Union[int, DataType]] = None,
         burn_value: Union[int,float,str] = 1,
     ):
         if other_layer is None:
@@ -178,6 +185,10 @@ class VectorLayer(YirgacheffeLayer):
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
+
+        if datatype is not None:
+            if isinstance(datatype, int):
+                datatype = DataType.of_gdal(datatype)
 
         vector_layer = VectorLayer(
             layer,
@@ -205,7 +216,7 @@ class VectorLayer(YirgacheffeLayer):
         where_filter: Optional[str],
         scale: PixelScale,
         projection: str,
-        datatype: Optional[int] = None,
+        datatype: Optional[Union[int, DataType]] = None,
         burn_value: Union[int,float,str] = 1,
         anchor: Tuple[float,float] = (0.0, 0.0)
     ):
@@ -219,6 +230,9 @@ class VectorLayer(YirgacheffeLayer):
         estimated_datatype = _validate_burn_value(burn_value, layer)
         if datatype is None:
             datatype = estimated_datatype
+
+        if isinstance(datatype, int):
+            datatype = DataType.of_gdal(datatype)
 
         vector_layer = VectorLayer(
             layer,
@@ -244,7 +258,7 @@ class VectorLayer(YirgacheffeLayer):
         scale: PixelScale,
         projection: str,
         name: Optional[str] = None,
-        datatype: int = gdal.GDT_Byte,
+        datatype: Union[int,DataType] = DataType.Byte,
         burn_value: Union[int,float,str] = 1,
         anchor: Tuple[float,float] = (0.0, 0.0)
     ):
@@ -253,7 +267,10 @@ class VectorLayer(YirgacheffeLayer):
         self.layer = layer
         self.name = name
 
-        self._datatype = datatype
+        if isinstance(datatype, int):
+            self._datatype = DataType.of_gdal(datatype)
+        else:
+            self._datatype = datatype
 
         # If the burn value is a number, use it directly, if it's a string
         # then assume it is a column name in the dataset
@@ -332,7 +349,7 @@ class VectorLayer(YirgacheffeLayer):
                 self.layer.SetAttributeFilter(self._filter)
 
     @property
-    def datatype(self) -> int:
+    def datatype(self) -> DataType:
         return self._datatype
 
     def read_array_for_area(self, target_area: Area, x: int, y: int, width: int, height: int) -> Any:
@@ -348,7 +365,7 @@ class VectorLayer(YirgacheffeLayer):
             width,
             height,
             1,
-            self.datatype,
+            self.datatype.to_gdal(),
             []
         )
         if not dataset:

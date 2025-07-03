@@ -10,7 +10,7 @@ from osgeo import gdal
 from helpers import gdal_dataset_with_data
 import yirgacheffe
 from yirgacheffe.layers import RasterLayer, ConstantLayer
-from yirgacheffe.operators import LayerOperation
+from yirgacheffe.operators import LayerOperation, DataType
 from yirgacheffe.backends import backend
 
 def test_add_byte_layers() -> None:
@@ -21,8 +21,8 @@ def test_add_byte_layers() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    assert layer1.datatype == gdal.GDT_Byte
-    assert layer2.datatype == gdal.GDT_Byte
+    assert layer1.datatype == DataType.Byte
+    assert layer2.datatype == DataType.Byte
 
     comp = layer1 + layer2
     comp.save(result)
@@ -64,8 +64,8 @@ def test_add_byte_layers_with_callback(skip, expected_steps) -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    assert layer1.datatype == gdal.GDT_Byte
-    assert layer2.datatype == gdal.GDT_Byte
+    assert layer1.datatype == DataType.Byte
+    assert layer2.datatype == DataType.Byte
 
     callback_possitions = []
 
@@ -632,7 +632,7 @@ def test_save_and_sum_float32(monkeypatch) -> None:
 
     data1 = np.array(data, dtype=np.float32)
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    assert layer1.datatype == gdal.GDT_Float32
+    assert layer1.datatype == DataType.Float32
 
     # Sum forces things to float64
     expected = np.sum(data1.astype(np.float64))
@@ -660,7 +660,7 @@ def test_parallel_save_and_sum_float32(monkeypatch) -> None:
         dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
         dataset1.Close()
         layer1 = RasterLayer.layer_from_file(path1)
-        assert layer1.datatype == gdal.GDT_Float32
+        assert layer1.datatype == DataType.Float32
 
         # Sum forces things to float64
         expected = np.sum(data1.astype(np.float64))
@@ -684,7 +684,7 @@ def test_sum_float32(monkeypatch) -> None:
 
     data1 = np.array(data, dtype=np.float32)
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    assert layer1.datatype == gdal.GDT_Float32
+    assert layer1.datatype == DataType.Float32
 
     # Sum forces things to float64
     expected = np.sum(data1.astype(np.float64))
@@ -703,8 +703,8 @@ def test_and_byte_layers() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    assert layer1.datatype == gdal.GDT_Byte
-    assert layer2.datatype == gdal.GDT_Byte
+    assert layer1.datatype == DataType.Byte
+    assert layer2.datatype == DataType.Byte
 
     comp = layer1 & layer2
     comp.save(result)
@@ -722,8 +722,8 @@ def test_or_byte_layers() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    assert layer1.datatype == gdal.GDT_Byte
-    assert layer2.datatype == gdal.GDT_Byte
+    assert layer1.datatype == DataType.Byte
+    assert layer2.datatype == DataType.Byte
 
     comp = layer1 | layer2
     comp.save(result)
@@ -741,8 +741,8 @@ def test_and_int_layers() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    assert layer1.datatype == gdal.GDT_Int16
-    assert layer2.datatype == gdal.GDT_Int16
+    assert layer1.datatype == DataType.Int16
+    assert layer2.datatype == DataType.Int16
 
     comp = layer1 & layer2
     comp.save(result)
@@ -760,8 +760,8 @@ def test_or_int_layers() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    assert layer1.datatype == gdal.GDT_Int16
-    assert layer2.datatype == gdal.GDT_Int16
+    assert layer1.datatype == DataType.Int16
+    assert layer2.datatype == DataType.Int16
 
     comp = layer1 | layer2
     comp.save(result)

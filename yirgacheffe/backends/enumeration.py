@@ -1,5 +1,7 @@
 from enum import Enum
 
+from osgeo import gdal
+
 class operators(Enum):
     ADD = 1
     SUB = 2
@@ -32,3 +34,25 @@ class operators(Enum):
     FLOORDIV = 29
     CONV2D = 30
     ABS = 31
+    ASTYPE = 32
+
+
+class dtype(Enum):
+    Float32 = gdal.GDT_Float32
+    Float64 = gdal.GDT_Float64
+    Byte = gdal.GDT_Byte
+    Int8 = gdal.GDT_Int8
+    Int16 = gdal.GDT_Int16
+    Int32 = gdal.GDT_Int32
+    Int64 = gdal.GDT_Int64
+    UInt8 = gdal.GDT_Byte
+    UInt16 = gdal.GDT_UInt16
+    UInt32 = gdal.GDT_UInt32
+    UInt64 = gdal.GDT_UInt64
+
+    def to_gdal(self):
+        return self.value
+
+    @classmethod
+    def of_gdal(cls, val):
+        return cls(val)

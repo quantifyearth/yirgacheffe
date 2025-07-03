@@ -3,6 +3,7 @@ import numpy as np
 import torch
 
 from .enumeration import operators as op
+from .enumeration import dtype
 
 array_t = np.ndarray
 float_t = np.float64
@@ -61,52 +62,91 @@ def conv2d_op(data, weights):
     res = conv(preped_data)
     return res.detach().numpy()[0][0]
 
-operator_map = {
-	op.ADD: np.ndarray.__add__,
-	op.SUB: np.ndarray.__sub__,
-	op.MUL: np.ndarray.__mul__,
-	op.TRUEDIV: np.ndarray.__truediv__,
-	op.POW: np.ndarray.__pow__,
-	op.EQ: np.ndarray.__eq__,
-	op.NE: np.ndarray.__ne__,
-	op.LT: np.ndarray.__lt__,
-	op.LE: np.ndarray.__le__,
-	op.GT: np.ndarray.__gt__,
-	op.GE: np.ndarray.__ge__,
-	op.AND: np.ndarray.__and__,
-	op.OR: np.ndarray.__or__,
-	op.LOG: np.log,
-	op.LOG2: np.log2,
-	op.LOG10: np.log10,
-	op.EXP: np.exp,
-	op.EXP2: np.exp2,
-	op.CLIP: np.clip,
-	op.WHERE: np.where,
-	op.MIN: np.min,
-	op.MAX: np.max,
-	op.MINIMUM: np.minimum,
-	op.MAXIMUM: np.maximum,
-	op.NAN_TO_NUM: np.nan_to_num,
-	op.ISIN: np.isin,
-	op.REMAINDER: np.ndarray.__mod__,
-	op.FLOORDIV: np.ndarray.__floordiv__,
-	op.CONV2D: conv2d_op,
-	op.ABS: np.abs,
-}
+def dtype_to_backed(dt):
+    match dt:
+        case dtype.Float32:
+            return np.float32
+        case dtype.Float64:
+            return np.float64
+        case dtype.Byte:
+            return np.uint8
+        case dtype.Int8:
+            return np.int8
+        case dtype.Int16:
+            return np.int16
+        case dtype.Int32:
+            return np.int32
+        case dtype.Int64:
+            return np.int64
+        case dtype.UInt8:
+            return np.uint8
+        case dtype.UInt16:
+            return np.uint16
+        case dtype.UInt32:
+            return np.uint32
+        case dtype.UInt64:
+            return np.uint64
+        case _:
+            raise ValueError
 
-operator_str_map = {
-	op.POW: "np.ndarray.__pow__(%s, %s)",
-	op.LOG: "np.log(%s)",
-	op.LOG2: "np.log2(%s)",
-	op.LOG10: "np.log10(%s)",
-	op.EXP: "np.exp(%s)",
-	op.EXP2: "np.exp2(%s)",
-	op.CLIP: "np.clip",
-	op.WHERE: "np.where(%s, %s, %s)",
-	op.MIN: "np.min(%s)",
-	op.MAX: "np.max(%s)",
-	op.MINIMUM: "np.minimum(%s)",
-	op.MAXIMUM: "np.maximum(%s)",
-	op.NAN_TO_NUM: "np.nan_to_num(%s)",
-	op.ISIN: "np.isin(%s, %s)",
+def backend_to_dtype(val):
+    match val:
+        case np.float32:
+            return dtype.Float32
+        case np.float64:
+            return dtype.Float64
+        case np.int8:
+            return dtype.Int8
+        case np.int16:
+            return dtype.Int16
+        case np.int32:
+            return dtype.Int32
+        case np.int64:
+            return dtype.Int64
+        case np.uint8:
+            return dtype.Byte
+        case np.uint16:
+            return dtype.UInt16
+        case np.uint32:
+            return dtype.UInt32
+        case np.uint64:
+            return dtype.UInt64
+        case _:
+            raise ValueError
+
+def astype_op(data, datatype):
+    return data.astype(dtype_to_backed(datatype))
+
+operator_map = {
+    op.ADD: np.ndarray.__add__,
+    op.SUB: np.ndarray.__sub__,
+    op.MUL: np.ndarray.__mul__,
+    op.TRUEDIV: np.ndarray.__truediv__,
+    op.POW: np.ndarray.__pow__,
+    op.EQ: np.ndarray.__eq__,
+    op.NE: np.ndarray.__ne__,
+    op.LT: np.ndarray.__lt__,
+    op.LE: np.ndarray.__le__,
+    op.GT: np.ndarray.__gt__,
+    op.GE: np.ndarray.__ge__,
+    op.AND: np.ndarray.__and__,
+    op.OR: np.ndarray.__or__,
+    op.LOG: np.log,
+    op.LOG2: np.log2,
+    op.LOG10: np.log10,
+    op.EXP: np.exp,
+    op.EXP2: np.exp2,
+    op.CLIP: np.clip,
+    op.WHERE: np.where,
+    op.MIN: np.min,
+    op.MAX: np.max,
+    op.MINIMUM: np.minimum,
+    op.MAXIMUM: np.maximum,
+    op.NAN_TO_NUM: np.nan_to_num,
+    op.ISIN: np.isin,
+    op.REMAINDER: np.ndarray.__mod__,
+    op.FLOORDIV: np.ndarray.__floordiv__,
+    op.CONV2D: conv2d_op,
+    op.ABS: np.abs,
+    op.ASTYPE: astype_op,
 }

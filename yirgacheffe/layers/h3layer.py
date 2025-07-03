@@ -3,7 +3,7 @@ from typing import Any
 
 import h3
 import numpy as np
-from osgeo import gdal
+from yirgacheffe.operators import DataType
 
 from ..rounding import round_up_pixels
 from ..window import Area, PixelScale, Window
@@ -76,8 +76,8 @@ class H3CellLayer(YirgacheffeLayer):
 
 
     @property
-    def datatype(self) -> int:
-        return gdal.GDT_Float64
+    def datatype(self) -> DataType:
+        return DataType.Float64
 
     def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
         if (xsize <= 0) or (ysize <= 0):

@@ -17,6 +17,7 @@ from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down
 from .window import Area, PixelScale, Window
 from .backends import backend
 from .backends.enumeration import operators as op
+from .backends.enumeration import dtype as DataType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -208,6 +209,14 @@ class LayerMathMixin:
     def max(self):
         return LayerOperation(self).max()
 
+    def astype(self, datatype):
+        return LayerOperation(
+            self,
+            op.ASTYPE,
+            window_op=WindowOperation.NONE,
+            datatype=datatype
+        )
+
 
 class LayerOperation(LayerMathMixin):
 
@@ -392,7 +401,7 @@ class LayerOperation(LayerMathMixin):
         )
 
     @property
-    def datatype(self):
+    def datatype(self) -> DataType:
         # TODO: Work out how to indicate type promotion via numpy
         return self.lhs.datatype
 
