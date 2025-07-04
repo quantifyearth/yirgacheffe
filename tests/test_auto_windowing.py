@@ -2,7 +2,9 @@ import os
 import tempfile
 
 import numpy as np
+import pytest
 
+import yirgacheffe
 from helpers import gdal_dataset_with_data, make_vectors_with_mutlile_ids
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer, area
 from yirgacheffe.window import Area
@@ -247,4 +249,36 @@ def test_vector_layers_multiply() -> None:
 		actual = result.read_array(0, 0, 2, 2)
 
 		expected = np.array([[2, 0], [0, 8]])
+		assert (expected == actual).all()
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_parallel_save_windows() -> None:
+	data1 = np.array([[1, 2], [3, 4]])
+	data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80], [90, 100, 110, 120], [130, 140, 150, 160]])
+
+	with tempfile.TemporaryDirectory() as tempdir:
+		layer1_filename = os.path.join(tempdir, "layer1.tif")
+		layer1_dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=layer1_filename)
+		layer1_dataset.Close()
+
+		layer2_filename = os.path.join(tempdir, "layer2.tif")
+		layer2_dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=layer2_filename)
+		layer2_dataset.Close()
+
+		layer1 = RasterLayer.layer_from_file(layer1_filename)
+		layer2 = RasterLayer.layer_from_file(layer2_filename)
+
+		assert layer1.area != layer2.area
+		assert layer1.window != layer2.window
+
+		calc = layer1 + layer2
+
+		assert calc.area == layer2.area
+		assert calc.window == layer2.window
+
+		result = RasterLayer.empty_raster_layer_like(calc)
+		calc.parallel_save(result)
+
+		expected = np.array([[11, 22, 30, 40], [53, 64, 70, 80], [90, 100, 110, 120], [130, 140, 150, 160]])
+		actual = result.read_array(0, 0, 4, 4)
 		assert (expected == actual).all()

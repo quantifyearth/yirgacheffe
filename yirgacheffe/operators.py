@@ -529,7 +529,7 @@ class LayerOperation(LayerMathMixin):
 
         return total if and_sum else None
 
-    def _parallel_worker(self, index, shared_mem, sem, np_dtype, width, input_queue, output_queue):
+    def _parallel_worker(self, index, shared_mem, sem, np_dtype, width, input_queue, output_queue, computation_window):
         arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
 
         try:
@@ -549,7 +549,7 @@ class LayerOperation(LayerMathMixin):
                     break
                 yoffset, step = task
 
-                result = self._eval(self.area, yoffset, step)
+                result = self._eval(self.area, yoffset, step, computation_window)
                 backend.eval_op(result)
 
                 arr[:step] = backend.demote_array(result)
@@ -650,7 +650,8 @@ class LayerOperation(LayerMathMixin):
                     np_dtype,
                     computation_window.xsize,
                     source_queue,
-                    result_queue
+                    result_queue,
+                    computation_window
                 )) for i in range(worker_count)]
                 for worker in workers:
                     worker.start()
