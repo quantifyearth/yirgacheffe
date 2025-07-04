@@ -2,7 +2,9 @@ import os
 import tempfile
 
 import numpy as np
+import pytest
 
+import yirgacheffe
 from helpers import gdal_dataset_with_data, make_vectors_with_mutlile_ids
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer, area
 from yirgacheffe.window import Area
@@ -249,7 +251,8 @@ def test_vector_layers_multiply() -> None:
 		expected = np.array([[2, 0], [0, 8]])
 		assert (expected == actual).all()
 
-def test_pararllel_save_windows() -> None:
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_parallel_save_windows() -> None:
 	data1 = np.array([[1, 2], [3, 4]])
 	data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80], [90, 100, 110, 120], [130, 140, 150, 160]])
 
