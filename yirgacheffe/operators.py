@@ -1,4 +1,5 @@
 import logging
+import math
 import multiprocessing
 import sys
 import time
@@ -578,6 +579,20 @@ class LayerOperation(LayerMathMixin):
     def _parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
         assert (destination_layer is not None) or and_sum
         computation_window = self.window
+
+        worker_count = parallelism or multiprocessing.cpu_count()
+        work_blocks = len(range(0, computation_window.ysize, self.ystep))
+        adjusted_blocks = math.ceil(work_blocks / constants.MINIMUM_CHUNKS_PER_THREAD)
+        worker_count = min(adjusted_blocks, worker_count)
+
+        if worker_count == 1:
+            if destination_layer:
+                return self.save(destination_layer, and_sum, callback, band)
+            elif and_sum:
+                return self.sum()
+            else:
+                assert False
+
         if destination_layer is not None:
             try:
                 band = destination_layer._dataset.GetRasterBand(band)
@@ -614,10 +629,6 @@ class LayerOperation(LayerMathMixin):
 
         with multiprocessing.Manager() as manager:
             with SharedMemoryManager() as smm:
-
-                worker_count = parallelism or multiprocessing.cpu_count()
-                work_blocks = len(range(0, computation_window.ysize, self.ystep))
-                worker_count = min(work_blocks, worker_count)
 
                 mem_sem_cast = []
                 for i in range(worker_count):
