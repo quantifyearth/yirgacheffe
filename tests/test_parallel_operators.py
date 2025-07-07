@@ -19,237 +19,292 @@ from yirgacheffe.operators import LayerOperation
 # It seems that under the hood MLX is doing some threading of its own and my
 # guess is that that's interacting with the Python threading here.
 
+def test_add_byte_layers_with_one_thread_uses_regular_save(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 4)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_add_byte_layers() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path1 = os.path.join(tempdir, "test1.tif")
-        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-        dataset1.Close()
+            path2 = os.path.join(tempdir, "test2.tif")
+            data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+            dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
+            dataset2.Close()
 
-        path2 = os.path.join(tempdir, "test2.tif")
-        data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
-        dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
-        dataset2.Close()
+            layer1 = RasterLayer.layer_from_file(path1)
+            layer2 = RasterLayer.layer_from_file(path2)
+            result = RasterLayer.empty_raster_layer_like(layer1)
 
-        layer1 = RasterLayer.layer_from_file(path1)
-        layer2 = RasterLayer.layer_from_file(path2)
-        result = RasterLayer.empty_raster_layer_like(layer1)
-
-        comp = layer1 + layer2
-        comp.parallel_save(result)
-
-        expected = data1 + data2
-        actual = result.read_array(0, 0, 4, 2)
-
-        assert (expected == actual).all()
-
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_add_byte_layers_and_sum() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path1 = os.path.join(tempdir, "test1.tif")
-        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-        dataset1.Close()
-
-        path2 = os.path.join(tempdir, "test2.tif")
-        data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
-        dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
-        dataset2.Close()
-
-        layer1 = RasterLayer.layer_from_file(path1)
-        layer2 = RasterLayer.layer_from_file(path2)
-        result = RasterLayer.empty_raster_layer_like(layer1)
-
-        comp = layer1 + layer2
-        sum_total = comp.parallel_save(result, and_sum=True)
-
-        expected = data1 + data2
-        actual = result.read_array(0, 0, 4, 2)
-
-        assert (expected == actual).all()
-        assert sum_total == expected.sum()
-
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_parallel_sum() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path1 = os.path.join(tempdir, "test1.tif")
-        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-        dataset1.Close()
-
-        path2 = os.path.join(tempdir, "test2.tif")
-        data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
-        dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
-        dataset2.Close()
-
-        layer1 = RasterLayer.layer_from_file(path1)
-        layer2 = RasterLayer.layer_from_file(path2)
-
-        comp = layer1 + layer2
-        sum_total = comp.parallel_sum()
-
-        expected = data1 + data2
-        assert sum_total == expected.sum()
-
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-@pytest.mark.parametrize("skip,expected_steps", [
-    (1, [0.0, 0.5, 1.0]),
-    (2, [0.0, 1.0]),
-])
-def test_parallel_with_different_skip(skip, expected_steps) -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path1 = os.path.join(tempdir, "test1.tif")
-        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-        dataset1.Close()
-
-        path2 = os.path.join(tempdir, "test2.tif")
-        data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
-        dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
-        dataset2.Close()
-
-        layer1 = RasterLayer.layer_from_file(path1)
-        layer2 = RasterLayer.layer_from_file(path2)
-        result = RasterLayer.empty_raster_layer_like(layer1)
-
-        callback_possitions = []
-
-        comp = layer1 + layer2
-        comp.ystep = skip
-        comp.parallel_save(result, callback=lambda x: callback_possitions.append(x))
-
-        expected = data1 + data2
-        actual = result.read_array(0, 0, 4, 2)
-
-        assert (expected == actual).all()
-
-        assert callback_possitions == expected_steps
-
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_parallel_equality() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path1 = os.path.join(tempdir, "test1.tif")
-        data1 = np.array([[1, 2, 3, 4], [4, 3, 2, 1]])
-        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-        dataset1.Close()
-        with RasterLayer.layer_from_file(path1) as layer1:
-            with RasterLayer.empty_raster_layer_like(layer1) as result:
-                comp = layer1 == 2
+            comp = layer1 + layer2
+            with pytest.raises(TypeError):
                 comp.parallel_save(result)
 
-                expected = np.array([[0, 1, 0, 0], [0, 0, 1, 0]])
-                actual = result.read_array(0, 0, 4, 2)
-
-                assert (expected == actual).all()
 
 @pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_parallel_equality_to_file() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path1 = os.path.join(tempdir, "test1.tif")
-        path2 = os.path.join(tempdir, "result.tif")
-        data1 = np.array([[1, 2, 3, 4], [4, 3, 2, 1]])
-        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-        dataset1.Close()
-        with RasterLayer.layer_from_file(path1) as layer1:
-            comp = layer1 == 2
-            with RasterLayer.empty_raster_layer_like(layer1, filename=path2) as result:
-                comp.parallel_save(result)
-        with RasterLayer.layer_from_file(path2) as actual_result:
-            expected = np.array([[0, 1, 0, 0], [0, 0, 1, 0]])
-            actual = actual_result.read_array(0, 0, 4, 2)
+def test_add_byte_layers(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+
+            path2 = os.path.join(tempdir, "test2.tif")
+            data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+            dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
+            dataset2.Close()
+
+            layer1 = RasterLayer.layer_from_file(path1)
+            layer2 = RasterLayer.layer_from_file(path2)
+            result = RasterLayer.empty_raster_layer_like(layer1)
+
+            comp = layer1 + layer2
+            comp.parallel_save(result)
+
+            expected = data1 + data2
+            actual = result.read_array(0, 0, 4, 2)
+
             assert (expected == actual).all()
 
 @pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_parallel_unary_numpy_apply_with_function() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path1 = os.path.join(tempdir, "test1.tif")
-        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-        dataset1.Close()
-        layer1 = RasterLayer.layer_from_file(path1)
+def test_add_byte_layers_and_sum(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
 
-        result = RasterLayer.empty_raster_layer_like(layer1)
+            path2 = os.path.join(tempdir, "test2.tif")
+            data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+            dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
+            dataset2.Close()
 
-        def simple_add(chunk):
-            return chunk + 1.0
+            layer1 = RasterLayer.layer_from_file(path1)
+            layer2 = RasterLayer.layer_from_file(path2)
+            result = RasterLayer.empty_raster_layer_like(layer1)
 
-        comp = layer1.numpy_apply(simple_add)
-        comp.ystep = 1
-        comp.parallel_save(result)
+            comp = layer1 + layer2
+            sum_total = comp.parallel_save(result, and_sum=True)
 
-        expected = data1 + 1.0
-        actual = result.read_array(0, 0, 4, 2)
+            expected = data1 + data2
+            actual = result.read_array(0, 0, 4, 2)
 
-        assert (expected == actual).all()
-
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_parallel_unary_numpy_apply_with_lambda() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path1 = os.path.join(tempdir, "test1.tif")
-        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-        dataset1.Close()
-        layer1 = RasterLayer.layer_from_file(path1)
-
-        result = RasterLayer.empty_raster_layer_like(layer1)
-
-        comp = layer1.numpy_apply(lambda a: a + 1.0)
-        comp.ystep = 1
-        comp.parallel_save(result)
-
-        expected = data1 + 1.0
-        actual = result.read_array(0, 0, 4, 2)
-
-        assert (expected == actual).all()
+            assert (expected == actual).all()
+            assert sum_total == expected.sum()
 
 @pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_parallel_where_simple() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path1 = os.path.join(tempdir, "test1.tif")
-        data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]])
-        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-        dataset1.Close()
-        layer1 = RasterLayer.layer_from_file(path1)
+def test_parallel_sum(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
 
-        result = RasterLayer.empty_raster_layer_like(layer1)
+            path2 = os.path.join(tempdir, "test2.tif")
+            data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+            dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
+            dataset2.Close()
 
-        comp = LayerOperation.where(layer1 > 0, 1, 2)
-        comp.ystep = 1
-        comp.parallel_save(result)
+            layer1 = RasterLayer.layer_from_file(path1)
+            layer2 = RasterLayer.layer_from_file(path2)
 
-        expected = np.where(data1 > 0, 1, 2)
-        actual = result.read_array(0, 0, 4, 2)
-        assert (expected == actual).all()
+            comp = layer1 + layer2
+            sum_total = comp.parallel_sum()
+
+            expected = data1 + data2
+            assert sum_total == expected.sum()
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.parametrize("skip,expected_steps", [
+    (1, [0.0, 0.25, 0.5, 0.75, 1.0]),
+    (2, [0.0, 0.5, 1.0]),
+])
+def test_parallel_with_different_skip(monkeypatch, skip, expected_steps) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+
+            path2 = os.path.join(tempdir, "test2.tif")
+            data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80], [10, 20, 30, 40], [50, 60, 70, 80]])
+            dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
+            dataset2.Close()
+
+            layer1 = RasterLayer.layer_from_file(path1)
+            layer2 = RasterLayer.layer_from_file(path2)
+            result = RasterLayer.empty_raster_layer_like(layer1)
+
+            callback_possitions = []
+
+            comp = layer1 + layer2
+            comp.ystep = skip
+            comp.parallel_save(result, callback=lambda x: callback_possitions.append(x))
+
+            expected = data1 + data2
+            actual = result.read_array(0, 0, 4, 4)
+
+            assert (expected == actual).all()
+
+            assert callback_possitions == expected_steps
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_parallel_equality(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [4, 3, 2, 1]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+            with RasterLayer.layer_from_file(path1) as layer1:
+                with RasterLayer.empty_raster_layer_like(layer1) as result:
+                    comp = layer1 == 2
+                    comp.parallel_save(result)
+
+                    expected = np.array([[0, 1, 0, 0], [0, 0, 1, 0]])
+                    actual = result.read_array(0, 0, 4, 2)
+
+                    assert (expected == actual).all()
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_parallel_equality_to_file(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            path2 = os.path.join(tempdir, "result.tif")
+            data1 = np.array([[1, 2, 3, 4], [4, 3, 2, 1]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+            with RasterLayer.layer_from_file(path1) as layer1:
+                comp = layer1 == 2
+                with RasterLayer.empty_raster_layer_like(layer1, filename=path2) as result:
+                    comp.parallel_save(result)
+            with RasterLayer.layer_from_file(path2) as actual_result:
+                expected = np.array([[0, 1, 0, 0], [0, 0, 1, 0]])
+                actual = actual_result.read_array(0, 0, 4, 2)
+                assert (expected == actual).all()
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_parallel_unary_numpy_apply_with_function(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+            layer1 = RasterLayer.layer_from_file(path1)
+
+            result = RasterLayer.empty_raster_layer_like(layer1)
+
+            def simple_add(chunk):
+                return chunk + 1.0
+
+            comp = layer1.numpy_apply(simple_add)
+            comp.ystep = 1
+            comp.parallel_save(result)
+
+            expected = data1 + 1.0
+            actual = result.read_array(0, 0, 4, 2)
+
+            assert (expected == actual).all()
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_parallel_unary_numpy_apply_with_lambda(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+            layer1 = RasterLayer.layer_from_file(path1)
+
+            result = RasterLayer.empty_raster_layer_like(layer1)
+
+            comp = layer1.numpy_apply(lambda a: a + 1.0)
+            comp.ystep = 1
+            comp.parallel_save(result)
+
+            expected = data1 + 1.0
+            actual = result.read_array(0, 0, 4, 2)
+
+            assert (expected == actual).all()
+
+@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_parallel_where_simple(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[0, 1, 0, 2], [0, 0, 1, 1]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+            layer1 = RasterLayer.layer_from_file(path1)
+
+            result = RasterLayer.empty_raster_layer_like(layer1)
+
+            comp = LayerOperation.where(layer1 > 0, 1, 2)
+            comp.ystep = 1
+            comp.parallel_save(result)
+
+            expected = np.where(data1 > 0, 1, 2)
+            actual = result.read_array(0, 0, 4, 2)
+            assert (expected == actual).all()
 
 @pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_conv2d() -> None:
-    data1 = np.array([
-        [0, 0, 0, 0, 0],
-        [0, 1, 1, 1, 0],
-        [0, 1, 1, 1, 0],
-        [0, 1, 1, 1, 0],
-        [0, 0, 0, 0, 0],
-    ]).astype(np.float32)
-    weights = np.array([
-        [0.0, 0.1, 0.0],
-        [0.1, 0.6, 0.1],
-        [0.0, 0.1, 0.0],
-    ])
+    with tempfile.TemporaryDirectory() as tempdir:
 
-    conv = torch.nn.Conv2d(1, 1, 3, padding=1, bias=False)
-    conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights.astype(np.float32)]])))
-    tensorres = conv(torch.from_numpy(np.array([[data1]])))
-    expected = tensorres.detach().numpy()[0][0]
+        data1 = np.array([
+            [0, 0, 0, 0, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0],
+            [0, 0, 0, 0, 0],
+        ]).astype(np.float32)
+        weights = np.array([
+            [0.0, 0.1, 0.0],
+            [0.1, 0.6, 0.1],
+            [0.0, 0.1, 0.0],
+        ])
 
-    with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1:
+        conv = torch.nn.Conv2d(1, 1, 3, padding=1, bias=False)
+        conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights.astype(np.float32)]])))
+        tensorres = conv(torch.from_numpy(np.array([[data1]])))
+        expected = tensorres.detach().numpy()[0][0]
 
-        calc = layer1.conv2d(weights)
-        calc.ystep = 1
-        with RasterLayer.empty_raster_layer_like(layer1) as res:
-            calc.save(res)
-            actual = res.read_array(0, 0, 5, 5)
+        path1 = os.path.join(tempdir, "test1.tif")
+        dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+        dataset1.Close()
 
-            # Torch and MLX give slightly different rounding
-            assert np.isclose(expected, actual).all()
+        with RasterLayer.layer_from_file(path1) as layer1:
+
+            calc = layer1.conv2d(weights)
+            with RasterLayer.empty_raster_layer_like(layer1) as res:
+                calc.save(res)
+                actual = res.read_array(0, 0, 5, 5)
+
+                # Torch and MLX give slightly different rounding
+                assert np.isclose(expected, actual).all()
