@@ -121,6 +121,27 @@ class LayerMathMixin:
             window_op=WindowOperation.NONE,
         )
 
+    def floor(self):
+        return LayerOperation(
+            self,
+            op.FLOOR,
+            window_op=WindowOperation.NONE,
+        )
+
+    def round(self):
+        return LayerOperation(
+            self,
+            op.ROUND,
+            window_op=WindowOperation.NONE,
+        )
+
+    def ceil(self):
+        return LayerOperation(
+            self,
+            op.CEIL,
+            window_op=WindowOperation.NONE,
+        )
+
     def log(self):
         return LayerOperation(
             self,
@@ -765,3 +786,6 @@ exp2 = LayerOperation.exp2
 nan_to_num = LayerOperation.nan_to_num
 isin = LayerOperation.isin
 abs = LayerOperation.abs # pylint: disable=W0622
+floor = LayerOperation.floor
+round = LayerOperation.round # pylint: disable=W0622
+ceil = LayerOperation.ceil

@@ -1332,3 +1332,87 @@ def test_simple_conv2d_over_calculated_result(skip) -> None:
 
                 # Torch and MLX give slightly different rounding
                 assert np.isclose(expected, actual).all()
+
+def test_floor_method() -> None:
+    data1 = np.array([[1.0, 1.2, 1.5, 1.7], [-1.0, -1.2, -1.5, -1.7]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.floor()
+    comp.save(result)
+
+    expected = backend.floor_op(backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_floor_module() -> None:
+    data1 = np.array([[1.0, 1.2, 1.5, 1.7], [-1.0, -1.2, -1.5, -1.7]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.floor(layer1)
+    comp.save(result)
+
+    expected = backend.floor_op(backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_round_method() -> None:
+    data1 = np.array([[1.0, 1.2, 1.5, 1.7], [-1.0, -1.2, -1.5, -1.7]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.round()
+    comp.save(result)
+
+    expected = backend.round_op(backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_round_module() -> None:
+    data1 = np.array([[1.0, 1.2, 1.5, 1.7], [-1.0, -1.2, -1.5, -1.7]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.round(layer1)
+    comp.save(result)
+
+    expected = backend.round_op(backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_ceil_method() -> None:
+    data1 = np.array([[1.0, 1.2, 1.5, 1.7], [-1.0, -1.2, -1.5, -1.7]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = layer1.ceil()
+    comp.save(result)
+
+    expected = backend.ceil_op(backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()
+
+def test_ceil_module() -> None:
+    data1 = np.array([[1.0, 1.2, 1.5, 1.7], [-1.0, -1.2, -1.5, -1.7]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = LayerOperation.ceil(layer1)
+    comp.save(result)
+
+    expected = backend.ceil_op(backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = result.read_array(0, 0, 4, 2)
+    assert (expected == actual).all()

@@ -35,7 +35,9 @@ class operators(Enum):
     CONV2D = 30
     ABS = 31
     ASTYPE = 32
-
+    FLOOR = 33
+    ROUND = 34
+    CEIL = 35
 
 class dtype(Enum):
     Float32 = gdal.GDT_Float32
