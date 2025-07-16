@@ -45,6 +45,9 @@ allclose = mx.allclose
 remainder_op = mx.remainder
 floordiv_op = mx.array.__floordiv__
 abs_op = mx.abs
+floor_op = mx.floor
+round_op = mx.round
+ceil_op = mx.ceil
 
 def sum_op(a):
     # There are weird issues around how MLX overflows int8, so just promote the data ahead of summing
@@ -211,4 +214,7 @@ operator_map = {
     op.CONV2D: conv2d_op,
     op.ABS: mx.abs,
     op.ASTYPE: astype_op,
+    op.FLOOR: mx.floor,
+    op.ROUND: mx.round,
+    op.CEIL: mx.ceil,
 }

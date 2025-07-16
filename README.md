@@ -280,9 +280,11 @@ with RasterLayer.layer_from_file('test1.tif') as layer1:
 The following math operators common to numpy and other libraries are currently supported:
 
 * abs
+* ceil
 * clip
 * exp
 * exp2
+* floor
 * isin
 * log
 * log2
@@ -290,6 +292,7 @@ The following math operators common to numpy and other libraries are currently s
 * maximum
 * minimum
 * nan_to_num
+* round
 
 Typically these can be invoked either on a layer as a method:
 
