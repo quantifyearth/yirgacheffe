@@ -91,7 +91,12 @@ def numpy_to_gdal_type(val: np.array) -> int:
             raise ValueError
 
 
-def gdal_dataset_with_data(origin: Tuple, pixel_pitch: float, data: np.array, filename: Optional[str]=None) -> gdal.Dataset:
+def gdal_dataset_with_data(
+    origin: Tuple,
+    pixel_pitch: float,
+    data: np.array,
+    filename: Optional[str]=None
+) -> gdal.Dataset:
     assert data.ndim == 2
 
     datatype = numpy_to_gdal_type(data)
@@ -124,6 +129,7 @@ def gdal_multiband_dataset_with_data(origin: Tuple, pixel_pitch: float, datas: l
     for data in datas:
         assert data.ndim == 2
     datatype = gdal.GDT_Byte
+    data = datas[-1]
     if isinstance(data[0][0], float):
         datatype = gdal.GDT_Float64
     dataset = gdal.GetDriverByName('mem').Create(
@@ -138,9 +144,9 @@ def gdal_multiband_dataset_with_data(origin: Tuple, pixel_pitch: float, datas: l
         origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0
     ])
     dataset.SetProjection(WGS_84_PROJECTION)
-    for i in range(len(datas)):
+    for i, data in enumerate(datas):
         band = dataset.GetRasterBand(i + 1)
-        for index, val in enumerate(datas[i]):
+        for index, val in enumerate(data):
             band.WriteArray(np.array([list(val)]), 0, index)
     return dataset
 
@@ -205,7 +211,14 @@ def make_vectors_with_mutlile_ids(areas: Set[Tuple[Area,int]], filename: str) ->
 
     package.Close()
 
-def generate_child_tile(xoffset: int, yoffset: int, width: int, height: int, outer_width: int, outer_height: int) -> np.ndarray:
+def generate_child_tile(
+    xoffset: int,
+    yoffset: int,
+    width: int,
+    height: int,
+    outer_width: int,
+    outer_height: int
+) -> np.ndarray:
     data = np.zeros((height, width))
     assert xoffset + width <= outer_width
     assert yoffset + height <= outer_height

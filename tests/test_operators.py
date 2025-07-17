@@ -5,13 +5,12 @@ import tempfile
 import numpy as np
 import pytest
 import torch
-from osgeo import gdal
 
-from helpers import gdal_dataset_with_data
 import yirgacheffe
 from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe.operators import LayerOperation, DataType
 from yirgacheffe.backends import backend
+from tests.helpers import gdal_dataset_with_data
 
 def test_add_byte_layers() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]]).astype(np.uint8)
@@ -71,7 +70,7 @@ def test_add_byte_layers_with_callback(skip, expected_steps) -> None:
 
     comp = layer1 + layer2
     comp.ystep = skip
-    comp.save(result, callback=lambda x: callback_possitions.append(x))
+    comp.save(result, callback=callback_possitions.append)
 
     expected = data1 + data2
     actual = result.read_array(0, 0, 4, 2)

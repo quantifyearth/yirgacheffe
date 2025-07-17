@@ -2,9 +2,8 @@ import os
 import tempfile
 
 import pytest
-from osgeo import gdal
 
-from helpers import make_vectors_with_mutlile_ids, make_vectors_with_id, make_vectors_with_empty_feature
+from tests.helpers import make_vectors_with_mutlile_ids, make_vectors_with_id, make_vectors_with_empty_feature
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, RasteredVectorLayer, VectorLayer, VectorRangeLayer, DynamicVectorRangeLayer
 from yirgacheffe.window import Area, PixelScale, Window
@@ -111,7 +110,12 @@ def test_empty_layer_from_vector():
         area = Area(left=44.00253688814017, top=-12.440948032828079, right=50.483612168477286, bottom=-25.1535466075739)
         make_vectors_with_id(42, {area}, path)
 
-        source = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(xstep=0.00026949458523585647, ystep=-0.00026949458523585647), WGS_84_PROJECTION)
+        source = VectorLayer.layer_from_file(
+            path,
+            "id_no = 42",
+            PixelScale(xstep=0.00026949458523585647, ystep=-0.00026949458523585647),
+            WGS_84_PROJECTION
+        )
 
         empty = RasterLayer.empty_raster_layer_like(source)
         assert empty.pixel_scale == source.pixel_scale
@@ -422,7 +426,13 @@ def test_anchor_offsets(anchor, area, expected):
         path = os.path.join(tempdir, "test.gpkg")
         make_vectors_with_id(42, {area}, path)
 
-        source = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION, anchor=anchor)
+        source = VectorLayer.layer_from_file(
+            path,
+            "id_no = 42",
+            PixelScale(1.0, -1.0),
+            WGS_84_PROJECTION,
+            anchor=anchor
+        )
 
         final_area = source.area
         assert final_area == expected

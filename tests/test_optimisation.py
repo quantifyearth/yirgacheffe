@@ -5,7 +5,7 @@ import pytest
 
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.h3layer import H3CellLayer
-from yirgacheffe.layers import PixelScale, ConstantLayer, RasterLayer
+from yirgacheffe.layers import PixelScale, RasterLayer
 from yirgacheffe.window import Area
 import yirgacheffe.operators as yo
 
@@ -14,7 +14,7 @@ class NaiveH3CellLayer(H3CellLayer):
     so the H3CellLayer has a bunch of tricks to try reduce the work done. This is a naive
     version that checks for every cell."""
 
-    def read_array(self, xoffset, yoffset, xsize, ysize):
+    def read_array(self, xoffset, yoffset, xsize, ysize): # pylint: disable=W0237
         res = np.zeros((ysize, xsize), dtype=float)
         start_x = self._active_area.left + (xoffset * self._pixel_scale.xstep)
         start_y = self._active_area.top + (yoffset * self._pixel_scale.ystep)

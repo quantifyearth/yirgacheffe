@@ -1,6 +1,6 @@
 import numpy as np
 
-from helpers import gdal_dataset_of_region, gdal_dataset_with_data
+from tests.helpers import gdal_dataset_of_region, gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer, RescaledRasterLayer
 from yirgacheffe.window import Area, PixelScale, Window
 

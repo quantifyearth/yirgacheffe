@@ -521,8 +521,16 @@ class LayerOperation(LayerMathMixin):
         except AttributeError as exc:
             raise ValueError("Layer must be a raster backed layer") from exc
 
-        computation_window = self.window
         destination_window = destination_layer.window
+
+        # If we're calculating purely from a constant layer, then we don't have a window or area
+        # so we should use the destination raster details.
+        try:
+            computation_window = self.window
+            computation_area = self.area
+        except AttributeError:
+            computation_window = destination_window
+            computation_area = destination_layer.area
 
         if (computation_window.xsize != destination_window.xsize) \
                 or (computation_window.ysize != destination_window.ysize):
@@ -536,7 +544,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(self.area, yoffset, step, computation_window)
+            chunk = self._eval(computation_area, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
                 chunk = backend.full((step, destination_window.xsize), chunk)
             band.WriteArray(
@@ -599,7 +607,18 @@ class LayerOperation(LayerMathMixin):
 
     def _parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
         assert (destination_layer is not None) or and_sum
-        computation_window = self.window
+        try:
+            computation_window = self.window
+        except AttributeError:
+            # This is most likely because the calculation is on a constant layer (or combination of only constant
+            # layers) and there's no real benefit to parallel saving then, so to keep this code from getting yet
+            # more complicated just fall back to the single threaded path
+            if destination_layer:
+                return self.save(destination_layer, and_sum, callback, band)
+            elif and_sum:
+                return self.sum()
+            else:
+                assert False
 
         worker_count = parallelism or multiprocessing.cpu_count()
         work_blocks = len(range(0, computation_window.ysize, self.ystep))

@@ -6,8 +6,8 @@ import pytest
 import torch
 
 import yirgacheffe
-from helpers import gdal_dataset_with_data
-from yirgacheffe.layers import RasterLayer, ConstantLayer
+from tests.helpers import gdal_dataset_with_data
+from yirgacheffe.layers import RasterLayer
 from yirgacheffe.operators import LayerOperation
 
 # These tests are marked skip for MLX, because there seems to be a problem with
@@ -153,7 +153,7 @@ def test_parallel_with_different_skip(monkeypatch, skip, expected_steps) -> None
 
             comp = layer1 + layer2
             comp.ystep = skip
-            comp.parallel_save(result, callback=lambda x: callback_possitions.append(x))
+            comp.parallel_save(result, callback=callback_possitions.append)
 
             expected = data1 + data2
             actual = result.read_array(0, 0, 4, 4)

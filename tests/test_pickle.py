@@ -7,9 +7,10 @@ import tempfile
 import numpy as np
 import pytest
 
-from helpers import gdal_dataset_of_region, make_vectors_with_id
+from tests.helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe.window import Area, PixelScale, Window
-from yirgacheffe.layers import ConstantLayer, GroupLayer, RasterLayer, RescaledRasterLayer, UniformAreaLayer, VectorLayer
+from yirgacheffe.layers import ConstantLayer, GroupLayer, RasterLayer, RescaledRasterLayer, \
+    UniformAreaLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.backends import backend
 

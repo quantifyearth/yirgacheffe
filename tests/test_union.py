@@ -1,6 +1,6 @@
 import pytest
 
-from helpers import gdal_dataset_of_region
+from tests.helpers import gdal_dataset_of_region
 from yirgacheffe.window import Area, Window
 from yirgacheffe.layers import ConstantLayer, RasterLayer
 

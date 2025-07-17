@@ -5,7 +5,7 @@ import tempfile
 import numpy as np
 import pytest
 
-from helpers import gdal_dataset_of_region, gdal_dataset_with_data, make_vectors_with_id, generate_child_tile
+from tests.helpers import gdal_dataset_of_region, gdal_dataset_with_data, make_vectors_with_id, generate_child_tile
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import GroupLayer, RasterLayer, TiledGroupLayer, VectorLayer
 from yirgacheffe.window import Area, PixelScale, Window
@@ -35,7 +35,7 @@ def test_valid_file_list():
             assert group.area == area
             assert group.window == Window(0, 0, 100, 100)
 
-def test_valid_file_list():
+def test_valid_file_list_from_dir():
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10)
@@ -221,8 +221,8 @@ def test_with_window_adjust(klass):
 
         # Test before we apply a window
         row = group.read_array(0, 0, 100, 1)[0]
-        for idx in range(len(row)):
-            assert row[idx] == math.ceil((idx + 1) / 10.0)
+        for idx, val in enumerate(row):
+            assert val == math.ceil((idx + 1) / 10.0)
 
         # Test also for manual offsets that we get expected result
         for idx in range(0, 10):
