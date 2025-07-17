@@ -37,7 +37,7 @@ jobs:
           python -m pip install pylint mypy pytest types-setuptools pytest-cov build twine
 
       - name: Lint with pylint
-        run: python3 -m pylint yirgacheffe
+        run: python3 -m pylint .
 
       - name: Test with numpy backend
         run: python3 -m pytest --cov=yirgacheffe -vv

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from osgeo import gdal
 
-from helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data
+from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data
 from yirgacheffe.window import Area, PixelScale, Window
 from yirgacheffe.layers import RasterLayer, InvalidRasterBand
 from yirgacheffe.rounding import round_up_pixels
@@ -39,7 +39,7 @@ def test_make_basic_layer() -> None:
     assert close_called
 
 def test_make_basic_layer_old_name() -> None:
-    from yirgacheffe.layers import Layer
+    from yirgacheffe.layers import Layer # pylint: disable=C0415
 
     area = Area(-10, 10, 10, -10)
     with Layer(gdal_dataset_of_region(area, 0.02)) as layer:
@@ -104,7 +104,7 @@ def test_empty_layer_from_raster():
     assert empty.window == source.window
     assert empty.datatype == source.datatype
     assert empty.geo_transform == source.geo_transform
-    assert empty._dataset.GetRasterBand(1).GetNoDataValue() == None
+    assert empty._dataset.GetRasterBand(1).GetNoDataValue() is None
 
 @pytest.mark.parametrize("nodata", [0, 0.0, 2, 2.0])
 def test_empty_layer_from_raster_with_no_data_value(nodata):

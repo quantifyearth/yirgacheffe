@@ -4,7 +4,7 @@ import tempfile
 import numpy as np
 from osgeo import gdal
 
-from helpers import gdal_dataset_with_data
+from tests.helpers import gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer
 from yirgacheffe.window import Area, PixelScale
 
@@ -52,7 +52,7 @@ def test_stack_tifs_with_area_match() -> None:
         for layer in source_layers:
             layer.set_window_for_intersection(intersection)
 
-        # Note we're abusing that layer is the last of the source_layers here from the above loop
+        layer = source_layers[-1]
         assert layer.window.xsize == 100 - (bands - 1)
         assert layer.window.ysize == 100 - (bands - 1)
 

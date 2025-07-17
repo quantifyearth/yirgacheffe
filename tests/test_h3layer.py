@@ -6,8 +6,10 @@ from osgeo import gdal
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, PixelScale
-from yirgacheffe.operators import ShaderStyleOperation
 from yirgacheffe.backends import backend
+
+# work around of pylint
+demote_array = backend.demote_array
 
 
 @pytest.mark.parametrize(
@@ -135,10 +137,10 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
 
         # whilst we're here, check that we do have an filled border (i.e., does window for
         # intersection do the right thing)
-        assert np.sum(backend.demote_array(h3_layer.read_array(0, 0, h3_layer.window.xsize, 5))) > 0.0
-        assert np.sum(backend.demote_array(h3_layer.read_array(0, h3_layer.window.ysize - 5, h3_layer.window.xsize, 5))) > 0.0
-        assert np.sum(backend.demote_array(h3_layer.read_array(0, 0, 5, h3_layer.window.ysize))) > 0.0
-        assert np.sum(backend.demote_array(h3_layer.read_array(h3_layer.window.xsize - 5, 0, 5, h3_layer.window.ysize))) > 0.0
+        assert np.sum(demote_array(h3_layer.read_array(0, 0, h3_layer.window.xsize, 5))) > 0.0
+        assert np.sum(demote_array(h3_layer.read_array(0, h3_layer.window.ysize - 5, h3_layer.window.xsize, 5))) > 0.0
+        assert np.sum(demote_array(h3_layer.read_array(0, 0, 5, h3_layer.window.ysize))) > 0.0
+        assert np.sum(demote_array(h3_layer.read_array(h3_layer.window.xsize - 5, 0, 5, h3_layer.window.ysize))) > 0.0
 
 @pytest.mark.parametrize(
     "lat,lng",
@@ -189,8 +191,8 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     assert expanded_area == area
 
     # whilst we're here, check that we do have an empty border (i.e., does window for union do the right thing)
-    assert np.sum(backend.demote_array(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2))) == 0.0
-    assert np.sum(backend.demote_array(h3_layer.read_array(0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2))) == 0.0
+    assert np.sum(demote_array(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2))) == 0.0
+    assert np.sum(demote_array(h3_layer.read_array(0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2))) == 0.0
 
 def test_h3_layer_overlapped():
     # This is based on a regression, where somehow I made tiles not tesselate properly
