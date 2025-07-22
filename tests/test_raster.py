@@ -38,16 +38,6 @@ def test_make_basic_layer() -> None:
 
     assert close_called
 
-def test_make_basic_layer_old_name() -> None:
-    from yirgacheffe.layers import Layer # pylint: disable=C0415
-
-    area = Area(-10, 10, 10, -10)
-    with Layer(gdal_dataset_of_region(area, 0.02)) as layer:
-        assert layer.area == area
-        assert layer.pixel_scale == (0.02, -0.02)
-        assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
-        assert layer.window == Window(0, 0, 1000, 1000)
-
 def test_layer_from_null() -> None:
     # Seems a petty test, but gdal doesn't throw exceptions
     # so you often get None datasets if you're not careful
