@@ -4,7 +4,7 @@ import pytest
 from osgeo import gdal
 
 from yirgacheffe.operators import DataType
-from yirgacheffe.backends import backend, BACKEND
+from yirgacheffe._backends import backend, BACKEND
 from yirgacheffe.layers import RasterLayer
 
 from tests.helpers import gdal_dataset_with_data

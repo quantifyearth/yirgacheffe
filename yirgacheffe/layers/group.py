@@ -10,7 +10,7 @@ from ..rounding import are_pixel_scales_equal_enough, round_down_pixels
 from ..window import Area, Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
-from ..backends import backend
+from .._backends import backend
 
 GroupLayerT = TypeVar("GroupLayerT", bound="GroupLayer")
 

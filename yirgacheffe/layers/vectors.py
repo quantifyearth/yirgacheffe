@@ -9,7 +9,7 @@ from ..operators import DataType
 from ..window import Area, PixelScale
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
-from ..backends import backend
+from .._backends import backend
 
 def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> int: # pylint: disable=R0911
     if isinstance(burn_value, str):

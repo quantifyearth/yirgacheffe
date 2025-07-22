@@ -6,7 +6,7 @@ from yirgacheffe.operators import DataType
 
 from ..window import PixelScale, Window
 from .rasters import RasterLayer, YirgacheffeLayer
-from ..backends import backend
+from .._backends import backend
 
 
 class RescaledRasterLayer(YirgacheffeLayer):

@@ -16,9 +16,9 @@ from dill import dumps, loads
 from . import constants
 from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
 from .window import Area, PixelScale, Window
-from .backends import backend
-from .backends.enumeration import operators as op
-from .backends.enumeration import dtype as DataType
+from ._backends import backend
+from ._backends.enumeration import operators as op
+from ._backends.enumeration import dtype as DataType
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)

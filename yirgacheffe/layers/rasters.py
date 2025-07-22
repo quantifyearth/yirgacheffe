@@ -10,7 +10,7 @@ from ..window import Area, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
 from ..operators import DataType
-from ..backends import backend
+from .._backends import backend
 
 # Still to early to require Python 3.11 :/
 RasterLayerT = TypeVar("RasterLayerT", bound="RasterLayer")

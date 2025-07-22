@@ -8,7 +8,7 @@ from yirgacheffe.operators import DataType
 from ..rounding import round_up_pixels
 from ..window import Area, PixelScale, Window
 from .base import YirgacheffeLayer
-from ..backends import backend
+from .._backends import backend
 
 class H3CellLayer(YirgacheffeLayer):
 

@@ -27,6 +27,9 @@ extensions = [
 templates_path = ['_templates']
 exclude_patterns = []
 
+autodoc_mock_imports = [
+	'backend',
+]
 
 
 # -- Options for HTML output -------------------------------------------------

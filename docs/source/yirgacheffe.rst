@@ -7,7 +7,6 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   yirgacheffe.backends
    yirgacheffe.layers
 
 Submodules

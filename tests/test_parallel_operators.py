@@ -43,7 +43,7 @@ def test_add_byte_layers_with_one_thread_uses_regular_save(monkeypatch) -> None:
                 comp.parallel_save(result)
 
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_add_byte_layers(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -71,7 +71,7 @@ def test_add_byte_layers(monkeypatch) -> None:
 
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_add_byte_layers_and_sum(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -100,7 +100,7 @@ def test_add_byte_layers_and_sum(monkeypatch) -> None:
             assert (expected == actual).all()
             assert sum_total == expected.sum()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_sum(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -125,7 +125,7 @@ def test_parallel_sum(monkeypatch) -> None:
             expected = data1 + data2
             assert sum_total == expected.sum()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 @pytest.mark.parametrize("skip,expected_steps", [
     (1, [0.0, 0.25, 0.5, 0.75, 1.0]),
     (2, [0.0, 0.5, 1.0]),
@@ -162,7 +162,7 @@ def test_parallel_with_different_skip(monkeypatch, skip, expected_steps) -> None
 
             assert callback_possitions == expected_steps
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_equality(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -182,7 +182,7 @@ def test_parallel_equality(monkeypatch) -> None:
 
                     assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_equality_to_file(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -202,7 +202,7 @@ def test_parallel_equality_to_file(monkeypatch) -> None:
                 actual = actual_result.read_array(0, 0, 4, 2)
                 assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_unary_numpy_apply_with_function(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -228,7 +228,7 @@ def test_parallel_unary_numpy_apply_with_function(monkeypatch) -> None:
 
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_unary_numpy_apply_with_lambda(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -251,7 +251,7 @@ def test_parallel_unary_numpy_apply_with_lambda(monkeypatch) -> None:
 
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_where_simple(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -273,7 +273,7 @@ def test_parallel_where_simple(monkeypatch) -> None:
             actual = result.read_array(0, 0, 4, 2)
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_conv2d() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
 

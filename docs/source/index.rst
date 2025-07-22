@@ -1,17 +1,19 @@
-.. yirgacheffe documentation master file, created by
-   sphinx-quickstart on Sat Jul 19 08:32:40 2025.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Yirgacheffe
+===========
 
-yirgacheffe documentation
-=========================
+What are we even doing here
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+Installation
+========================================
+**Install using pip**
+
+.. code-block:: shell
+
+    pip install yirgacheffe
 
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   modules
