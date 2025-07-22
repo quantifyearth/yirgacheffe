@@ -2,13 +2,13 @@ import math
 import sys
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
 @dataclass
 class Area:
-    """Class to hold a geospatial area of rasteer data in the given projection.
+    """Class to hold a geospatial area of data in the given projection.
 
     Parameters
     ----------
@@ -96,13 +96,38 @@ class Area:
 
 @dataclass
 class Window:
+    """Class to hold the pixel dimensions of data in the given projection.
+
+    Parameters
+    ----------
+    xoff : int
+        X axis offset
+    yoff : int
+        Y axis offset
+    xsize : int
+        Width of data in pixels
+    bottom : float
+        Height of data in pixels
+
+    Attributes
+    ----------
+    xoff : int
+        X axis offset
+    yoff : int
+        Y axis offset
+    xsize : int
+        Width of data in pixels
+    bottom : float
+        Height of data in pixels
+    """
     xoff: int
     yoff: int
     xsize: int
     ysize: int
 
     @property
-    def as_array_args(self):
+    def as_array_args(self) -> Tuple[int,...]:
+        """A tuple containing xoff, yoff, xsize, and ysize."""
         return (self.xoff, self.yoff, self.xsize, self.ysize)
 
     def __lt__(self, other) -> bool:
@@ -138,6 +163,21 @@ class Window:
             ((self.yoff + self.ysize) >= (other.yoff + other.ysize))
 
     def grow(self, pixels: int):
+        """Expand the area in all directions by the given amount.
+
+        Generates a new window that is an expanded version of the current window.
+
+        Parameters
+        ----------
+        pixels : int
+            The amount by which to grow the window in pixels
+
+        Returns
+        -------
+        Window
+            A new window of the expanded size.
+
+        """
         return Window(
             xoff=self.xoff - pixels,
             yoff=self.xoff - pixels,
