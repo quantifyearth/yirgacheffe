@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path('..', 'yirgacheffe').resolve()))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'yirgacheffe'
-copyright = '2025, Michael Winston Dales'
+copyright = '2025, Michael Winston Dales' # pylint: disable=W0622
 author = 'Michael Winston Dales'
 release = '1.4'
 
