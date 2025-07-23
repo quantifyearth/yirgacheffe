@@ -2,12 +2,36 @@ import math
 import sys
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
 @dataclass
 class Area:
+    """Class to hold a geospatial area of data in the given projection.
+
+    Parameters
+    ----------
+    left : float
+        Left most point in the projection space
+    top : float
+        Top most point in the projection space
+    right : float
+        Right most point in the projection space
+    bottom : float
+        Bottom most point in the projection space
+
+    Attributes
+    ----------
+    left : float
+        Left most point in the projection space
+    top : float
+        Top most point in the projection space
+    right : float
+        Right most point in the projection space
+    bottom : float
+        Bottom most point in the projection space
+    """
     left: float
     top: float
     right: float
@@ -23,6 +47,21 @@ class Area:
             math.isclose(self.bottom, other.bottom, abs_tol=1e-09)
 
     def grow(self, offset: float):
+        """Expand the area in all directions by the given amount.
+
+        Generates a new area that is an expanded version of the current area.
+
+        Parameters
+        ----------
+        offset : float
+            The amount by which to grow the area
+
+        Returns
+        -------
+        Area
+            A new area of the expanded size.
+
+        """
         return Area(
             left=self.left - offset,
             top=self.top + offset,
@@ -31,6 +70,18 @@ class Area:
         )
 
     def overlaps(self, other) -> bool:
+        """Check if this area overlaps with another area.
+
+        Parameters
+        ----------
+        other : Area
+            The other area to compare this area with
+
+        Returns
+        -------
+        bool
+            True if the two areas intersect, otherwise false.
+        """
         return (
             (self.left <= other.left <= self.right) or
             (self.left <= other.right <= self.right) or
@@ -45,13 +96,38 @@ class Area:
 
 @dataclass
 class Window:
+    """Class to hold the pixel dimensions of data in the given projection.
+
+    Parameters
+    ----------
+    xoff : int
+        X axis offset
+    yoff : int
+        Y axis offset
+    xsize : int
+        Width of data in pixels
+    bottom : float
+        Height of data in pixels
+
+    Attributes
+    ----------
+    xoff : int
+        X axis offset
+    yoff : int
+        Y axis offset
+    xsize : int
+        Width of data in pixels
+    bottom : float
+        Height of data in pixels
+    """
     xoff: int
     yoff: int
     xsize: int
     ysize: int
 
     @property
-    def as_array_args(self):
+    def as_array_args(self) -> Tuple[int,...]:
+        """A tuple containing xoff, yoff, xsize, and ysize."""
         return (self.xoff, self.yoff, self.xsize, self.ysize)
 
     def __lt__(self, other) -> bool:
@@ -87,6 +163,21 @@ class Window:
             ((self.yoff + self.ysize) >= (other.yoff + other.ysize))
 
     def grow(self, pixels: int):
+        """Expand the area in all directions by the given amount.
+
+        Generates a new window that is an expanded version of the current window.
+
+        Parameters
+        ----------
+        pixels : int
+            The amount by which to grow the window in pixels
+
+        Returns
+        -------
+        Window
+            A new window of the expanded size.
+
+        """
         return Window(
             xoff=self.xoff - pixels,
             yoff=self.xoff - pixels,

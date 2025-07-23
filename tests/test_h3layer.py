@@ -6,7 +6,7 @@ from osgeo import gdal
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, PixelScale
-from yirgacheffe.backends import backend
+from yirgacheffe._backends import backend
 
 # work around of pylint
 demote_array = backend.demote_array

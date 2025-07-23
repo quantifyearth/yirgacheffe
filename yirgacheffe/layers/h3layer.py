@@ -1,5 +1,5 @@
 from math import ceil, floor
-from typing import Any
+from typing import Any, Tuple
 
 import h3
 import numpy as np
@@ -8,7 +8,7 @@ from yirgacheffe.operators import DataType
 from ..rounding import round_up_pixels
 from ..window import Area, PixelScale, Window
 from .base import YirgacheffeLayer
-from ..backends import backend
+from .._backends import backend
 
 class H3CellLayer(YirgacheffeLayer):
 
@@ -74,12 +74,17 @@ class H3CellLayer(YirgacheffeLayer):
             (sorted_lats[1] / abs_ystep) * abs_ystep,
         )
 
+    @property
+    def _raster_dimensions(self) -> Tuple[int,int]:
+        return (self._raster_xsize, self._raster_ysize)
 
     @property
     def datatype(self) -> DataType:
         return DataType.Float64
 
     def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
+        assert self._pixel_scale is not None
+
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 

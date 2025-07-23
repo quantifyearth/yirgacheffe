@@ -1,3 +1,4 @@
+from __future__ import annotations
 from math import floor, ceil
 from typing import Any, Optional
 
@@ -6,7 +7,7 @@ from yirgacheffe.operators import DataType
 
 from ..window import PixelScale, Window
 from .rasters import RasterLayer, YirgacheffeLayer
-from ..backends import backend
+from .._backends import backend
 
 
 class RescaledRasterLayer(YirgacheffeLayer):
@@ -20,7 +21,7 @@ class RescaledRasterLayer(YirgacheffeLayer):
         pixel_scale: PixelScale,
         band: int = 1,
         nearest_neighbour: bool = True,
-    ):
+    ) -> RescaledRasterLayer:
         src = RasterLayer.layer_from_file(filename, band=band)
         return RescaledRasterLayer(src, pixel_scale, nearest_neighbour, src.name)
 

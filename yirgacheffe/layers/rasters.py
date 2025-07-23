@@ -1,6 +1,7 @@
+from __future__ import annotations
 import math
 import os
-from typing import Any, Optional, TypeVar, Union
+from typing import Any, Optional, Tuple, Union
 
 import numpy as np
 from osgeo import gdal
@@ -10,10 +11,7 @@ from ..window import Area, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
 from ..operators import DataType
-from ..backends import backend
-
-# Still to early to require Python 3.11 :/
-RasterLayerT = TypeVar("RasterLayerT", bound="RasterLayer")
+from .._backends import backend
 
 class InvalidRasterBand(Exception):
     def __init__ (self, band):
@@ -37,7 +35,7 @@ class RasterLayer(YirgacheffeLayer):
         nbits: Optional[int]=None,
         threads: Optional[int]=None,
         bands: int=1
-    ) -> RasterLayerT:
+    ) -> RasterLayer:
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
         # We treat the provided area as aspirational, and we need to align it to pixel boundaries
@@ -50,7 +48,9 @@ class RasterLayer(YirgacheffeLayer):
 
         # This used to the the GDAL type, so we support that for legacy reasons
         if isinstance(datatype, int):
-            datatype = DataType.of_gdal(datatype)
+            datatype_arg = DataType.of_gdal(datatype)
+        else:
+            datatype_arg = datatype
 
         options = []
         if threads is not None:
@@ -74,7 +74,7 @@ class RasterLayer(YirgacheffeLayer):
             round_up_pixels((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep, abs_xstep),
             round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
             bands,
-            datatype.to_gdal(),
+            datatype_arg.to_gdal(),
             options
         )
         dataset.SetGeoTransform([
@@ -96,7 +96,7 @@ class RasterLayer(YirgacheffeLayer):
         nbits: Optional[int]=None,
         threads: Optional[int]=None,
         bands: int=1
-    ) -> RasterLayerT:
+    ) -> RasterLayer:
         width = layer.window.xsize
         height = layer.window.ysize
         if area is None:
@@ -116,6 +116,13 @@ class RasterLayer(YirgacheffeLayer):
         geo_transform = (
             area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep
         )
+
+        if datatype is None:
+            datatype_arg = layer.datatype
+        elif isinstance(datatype, int):
+            datatype_arg = DataType.of_gdal(datatype)
+        else:
+            datatype_arg = datatype
 
         options = []
         if threads is not None:
@@ -139,7 +146,7 @@ class RasterLayer(YirgacheffeLayer):
             width,
             height,
             bands,
-            (datatype if datatype is not None else layer.datatype).to_gdal(),
+            (datatype_arg).to_gdal(),
             options,
         )
         dataset.SetGeoTransform(geo_transform)
@@ -152,13 +159,15 @@ class RasterLayer(YirgacheffeLayer):
     @classmethod
     def scaled_raster_from_raster(
         cls,
-        source: RasterLayerT,
+        source: RasterLayer,
         new_pixel_scale: PixelScale,
         filename: Optional[str]=None,
         compress: bool=True,
         algorithm: int=gdal.GRA_NearestNeighbour,
-    ) -> RasterLayerT:
+    ) -> RasterLayer:
         source_dataset = source._dataset
+        assert source_dataset is not None
+
         old_pixel_scale = source.pixel_scale
         assert old_pixel_scale
 
@@ -205,7 +214,7 @@ class RasterLayer(YirgacheffeLayer):
         return RasterLayer(dataset)
 
     @classmethod
-    def layer_from_file(cls, filename: str, band: int = 1) -> RasterLayerT:
+    def layer_from_file(cls, filename: str, band: int = 1) -> RasterLayer:
         try:
             dataset = gdal.Open(filename, gdal.GA_ReadOnly)
         except RuntimeError as exc:
@@ -248,6 +257,10 @@ class RasterLayer(YirgacheffeLayer):
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
 
+    @property
+    def _raster_dimensions(self) -> Tuple[int,int]:
+        return (self._raster_xsize, self._raster_ysize)
+
     def close(self):
         try:
             if self._dataset:
@@ -274,10 +287,8 @@ class RasterLayer(YirgacheffeLayer):
         self._unpark()
 
     def _park(self):
-        try:
+        if self._dataset is not None:
             self._dataset.Close()
-        except AttributeError:
-            pass
         self._dataset = None
 
     def _unpark(self):

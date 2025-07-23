@@ -4,8 +4,7 @@ import numpy as np
 import pytest
 
 from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.h3layer import H3CellLayer
-from yirgacheffe.layers import PixelScale, RasterLayer
+from yirgacheffe.layers import PixelScale, RasterLayer, H3CellLayer
 from yirgacheffe.window import Area
 import yirgacheffe.operators as yo
 

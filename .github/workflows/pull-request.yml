@@ -32,11 +32,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install gdal[numpy]==3.11.0 scikit-image torch "h3==4.0.0b5" mlx
+          python -m pip install gdal[numpy]==3.11.0 scikit-image torch "h3==4.0.0b5" mlx[cpu]
           python -m pip install pylint mypy pytest types-setuptools pytest-cov build twine
 
       - name: Lint with pylint
         run: python3 -m pylint .
+
+      - name: Type checking with mypy
+        run: python3 -m mypy yirgacheffe
 
       - name: Test with numpy backend
         run: python3 -m pytest --cov=yirgacheffe -vv

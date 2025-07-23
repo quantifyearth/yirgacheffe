@@ -3,7 +3,7 @@ from typing import Any, Union
 from ..operators import DataType
 from ..window import Area, PixelScale, Window
 from .base import YirgacheffeLayer
-from ..backends import backend
+from .._backends import backend
 from .. import WGS_84_PROJECTION
 
 

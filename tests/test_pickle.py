@@ -12,7 +12,7 @@ from yirgacheffe.window import Area, PixelScale, Window
 from yirgacheffe.layers import ConstantLayer, GroupLayer, RasterLayer, RescaledRasterLayer, \
     UniformAreaLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.backends import backend
+from yirgacheffe._backends import backend
 
 
 def test_pickle_raster_layer() -> None:

@@ -1,7 +1,8 @@
+from __future__ import annotations
 import copy
 import glob
 import os
-from typing import Any, List, Optional, TypeVar
+from typing import Any, List, Optional
 
 import numpy as np
 from yirgacheffe.operators import DataType
@@ -10,9 +11,8 @@ from ..rounding import are_pixel_scales_equal_enough, round_down_pixels
 from ..window import Area, Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
-from ..backends import backend
+from .._backends import backend
 
-GroupLayerT = TypeVar("GroupLayerT", bound="GroupLayer")
 
 class GroupLayerEmpty(ValueError):
     def __init__(self, msg):
@@ -26,7 +26,7 @@ class GroupLayer(YirgacheffeLayer):
         directory_path: str,
         name: Optional[str] = None,
         matching: str = "*.tif"
-    ) -> GroupLayerT:
+    ) -> GroupLayer:
         if directory_path is None:
             raise ValueError("Directory path is None")
         files = [os.path.join(directory_path, x) for x in glob.glob(matching, root_dir=directory_path)]
@@ -35,12 +35,12 @@ class GroupLayer(YirgacheffeLayer):
         return cls.layer_from_files(files, name)
 
     @classmethod
-    def layer_from_files(cls, filenames: List[str], name: Optional[str] = None) -> GroupLayerT:
+    def layer_from_files(cls, filenames: List[str], name: Optional[str] = None) -> GroupLayer:
         if filenames is None:
             raise ValueError("filenames argument is None")
         if len(filenames) < 1:
             raise GroupLayerEmpty("No files found")
-        rasters = [RasterLayer.layer_from_file(x) for x in filenames]
+        rasters: List[YirgacheffeLayer] = [RasterLayer.layer_from_file(x) for x in filenames]
         return cls(rasters, name)
 
     def __init__(self, layers: List[YirgacheffeLayer], name: Optional[str] = None) -> None:
@@ -65,7 +65,7 @@ class GroupLayer(YirgacheffeLayer):
         self._underlying_layers.reverse()
         self.layers = self._underlying_layers
 
-    def _park(self):
+    def _park(self) -> None:
         for layer in self.layers:
             try:
                 layer._park()
@@ -157,7 +157,7 @@ class GroupLayer(YirgacheffeLayer):
 class TileData:
     """This class exists just to let me sort the tiles into the correct order for processing."""
 
-    def __init__(self, data, x, y):
+    def __init__(self, data: Any, x: int, y: int):
         self.data = data
         self.x = x
         self.y = y
@@ -219,7 +219,7 @@ class TiledGroupLayer(GroupLayer):
             ysize
         )
 
-        partials = []
+        partials: List[TileData] = []
         for layer in self.layers:
             # Normally this is hidden with set_window_for_...
             adjusted_layer_window = Window(
@@ -251,7 +251,7 @@ class TiledGroupLayer(GroupLayer):
         # the "obvious" tile. In which case, we should reject the smaller section. If we have
         # two tiles at the same offset and one is not a perfect subset of the other then the
         # tile set we were given is not regularly shaped, and so we should give up.
-        combed_partials = []
+        combed_partials: List[TileData] = []
         previous_tile = None
         for tile in sorted_partials:
             if previous_tile is None:
@@ -276,7 +276,7 @@ class TiledGroupLayer(GroupLayer):
         expected_next_x = 0
         expected_next_y = 0
         data = None
-        row_chunk = None
+        row_chunk: Optional[np.ndarray] = None
 
         # Allow for reading off top
         if combed_partials:
@@ -337,6 +337,7 @@ class TiledGroupLayer(GroupLayer):
                             data = np.vstack((data, row_chunk))
                             expected_next_y += last_y_height
                         else:
+                            assert last_y_offset is not None
                             diff = expected_next_y - last_y_offset
                             assert diff > 0, f"{expected_next_y} - {last_y_offset} <= 0 (aka {diff})"
                             subdata = np.delete(row_chunk, np.s_[0:diff], 0)
@@ -351,8 +352,10 @@ class TiledGroupLayer(GroupLayer):
                     last_y_height = tile.data.shape[0]
                     expected_next_x = tile.data.shape[1] + tile.x
 
+        assert last_y_offset is not None
         if (last_y_offset + last_y_height) < ysize:
             data = np.vstack((data, np.zeros((ysize - (last_y_offset + last_y_height), xsize))))
 
+        assert data is not None
         assert data.shape == (ysize, xsize)
         return backend.promote(data)

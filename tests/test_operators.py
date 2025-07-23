@@ -9,7 +9,7 @@ import torch
 import yirgacheffe
 from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe.operators import LayerOperation, DataType
-from yirgacheffe.backends import backend
+from yirgacheffe._backends import backend
 from tests.helpers import gdal_dataset_with_data
 
 def test_add_byte_layers() -> None:
@@ -584,7 +584,7 @@ def test_direct_layer_save_and_sum() -> None:
     assert (data1 == actual_data).all()
     assert expected_sum == actual_sum
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_add_to_float_layer_by_np_array() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
@@ -619,7 +619,7 @@ def test_write_mulitband_raster() -> None:
 
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_save_and_sum_float32(monkeypatch) -> None:
     random.seed(42)
     data = []
@@ -643,7 +643,7 @@ def test_save_and_sum_float32(monkeypatch) -> None:
                 actual = layer1.save(store, and_sum=True)
             assert expected == actual
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_save_and_sum_float32(monkeypatch) -> None:
     random.seed(42)
     data = []
@@ -671,7 +671,7 @@ def test_parallel_save_and_sum_float32(monkeypatch) -> None:
                     actual = layer1.parallel_save(store, and_sum=True)
                 assert expected == actual
 
-@pytest.mark.skipif(yirgacheffe.backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_sum_float32(monkeypatch) -> None:
     random.seed(42)
     data = []

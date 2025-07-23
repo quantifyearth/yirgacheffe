@@ -5,7 +5,7 @@ import pytest
 
 from tests.helpers import make_vectors_with_mutlile_ids, make_vectors_with_id, make_vectors_with_empty_feature
 from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.layers import RasterLayer, RasteredVectorLayer, VectorLayer, VectorRangeLayer, DynamicVectorRangeLayer
+from yirgacheffe.layers import RasterLayer, RasteredVectorLayer, VectorLayer
 from yirgacheffe.window import Area, PixelScale, Window
 from yirgacheffe.operators import DataType
 
@@ -31,18 +31,6 @@ def test_basic_dyanamic_vector_layer() -> None:
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.projection == WGS_84_PROJECTION
 
-def test_old_dyanamic_vector_layer() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
-        area = Area(-10.0, 10.0, 10.0, 0.0)
-        make_vectors_with_id(42, {area}, path)
-
-        with DynamicVectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
-            assert layer.area == area
-            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-            assert layer.window == Window(0, 0, 20, 10)
-            assert layer.projection == WGS_84_PROJECTION
-
 def test_rastered_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
@@ -50,18 +38,6 @@ def test_rastered_vector_layer() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with RasteredVectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
-            assert layer.area == area
-            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-            assert layer.window == Window(0, 0, 20, 10)
-            assert layer.projection == WGS_84_PROJECTION
-
-def test_old_rastered_vector_layer() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
-        area = Area(-10.0, 10.0, 10.0, 0.0)
-        make_vectors_with_id(42, {area}, path)
-
-        with VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
             assert layer.area == area
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
@@ -385,7 +361,7 @@ def test_read_array_size(size, expect_success):
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        source = VectorRangeLayer(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
+        source = RasteredVectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
 
         if expect_success:
             data = source.read_array(0, 0, size[0], size[1])

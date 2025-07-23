@@ -4,11 +4,10 @@ good-names=x, y
 [FORMAT]
 max-line-length=120
 
-disable=C3001, C0302, C0114, C0115, C0116, C0103, W0212, W0231, W0511, R0801, R0902, R0903, R0912, R0913, R0914, R0915, R0917, R1705, R0911, R0904
+disable=C3001, C0302, C0114, C0115, C0116, C0103, W0212, W0231, W0511, R0801, R0902, R0903, R0912, R0913, R0914, R0915, R0917, R1705, R0911, R0904, I1101
 
 [TYPECHECK]
 # Seems pylint doesn't like mixins :/
-ignored-classes=Layer
 
 [MASTER]
 init-hook="from pylint.config import find_default_config_files; import sys; sys.path.append(next(find_default_config_files()).parent.as_posix())"
