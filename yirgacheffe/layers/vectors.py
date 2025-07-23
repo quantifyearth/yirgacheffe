@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from math import ceil, floor
 from typing import Any, Optional, Tuple, Union
@@ -11,7 +12,7 @@ from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 from .._backends import backend
 
-def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> int: # pylint: disable=R0911
+def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> DataType: # pylint: disable=R0911
     if isinstance(burn_value, str):
         # burn value is field name, so validate it
         index = layer.FindFieldIndex(burn_value, True)
@@ -23,32 +24,32 @@ def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> int: # pylint: di
         field = definition.GetFieldDefn(index)
         typename = field.GetTypeName()
         if typename == "Integer":
-            return gdal.GDT_Int64
+            return DataType.Int64
         elif typename == "Real":
-            return gdal.GDT_Float64
+            return DataType.Float64
         else:
             raise ValueError(f"Can't set datatype {typename} for burn value {burn_value}")
     elif isinstance(burn_value, int):
         if 0 <= burn_value <= 255:
-            return gdal.GDT_Byte
+            return DataType.Byte
         else:
             unsigned = burn_value > 0
             if unsigned:
                 if burn_value < (pow(2, 16)):
-                    return gdal.GDT_UInt16
+                    return DataType.UInt16
                 elif burn_value < (pow(2, 32)):
-                    return gdal.GDT_UInt32
+                    return DataType.UInt32
                 else:
-                    return gdal.GDT_UInt64
+                    return DataType.UInt64
             else:
                 if abs(burn_value) < (pow(2, 15)):
-                    return gdal.GDT_Int16
+                    return DataType.Int16
                 elif abs(burn_value) < (pow(2, 31)):
-                    return gdal.GDT_Int32
+                    return DataType.Int32
                 else:
-                    return gdal.GDT_Int64
+                    return DataType.Int64
     elif isinstance(burn_value, float):
-        return gdal.GDT_Float64
+        return DataType.Float64
     else:
         raise ValueError(f"data type of burn value {burn_value} not supported")
 
@@ -59,7 +60,7 @@ class RasteredVectorLayer(RasterLayer):
     VectorLayer."""
 
     @classmethod
-    def layer_from_file(
+    def layer_from_file( # type: ignore[override] # pylint: disable=W0221
         cls,
         filename: str,
         where_filter: Optional[str],
@@ -67,7 +68,7 @@ class RasteredVectorLayer(RasterLayer):
         projection: str,
         datatype: Optional[Union[int, DataType]] = None,
         burn_value: Union[int,float,str] = 1,
-    ): # pylint: disable=W0221
+    ) -> RasteredVectorLayer:
         vectors = ogr.Open(filename)
         if vectors is None:
             raise FileNotFoundError(filename)
@@ -77,16 +78,17 @@ class RasteredVectorLayer(RasterLayer):
 
         estimated_datatype = _validate_burn_value(burn_value, layer)
         if datatype is None:
-            datatype = estimated_datatype
-
-        if isinstance(datatype, int):
-            datatype = DataType.of_gdal(datatype)
+            datatype_arg: DataType = estimated_datatype
+        elif isinstance(datatype, int):
+            datatype_arg = DataType.of_gdal(datatype)
+        else:
+            datatype_arg = datatype
 
         vector_layer = RasteredVectorLayer(
             layer,
             scale,
             projection,
-            datatype=datatype,
+            datatype=datatype_arg,
             burn_value=burn_value
         )
 
@@ -108,10 +110,12 @@ class RasteredVectorLayer(RasterLayer):
             raise ValueError('No layer provided')
         self.layer = layer
 
-        self._original = None
+        self._original: Optional[Any] = None
 
         if isinstance(datatype, int):
-            datatype = DataType.of_gdal(datatype)
+            datatype_arg = DataType.of_gdal(datatype)
+        else:
+            datatype_arg = datatype
 
         # work out region for mask
         envelopes = []
@@ -142,7 +146,7 @@ class RasteredVectorLayer(RasterLayer):
             round((area.right - area.left) / abs_xstep),
             round((area.top - area.bottom) / abs_ystep),
             1,
-            datatype.to_gdal(),
+            datatype_arg.to_gdal(),
             []
         )
         if not dataset:
@@ -173,7 +177,7 @@ class VectorLayer(YirgacheffeLayer):
         where_filter: Optional[str]=None,
         datatype: Optional[Union[int, DataType]] = None,
         burn_value: Union[int,float,str] = 1,
-    ):
+    ) -> VectorLayer:
         if other_layer is None:
             raise ValueError("like layer can not be None")
         if other_layer.pixel_scale is None:
@@ -208,7 +212,6 @@ class VectorLayer(YirgacheffeLayer):
         vector_layer._filter = where_filter
         return vector_layer
 
-
     @classmethod
     def layer_from_file(
         cls,
@@ -219,7 +222,7 @@ class VectorLayer(YirgacheffeLayer):
         datatype: Optional[Union[int, DataType]] = None,
         burn_value: Union[int,float,str] = 1,
         anchor: Tuple[float,float] = (0.0, 0.0)
-    ):
+    ) -> VectorLayer:
         vectors = ogr.Open(filename)
         if vectors is None:
             raise FileNotFoundError(filename)
@@ -232,14 +235,16 @@ class VectorLayer(YirgacheffeLayer):
             datatype = estimated_datatype
 
         if isinstance(datatype, int):
-            datatype = DataType.of_gdal(datatype)
+            datatype_arg = DataType.of_gdal(datatype)
+        else:
+            datatype_arg = datatype
 
         vector_layer = VectorLayer(
             layer,
             scale,
             projection,
             name=filename,
-            datatype=datatype,
+            datatype=datatype_arg,
             burn_value=burn_value,
             anchor=anchor
         )
@@ -277,8 +282,8 @@ class VectorLayer(YirgacheffeLayer):
         self.burn_value = burn_value
 
         self._original = None
-        self._dataset_path = None
-        self._filter = None
+        self._dataset_path: Optional[str] = None
+        self._filter: Optional[str] = None
 
         # work out region for mask
         envelopes = []
@@ -318,7 +323,7 @@ class VectorLayer(YirgacheffeLayer):
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)
-        if not os.path.isfile(self._dataset_path):
+        if self._dataset_path is None or not os.path.isfile(self._dataset_path):
             raise ValueError("Can not pickle layer that is not file backed.")
         odict = self.__dict__.copy()
         del odict['_original']
@@ -353,6 +358,8 @@ class VectorLayer(YirgacheffeLayer):
         return self._datatype
 
     def read_array_for_area(self, target_area: Area, x: int, y: int, width: int, height: int) -> Any:
+        assert self._pixel_scale is not None
+
         if self._original is None:
             self._unpark()
         if (width <= 0) or (height <= 0):

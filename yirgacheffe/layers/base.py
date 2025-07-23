@@ -25,7 +25,7 @@ class YirgacheffeLayer(LayerMathMixin):
 
         self.reset_window()
 
-    def close(self):
+    def close(self) -> None:
         pass
 
     def __enter__(self):
@@ -33,6 +33,16 @@ class YirgacheffeLayer(LayerMathMixin):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def _park(self) -> None:
+        pass
+
+    def _unpark(self) -> None:
+        pass
+
+    @property
+    def _raster_dimensions(self) -> Tuple[int,int]:
+        raise AttributeError("Does not have raster")
 
     @property
     def datatype(self) -> DataType:
@@ -131,9 +141,10 @@ class YirgacheffeLayer(LayerMathMixin):
             raise ValueError('Window has negative offset')
         # If there is an underlying raster for this layer, do a sanity check
         try:
-            if ((new_window.xoff + new_window.xsize) > self._raster_xsize) or \
-                ((new_window.yoff + new_window.ysize) > self._raster_ysize):
-                raise ValueError(f'Window is bigger than dataset: raster is {self._raster_xsize}x{self._raster_ysize}'\
+            raster_xsize, raster_ysize = self._raster_dimensions
+            if ((new_window.xoff + new_window.xsize) > raster_xsize) or \
+                ((new_window.yoff + new_window.ysize) > raster_ysize):
+                raise ValueError(f'Window is bigger than dataset: raster is {raster_xsize}x{raster_ysize}'\
                     f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
         except AttributeError:
             pass
@@ -162,9 +173,10 @@ class YirgacheffeLayer(LayerMathMixin):
             raise ValueError('Window has positive offset')
         # If there is an underlying raster for this layer, do a sanity check
         try:
-            if ((new_window.xsize - new_window.xoff) < self._raster_xsize) or \
-                ((new_window.ysize - new_window.yoff) < self._raster_ysize):
-                raise ValueError(f'Window is smaller than dataset: raster is {self._raster_xsize}x{self._raster_ysize}'\
+            raster_xsize, raster_ysize = self._raster_dimensions
+            if ((new_window.xsize - new_window.xoff) < raster_xsize) or \
+                ((new_window.ysize - new_window.yoff) <raster_ysize):
+                raise ValueError(f'Window is smaller than dataset: raster is {raster_xsize}x{raster_ysize}'\
                     f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
         except AttributeError:
             pass
@@ -219,6 +231,7 @@ class YirgacheffeLayer(LayerMathMixin):
         raise NotImplementedError("Must be overridden by subclass")
 
     def read_array_for_area(self, target_area: Area, x: int, y: int, width: int, height: int) -> Any:
+        assert self._pixel_scale is not None
 
         target_window = Window(
             xoff=round_down_pixels((target_area.left - self._underlying_area.left) / self._pixel_scale.xstep,

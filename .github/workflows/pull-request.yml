@@ -38,6 +38,9 @@ jobs:
       - name: Lint with pylint
         run: python3 -m pylint .
 
+      - name: Type checking with mypy
+        run: python3 -m mypy yirgacheffe
+
       - name: Test with numpy backend
         run: python3 -m pytest --cov=yirgacheffe -vv
 

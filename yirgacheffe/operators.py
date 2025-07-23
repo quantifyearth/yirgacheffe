@@ -11,7 +11,7 @@ from typing import Optional
 
 import numpy as np
 from osgeo import gdal
-from dill import dumps, loads
+from dill import dumps, loads # type: ignore
 
 from . import constants
 from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
@@ -320,7 +320,7 @@ class LayerOperation(LayerMathMixin):
         else:
             self.other = None
 
-    def __str__(self):
+    def __str__(self) -> str:
         try:
             return f"({self.lhs} {self.operator} {self.rhs})"
         except AttributeError:
@@ -329,7 +329,7 @@ class LayerOperation(LayerMathMixin):
             except AttributeError:
                 return str(self.lhs)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.lhs)
 
     def __getstate__(self) -> object:
@@ -339,22 +339,22 @@ class LayerOperation(LayerMathMixin):
             del odict['operator']
         return odict
 
-    def __setstate__(self, state):
+    def __setstate__(self, state) -> None:
         if 'operator_dill' in state:
             state['operator'] = loads(state['operator_dill'])
             del state['operator_dill']
         self.__dict__.update(state)
 
     @property
-    def area(self) -> Area:
+    def area(self) -> Optional[Area]:
         # The type().__name__ here is to avoid a circular import dependancy
         lhs_area = self.lhs.area if not type(self.lhs).__name__ == "ConstantLayer" else None
         try:
-            rhs_area = self.rhs.area if not type(self.rhs).__name__ == "ConstantLayer" else None
+            rhs_area = self.rhs.area if not type(self.rhs).__name__ == "ConstantLayer" else None # type: ignore[return-value] # pylint: disable=C0301
         except AttributeError:
             rhs_area = None
         try:
-            other_area = self.other.area if not type(self.other).__name__ == "ConstantLayer" else None
+            other_area = self.other.area if not type(self.other).__name__ == "ConstantLayer" else None # type: ignore[return-value] # pylint: disable=C0301
         except AttributeError:
             other_area = None
 
@@ -391,6 +391,8 @@ class LayerOperation(LayerMathMixin):
                     right=max(x.right for x in all_areas),
                     bottom=min(x.bottom for x in all_areas)
                 )
+            case _:
+                assert False, "Should not be reached"
 
     @property
     def pixel_scale(self) -> PixelScale:
@@ -409,6 +411,7 @@ class LayerOperation(LayerMathMixin):
     def window(self) -> Window:
         pixel_scale = self.pixel_scale
         area = self.area
+        assert area is not None
 
         return Window(
             xoff=round_down_pixels(area.left / pixel_scale.xstep, pixel_scale.xstep),
