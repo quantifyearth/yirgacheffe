@@ -1,5 +1,5 @@
-
-from typing import Any, List, Optional, Tuple
+from __future__ import annotations
+from typing import Any, Optional, Sequence, Tuple
 
 from ..operators import DataType, LayerMathMixin
 from ..rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
@@ -67,7 +67,7 @@ class YirgacheffeLayer(LayerMathMixin):
         return self._window
 
     @staticmethod
-    def find_intersection(layers: List) -> Area:
+    def find_intersection(layers: Sequence[YirgacheffeLayer]) -> Area:
         if not layers:
             raise ValueError("Expected list of layers")
 
@@ -87,7 +87,7 @@ class YirgacheffeLayer(LayerMathMixin):
         return intersection
 
     @staticmethod
-    def find_union(layers: List) -> Area:
+    def find_union(layers: Sequence[YirgacheffeLayer]) -> Area:
         if not layers:
             raise ValueError("Expected list of layers")
 
@@ -183,7 +183,7 @@ class YirgacheffeLayer(LayerMathMixin):
         self._window = new_window
         self._active_area = new_area
 
-    def reset_window(self):
+    def reset_window(self) -> None:
         self._active_area = self._underlying_area
         if self._pixel_scale:
             abs_xstep, abs_ystep = abs(self._pixel_scale.xstep), abs(self._pixel_scale.ystep)
@@ -194,7 +194,7 @@ class YirgacheffeLayer(LayerMathMixin):
                 ysize=round_up_pixels((self.area.bottom - self.area.top) / self._pixel_scale.ystep, abs_ystep),
             )
 
-    def offset_window_by_pixels(self, offset: int):
+    def offset_window_by_pixels(self, offset: int) -> None:
         """Grows (if pixels is positive) or shrinks (if pixels is negative) the window for the layer."""
         if offset == 0:
             return
