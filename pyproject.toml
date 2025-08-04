@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yirgacheffe"
-version = "1.4.0"
+version = "1.4.1"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
@@ -16,7 +16,8 @@ dependencies = [
     "numpy",
     "gdal[numpy]",
     "scikit-image",
-    "torch"
+    "torch",
+    "dill",
 ]
 requires-python = ">=3.10"
 
