@@ -1,3 +1,4 @@
+from typing import Callable, Dict
 
 import numpy as np
 import mlx.core as mx # type: ignore
@@ -182,7 +183,7 @@ def backend_to_dtype(val):
 def astype_op(data, datatype):
     return data.astype(dtype_to_backed(datatype))
 
-operator_map = {
+operator_map : Dict[op,Callable] = {
     op.ADD: mx.array.__add__,
     op.SUB: mx.array.__sub__,
     op.MUL: mul_op,
