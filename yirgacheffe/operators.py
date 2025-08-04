@@ -7,7 +7,7 @@ import types
 from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 from osgeo import gdal
@@ -453,7 +453,7 @@ class LayerOperation(LayerMathMixin):
             return lhs_data
 
         try:
-            operator = backend.operator_map[self.operator]
+            operator: Callable = backend.operator_map[self.operator]
         except KeyError:
             # Handles things like `numpy_apply` where a custom operator is provided
             operator = self.operator
