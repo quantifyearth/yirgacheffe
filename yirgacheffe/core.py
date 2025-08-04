@@ -6,6 +6,19 @@ from .window import PixelScale
 from .operators import DataType
 
 def read_raster(filename: Union[Path,str], band: int = 1) -> RasterLayer:
+    """Open a raster file (e.g., GeoTIFF).
+
+    Parameters
+    ----------
+    filename : Path
+        Path of raster file to open.
+    band : int
+        For multi-band rasters, which band to use (defaults to first if not specified).
+
+    Returns
+    -------
+        Returns an layer representing the raster data.
+    """
     return RasterLayer.layer_from_file(filename, band)
 
 def read_shape(
