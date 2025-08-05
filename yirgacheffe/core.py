@@ -12,32 +12,57 @@ def read_raster(filename: Union[Path,str], band: int = 1) -> RasterLayer:
     ----------
     filename : Path
         Path of raster file to open.
-    band : int
+    band : int, default=1
         For multi-band rasters, which band to use (defaults to first if not specified).
 
     Returns
     -------
+    RasterLayer
         Returns an layer representing the raster data.
     """
     return RasterLayer.layer_from_file(filename, band)
 
 def read_shape(
     filename: Union[Path,str],
-    where_filter: Optional[str],
-    scale: PixelScale,
+    scale: Union[PixelScale, Tuple[float,float]],
     projection: str,
-    datatype: Optional[Union[int, DataType]] = None,
+    where_filter: Optional[str],
+    datatype: Optional[DataType] = None,
     burn_value: Union[int,float,str] = 1,
-    anchor: Tuple[float,float] = (0.0, 0.0)
 ) -> VectorLayer:
+    """Open a polygon file (e.g., GeoJSON, GPKG, or ESRI Shape File).
+
+    Parameters
+    ----------
+    filename : Path
+        Path of raster file to open.
+    scale: PixelScale or tuple of float
+        The dimensions of each pixel.
+    projection: str
+        The map projection to use
+    where_filter : str, optional
+        For use with files with many entries (e.g., GPKG), applies this filter to the data.
+    datatype: DataType, default=DataType.Byte
+        Specify the data type of the raster data generated.
+    burn_value: int or float or str, default=1
+        The value of each pixel in the polygon.
+
+    Returns
+    -------
+    VectorLayer
+        Returns an layer representing the vector data.
+    """
+
+    if not isinstance(scale, PixelScale):
+        scale = PixelScale(scale[0], scale[1])
+
     return VectorLayer.layer_from_file(
         filename,
         where_filter,
         scale,
         projection,
         datatype,
-        burn_value,
-        anchor
+        burn_value
     )
 
 def read_shape_like(
@@ -47,6 +72,27 @@ def read_shape_like(
     datatype: Optional[DataType] = None,
     burn_value: Union[int,float,str] = 1,
 ) -> VectorLayer:
+    """Open a polygon file (e.g., GeoJSON, GPKG, or ESRI Shape File).
+
+    Parameters
+    ----------
+    filename : Path
+        Path of raster file to open.
+    like: YirgacheffeLayer
+        Another layer that has a projection and pixel scale set. This layer will
+        use the same projection and pixel scale as that one.
+    where_filter : str, optional
+        For use with files with many entries (e.g., GPKG), applies this filter to the data.
+    datatype: DataType, default=DataType.Byte
+        Specify the data type of the raster data generated.
+    burn_value: int or float or str, default=1
+        The value of each pixel in the polygon.
+
+    Returns
+    -------
+    VectorLayer
+        Returns an layer representing the vector data.
+    """
     return VectorLayer.layer_from_file_like(
         filename,
         like,
