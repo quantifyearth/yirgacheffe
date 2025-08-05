@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-import yirgacheffe.core as yg
+import yirgacheffe as yg
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import InvalidRasterBand
 from yirgacheffe.window import Area, PixelScale, Window

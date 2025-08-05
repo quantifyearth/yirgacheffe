@@ -6,7 +6,7 @@ from typing import Any, Optional, Tuple, Union
 import numpy as np
 from osgeo import gdal
 
-from .. import WGS_84_PROJECTION
+from ..constants import WGS_84_PROJECTION
 from ..window import Area, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer

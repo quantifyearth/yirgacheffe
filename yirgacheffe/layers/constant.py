@@ -4,7 +4,7 @@ from ..operators import DataType
 from ..window import Area, PixelScale, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
-from .. import WGS_84_PROJECTION
+from ..constants import WGS_84_PROJECTION
 
 
 class ConstantLayer(YirgacheffeLayer):
