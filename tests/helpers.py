@@ -125,15 +125,25 @@ def gdal_dataset_with_data(
         band.WriteArray(np.array([list(val)]), 0, index)
     return dataset
 
-def gdal_multiband_dataset_with_data(origin: Tuple, pixel_pitch: float, datas: list[np.array]) -> gdal.Dataset:
+def gdal_multiband_dataset_with_data(
+    origin: Tuple,
+    pixel_pitch: float,
+    datas: list[np.array],
+    filename: Optional[str]=None,
+) -> gdal.Dataset:
     for data in datas:
         assert data.ndim == 2
     datatype = gdal.GDT_Byte
     data = datas[-1]
     if isinstance(data[0][0], float):
         datatype = gdal.GDT_Float64
-    dataset = gdal.GetDriverByName('mem').Create(
-        'mem',
+    if filename:
+        driver = gdal.GetDriverByName('GTiff')
+    else:
+        driver = gdal.GetDriverByName('mem')
+        filename = 'mem'
+    dataset = driver.Create(
+        filename,
         len(datas[0][0]),
         len(datas[0]),
         len(datas),

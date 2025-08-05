@@ -223,9 +223,11 @@ class VectorLayer(YirgacheffeLayer):
         burn_value: Union[int,float,str] = 1,
         anchor: Tuple[float,float] = (0.0, 0.0)
     ) -> VectorLayer:
-        vectors = ogr.Open(filename)
-        if vectors is None:
-            raise FileNotFoundError(filename)
+        try:
+            vectors = ogr.Open(filename)
+        except RuntimeError as exc:
+            # With exceptions on GDAL now returns the wrong (IMHO) exception
+            raise FileNotFoundError(filename) from exc
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)

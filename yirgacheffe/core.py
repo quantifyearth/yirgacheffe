@@ -26,7 +26,7 @@ def read_shape(
     filename: Union[Path,str],
     scale: Union[PixelScale, Tuple[float,float]],
     projection: str,
-    where_filter: Optional[str],
+    where_filter: Optional[str] = None,
     datatype: Optional[DataType] = None,
     burn_value: Union[int,float,str] = 1,
 ) -> VectorLayer:
@@ -68,7 +68,7 @@ def read_shape(
 def read_shape_like(
     filename: Union[Path,str],
     like: YirgacheffeLayer,
-    where_filter: Optional[str],
+    where_filter: Optional[str] = None,
     datatype: Optional[DataType] = None,
     burn_value: Union[int,float,str] = 1,
 ) -> VectorLayer:
