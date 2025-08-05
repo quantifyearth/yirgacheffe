@@ -1,11 +1,14 @@
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
-from .layers import RasterLayer, VectorLayer, YirgacheffeLayer
+from .layers import GroupLayer, RasterLayer, VectorLayer, YirgacheffeLayer
 from .window import PixelScale
 from .operators import DataType
 
-def read_raster(filename: Union[Path,str], band: int = 1) -> RasterLayer:
+def read_raster(
+    filename: Union[Path,str],
+    band: int = 1
+) -> RasterLayer:
     """Open a raster file (e.g., GeoTIFF).
 
     Parameters
@@ -21,6 +24,23 @@ def read_raster(filename: Union[Path,str], band: int = 1) -> RasterLayer:
         Returns an layer representing the raster data.
     """
     return RasterLayer.layer_from_file(filename, band)
+
+def read_rasters(
+    filenames : Union[List[Path],List[str]]
+) -> GroupLayer:
+    """Open a set of raster files (e.g., GeoTIFFs) as a single layer.
+
+    Parameters
+    ----------
+    filenames : List[Path]
+        List of paths of raster files to open.
+
+    Returns
+    -------
+    GroupLayer
+        Returns an layer representing the raster data.
+    """
+    return GroupLayer.layer_from_files(filenames)
 
 def read_shape(
     filename: Union[Path,str],

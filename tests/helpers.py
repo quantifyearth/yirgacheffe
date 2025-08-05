@@ -1,4 +1,5 @@
-from typing import Set, Optional, Tuple
+from pathlib import Path
+from typing import Set, Optional, Tuple, Union
 
 import numpy as np
 from osgeo import gdal, ogr
@@ -8,7 +9,7 @@ from yirgacheffe.layers import YirgacheffeLayer
 from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe import WGS_84_PROJECTION
 
-def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[str]=None) -> gdal.Dataset:
+def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[Union[str,Path]]=None) -> gdal.Dataset:
     if filename:
         driver = gdal.GetDriverByName('GTiff')
     else:
@@ -95,7 +96,7 @@ def gdal_dataset_with_data(
     origin: Tuple,
     pixel_pitch: float,
     data: np.array,
-    filename: Optional[str]=None
+    filename: Optional[Union[Path,str]]=None,
 ) -> gdal.Dataset:
     assert data.ndim == 2
 
@@ -129,7 +130,7 @@ def gdal_multiband_dataset_with_data(
     origin: Tuple,
     pixel_pitch: float,
     datas: list[np.array],
-    filename: Optional[str]=None,
+    filename: Optional[Union[Path,str]]=None,
 ) -> gdal.Dataset:
     for data in datas:
         assert data.ndim == 2
@@ -160,7 +161,7 @@ def gdal_multiband_dataset_with_data(
             band.WriteArray(np.array([list(val)]), 0, index)
     return dataset
 
-def make_vectors_with_id(identifier: int, areas: Set[Area], filename: str) -> None:
+def make_vectors_with_id(identifier: int, areas: Set[Area], filename: Union[str,Path]) -> None:
     poly = ogr.Geometry(ogr.wkbPolygon)
 
     for area in areas:
@@ -188,7 +189,7 @@ def make_vectors_with_id(identifier: int, areas: Set[Area], filename: str) -> No
 
     package.Close()
 
-def make_vectors_with_mutlile_ids(areas: Set[Tuple[Area,int]], filename: str) -> None:
+def make_vectors_with_mutlile_ids(areas: Set[Tuple[Area,int]], filename: Union[str,Path]) -> None:
     srs = ogr.osr.SpatialReference()
     srs.ImportFromEPSG(4326)
 

@@ -7,6 +7,7 @@ import pytest
 
 import yirgacheffe.core as yg
 from yirgacheffe import WGS_84_PROJECTION
+from yirgacheffe.layers import InvalidRasterBand
 from yirgacheffe.window import Area, PixelScale, Window
 from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data, \
     make_vectors_with_id, make_vectors_with_mutlile_ids
@@ -43,6 +44,19 @@ def test_open_raster_file_as_path() -> None:
             assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.window == Window(0, 0, 1000, 1000)
 
+def test_open_multiband_raster_wrong_band() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.tif"
+        data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+        data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+
+        datas = [data1, data2]
+        dataset = gdal_multiband_dataset_with_data((0.0, 0.0), 0.02, datas, filename=path)
+        dataset.Close()
+
+        with pytest.raises(InvalidRasterBand):
+            _ = yg.read_raster(path, 3)
+
 def test_open_multiband_raster() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.tif"
@@ -58,6 +72,22 @@ def test_open_multiband_raster() -> None:
                 data = datas[i]
                 actual = layer.read_array(0, 0, 4, 2)
                 assert (data == actual).all()
+
+def test_empty_rasters_list():
+    with pytest.raises(ValueError):
+        _ = yg.read_rasters([])
+
+def test_valid_rasters_list():
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.tif"
+        area = Area(-10, 10, 10, -10)
+        dataset = gdal_dataset_of_region(area, 0.2, filename=path)
+        dataset.Close()
+        assert path.exists
+
+        with yg.read_rasters([path]) as group:
+            assert group.area == area
+            assert group.window == Window(0, 0, 100, 100)
 
 def test_shape_from_nonexistent_file() -> None:
     with pytest.raises(FileNotFoundError):
@@ -104,3 +134,22 @@ def test_open_gpkg_with_filter() -> None:
             # Because we picked one later, all pixels should be burned
             total = layer.sum()
             assert total == (layer.window.xsize * layer.window.ysize)
+
+def test_open_shape_like() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.tif"
+        area = Area(-10, 10, 10, -10)
+        dataset = gdal_dataset_of_region(area, 1.0, filename=path)
+        dataset.Close()
+        assert os.path.exists(path)
+
+        with yg.read_raster(path) as raster_layer:
+            path = os.path.join(tempdir, "test.gpkg")
+            area = Area(-10.0, 10.0, 10.0, 0.0)
+            make_vectors_with_id(42, {area}, path)
+
+            with yg.read_shape_like(path, raster_layer) as layer:
+                assert layer.area == area
+                assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+                assert layer.window == Window(0, 0, 20, 10)
+                assert layer.projection == raster_layer.projection
