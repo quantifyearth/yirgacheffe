@@ -40,6 +40,9 @@ class LayerConstant:
     def _eval(self, _area, _index, _step, _target_window):
         return self.val
 
+    @property
+    def area(self):
+        return Area.world()
 
 class LayerMathMixin:
 
@@ -346,25 +349,19 @@ class LayerOperation(LayerMathMixin):
         self.__dict__.update(state)
 
     @property
-    def area(self) -> Optional[Area]:
+    def area(self) -> Area:
         # The type().__name__ here is to avoid a circular import dependancy
-        lhs_area = self.lhs.area if not type(self.lhs).__name__ == "ConstantLayer" else None
+        lhs_area = self.lhs.area
         try:
-            rhs_area = self.rhs.area if not type(self.rhs).__name__ == "ConstantLayer" else None # type: ignore[return-value] # pylint: disable=C0301
+            rhs_area = self.rhs.area
         except AttributeError:
             rhs_area = None
         try:
-            other_area = self.other.area if not type(self.other).__name__ == "ConstantLayer" else None # type: ignore[return-value] # pylint: disable=C0301
+            other_area = self.other.area
         except AttributeError:
             other_area = None
 
-        all_areas = []
-        if lhs_area is not None:
-            all_areas.append(lhs_area)
-        if rhs_area is not None:
-            all_areas.append(rhs_area)
-        if other_area is not None:
-            all_areas.append(other_area)
+        all_areas = [x for x in [lhs_area, rhs_area, other_area] if (x is not None) and (not x.is_world)]
 
         match self.window_op:
             case WindowOperation.NONE:
