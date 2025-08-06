@@ -1,12 +1,12 @@
 from __future__ import annotations
 import math
-import os
+from pathlib import Path
 from typing import Any, Optional, Tuple, Union
 
 import numpy as np
 from osgeo import gdal
 
-from .. import WGS_84_PROJECTION
+from ..constants import WGS_84_PROJECTION
 from ..window import Area, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
@@ -88,7 +88,7 @@ class RasterLayer(YirgacheffeLayer):
     @staticmethod
     def empty_raster_layer_like(
         layer: Any,
-        filename: Optional[str]=None,
+        filename: Optional[Union[Path,str]]=None,
         area: Optional[Area]=None,
         datatype: Optional[Union[int, DataType]]=None,
         compress: bool=True,
@@ -214,7 +214,7 @@ class RasterLayer(YirgacheffeLayer):
         return RasterLayer(dataset)
 
     @classmethod
-    def layer_from_file(cls, filename: str, band: int = 1) -> RasterLayer:
+    def layer_from_file(cls, filename: Union[Path,str], band: int = 1) -> RasterLayer:
         try:
             dataset = gdal.Open(filename, gdal.GA_ReadOnly)
         except RuntimeError as exc:
@@ -224,7 +224,7 @@ class RasterLayer(YirgacheffeLayer):
             _ = dataset.GetRasterBand(band)
         except RuntimeError as exc:
             raise InvalidRasterBand(band) from exc
-        return cls(dataset, filename, band)
+        return cls(dataset, str(filename), band)
 
     def __init__(self, dataset: gdal.Dataset, name: Optional[str] = None, band: int = 1):
         if not dataset:
@@ -252,7 +252,7 @@ class RasterLayer(YirgacheffeLayer):
         assert self.window == Window(0, 0, dataset.RasterXSize, dataset.RasterYSize)
 
         self._dataset = dataset
-        self._dataset_path = dataset.GetDescription()
+        self._dataset_path = Path(dataset.GetDescription())
         self._band = band
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
@@ -275,7 +275,7 @@ class RasterLayer(YirgacheffeLayer):
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)
-        if not os.path.isfile(self._dataset_path):
+        if not self._dataset_path.exists():
             raise ValueError("Can not pickle layer that is not file backed.")
         odict = self.__dict__.copy()
         self._park()

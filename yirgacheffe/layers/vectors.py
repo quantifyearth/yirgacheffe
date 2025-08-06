@@ -1,6 +1,6 @@
 from __future__ import annotations
-import os
 from math import ceil, floor
+from pathlib import Path
 from typing import Any, Optional, Tuple, Union
 from typing_extensions import NotRequired
 
@@ -62,7 +62,7 @@ class RasteredVectorLayer(RasterLayer):
     @classmethod
     def layer_from_file( # type: ignore[override] # pylint: disable=W0221
         cls,
-        filename: str,
+        filename: Union[Path,str],
         where_filter: Optional[str],
         scale: PixelScale,
         projection: str,
@@ -172,7 +172,7 @@ class VectorLayer(YirgacheffeLayer):
     @classmethod
     def layer_from_file_like(
         cls,
-        filename: str,
+        filename: Union[Path,str],
         other_layer: YirgacheffeLayer,
         where_filter: Optional[str]=None,
         datatype: Optional[Union[int, DataType]] = None,
@@ -198,7 +198,7 @@ class VectorLayer(YirgacheffeLayer):
             layer,
             other_layer.pixel_scale,
             other_layer.projection,
-            name=filename,
+            name=str(filename),
             datatype=datatype if datatype is not None else other_layer.datatype,
             burn_value=burn_value,
             anchor=(other_layer.area.left, other_layer.area.top),
@@ -208,14 +208,14 @@ class VectorLayer(YirgacheffeLayer):
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
         # the original object being around
         vector_layer._original = vectors
-        vector_layer._dataset_path = filename
+        vector_layer._dataset_path = filename if isinstance(filename, Path) else Path(filename)
         vector_layer._filter = where_filter
         return vector_layer
 
     @classmethod
     def layer_from_file(
         cls,
-        filename: str,
+        filename: Union[Path,str],
         where_filter: Optional[str],
         scale: PixelScale,
         projection: str,
@@ -223,9 +223,11 @@ class VectorLayer(YirgacheffeLayer):
         burn_value: Union[int,float,str] = 1,
         anchor: Tuple[float,float] = (0.0, 0.0)
     ) -> VectorLayer:
-        vectors = ogr.Open(filename)
-        if vectors is None:
-            raise FileNotFoundError(filename)
+        try:
+            vectors = ogr.Open(filename)
+        except RuntimeError as exc:
+            # With exceptions on GDAL now returns the wrong (IMHO) exception
+            raise FileNotFoundError(filename) from exc
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
@@ -243,7 +245,7 @@ class VectorLayer(YirgacheffeLayer):
             layer,
             scale,
             projection,
-            name=filename,
+            name=str(filename),
             datatype=datatype_arg,
             burn_value=burn_value,
             anchor=anchor
@@ -253,7 +255,7 @@ class VectorLayer(YirgacheffeLayer):
         # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
         # the original object being around
         vector_layer._original = vectors
-        vector_layer._dataset_path = filename
+        vector_layer._dataset_path = filename if isinstance(filename, Path) else Path(filename)
         vector_layer._filter = where_filter
         return vector_layer
 
@@ -282,7 +284,7 @@ class VectorLayer(YirgacheffeLayer):
         self.burn_value = burn_value
 
         self._original = None
-        self._dataset_path: Optional[str] = None
+        self._dataset_path: Optional[Path] = None
         self._filter: Optional[str] = None
 
         # work out region for mask
@@ -323,7 +325,7 @@ class VectorLayer(YirgacheffeLayer):
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)
-        if self._dataset_path is None or not os.path.isfile(self._dataset_path):
+        if self._dataset_path is None or not self._dataset_path.exists():
             raise ValueError("Can not pickle layer that is not file backed.")
         odict = self.__dict__.copy()
         del odict['_original']

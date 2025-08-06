@@ -1,8 +1,7 @@
 from __future__ import annotations
 import copy
-import glob
-import os
-from typing import Any, List, Optional
+from pathlib import Path
+from typing import Any, List, Optional, Union
 
 import numpy as np
 from yirgacheffe.operators import DataType
@@ -23,19 +22,25 @@ class GroupLayer(YirgacheffeLayer):
     @classmethod
     def layer_from_directory(
         cls,
-        directory_path: str,
+        directory_path: Union[Path,str],
         name: Optional[str] = None,
         matching: str = "*.tif"
     ) -> GroupLayer:
         if directory_path is None:
             raise ValueError("Directory path is None")
-        files = [os.path.join(directory_path, x) for x in glob.glob(matching, root_dir=directory_path)]
+        if isinstance(directory_path, str):
+            directory_path = Path(directory_path)
+        files = list(directory_path.glob(matching))
         if len(files) < 1:
             raise GroupLayerEmpty(directory_path)
         return cls.layer_from_files(files, name)
 
     @classmethod
-    def layer_from_files(cls, filenames: List[str], name: Optional[str] = None) -> GroupLayer:
+    def layer_from_files(
+        cls,
+        filenames: Union[List[Path],List[str]],
+        name: Optional[str] = None
+    ) -> GroupLayer:
         if filenames is None:
             raise ValueError("filenames argument is None")
         if len(filenames) < 1:
@@ -43,7 +48,11 @@ class GroupLayer(YirgacheffeLayer):
         rasters: List[YirgacheffeLayer] = [RasterLayer.layer_from_file(x) for x in filenames]
         return cls(rasters, name)
 
-    def __init__(self, layers: List[YirgacheffeLayer], name: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        layers: List[YirgacheffeLayer],
+        name: Optional[str] = None
+    ) -> None:
         if not layers:
             raise GroupLayerEmpty("Expected one or more layers")
         if not are_pixel_scales_equal_enough([x.pixel_scale for x in layers]):

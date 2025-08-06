@@ -1,15 +1,19 @@
 import logging
 import math
 import multiprocessing
+import os
 import sys
+import tempfile
 import time
 import types
 from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
-from typing import Callable, Optional
+from pathlib import Path
+from typing import Callable, Dict, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 from osgeo import gdal
 from dill import dumps, loads # type: ignore
 
@@ -40,6 +44,9 @@ class LayerConstant:
     def _eval(self, _area, _index, _step, _target_window):
         return self.val
 
+    @property
+    def area(self):
+        return Area.world()
 
 class LayerMathMixin:
 
@@ -346,25 +353,19 @@ class LayerOperation(LayerMathMixin):
         self.__dict__.update(state)
 
     @property
-    def area(self) -> Optional[Area]:
+    def area(self) -> Area:
         # The type().__name__ here is to avoid a circular import dependancy
-        lhs_area = self.lhs.area if not type(self.lhs).__name__ == "ConstantLayer" else None
+        lhs_area = self.lhs.area
         try:
-            rhs_area = self.rhs.area if not type(self.rhs).__name__ == "ConstantLayer" else None # type: ignore[return-value] # pylint: disable=C0301
+            rhs_area = self.rhs.area
         except AttributeError:
             rhs_area = None
         try:
-            other_area = self.other.area if not type(self.other).__name__ == "ConstantLayer" else None # type: ignore[return-value] # pylint: disable=C0301
+            other_area = self.other.area
         except AttributeError:
             other_area = None
 
-        all_areas = []
-        if lhs_area is not None:
-            all_areas.append(lhs_area)
-        if rhs_area is not None:
-            all_areas.append(rhs_area)
-        if other_area is not None:
-            all_areas.append(other_area)
+        all_areas = [x for x in [lhs_area, rhs_area, other_area] if (x is not None) and (not x.is_world)]
 
         match self.window_op:
             case WindowOperation.NONE:
@@ -511,7 +512,7 @@ class LayerOperation(LayerMathMixin):
                 res = chunk_max
         return res
 
-    def save(self, destination_layer, and_sum=False, callback=None, band=1):
+    def save(self, destination_layer, and_sum=False, callback=None, band=1) -> Optional[float]:
         """
         Calling save will write the output of the operation to the provied layer.
         If you provide sum as true it will additionall compute the sum and return that.
@@ -608,7 +609,14 @@ class LayerOperation(LayerMathMixin):
         except AttributeError:
             pass
 
-    def _parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
+    def _parallel_save(
+        self,
+        destination_layer,
+        and_sum=False,
+        callback=None,
+        parallelism=None,
+        band=1
+    ) -> Optional[float]:
         assert (destination_layer is not None) or and_sum
         try:
             computation_window = self.window
@@ -648,7 +656,7 @@ class LayerOperation(LayerMathMixin):
                     or (computation_window.ysize != destination_window.ysize):
                 raise ValueError("Destination raster window size does not match input raster window size.")
 
-            np_dtype = {
+            np_type_map : Dict[int, np.dtype] = {
                 gdal.GDT_Byte:    np.dtype('byte'),
                 gdal.GDT_Float32: np.dtype('float32'),
                 gdal.GDT_Float64: np.dtype('float64'),
@@ -659,7 +667,8 @@ class LayerOperation(LayerMathMixin):
                 gdal.GDT_UInt16:  np.dtype('uint16'),
                 gdal.GDT_UInt32:  np.dtype('uint32'),
                 gdal.GDT_UInt64:  np.dtype('uint64'),
-            }[band.DataType]
+            }
+            np_dtype = np_type_map[band.DataType]
         else:
             band = None
             np_dtype = np.dtype('float64')
@@ -674,9 +683,13 @@ class LayerOperation(LayerMathMixin):
             with SharedMemoryManager() as smm:
 
                 mem_sem_cast = []
-                for i in range(worker_count):
+                for _ in range(worker_count):
                     shared_buf = smm.SharedMemory(size=np_dtype.itemsize * self.ystep * computation_window.xsize)
-                    cast_buf = np.ndarray((self.ystep, computation_window.xsize), dtype=np_dtype, buffer=shared_buf.buf)
+                    cast_buf : npt.NDArray = np.ndarray(
+                        (self.ystep, computation_window.xsize),
+                        dtype=np_dtype,
+                        buffer=shared_buf.buf
+                    )
                     cast_buf[:] = np.zeros((self.ystep, computation_window.xsize), np_dtype)
                     mem_sem_cast.append((shared_buf, Semaphore(), cast_buf))
 
@@ -746,13 +759,64 @@ class LayerOperation(LayerMathMixin):
 
         return total if and_sum else None
 
-    def parallel_save(self, destination_layer, and_sum=False, callback=None, parallelism=None, band=1):
+    def parallel_save(
+        self,
+        destination_layer,
+        and_sum=False,
+        callback=None,
+        parallelism=None,
+        band=1
+    ) -> Optional[float]:
         if destination_layer is None:
             raise ValueError("Layer is required")
         return self._parallel_save(destination_layer, and_sum, callback, parallelism, band)
 
     def parallel_sum(self, callback=None, parallelism=None, band=1):
         return self._parallel_save(None, True, callback, parallelism, band)
+
+    def to_geotiff(
+        self,
+        filename: Union[Path,str],
+        and_sum: bool = False,
+        parallelism:Optional[int]=None
+    ) -> Optional[float]:
+        """Saves a calculation to a raster file, optionally also returning the sum of pixels.
+
+        Parameters
+        ----------
+        filename : Path
+            Path of the raster to save the result to.
+        and_sum : bool, default=False
+            If true then the function will also calculate the sum of the raster as it goes and return that value.
+        parallelism : int, optional, default=None
+            If passed, attempt to use multiple CPU cores up to the number provided.
+
+        Returns
+        -------
+        float, optional
+            Either returns None, or the sum of the pixels in the resulting raster if `and_sum` was specified.
+        """
+
+        # We want to write to a tempfile before we move the result into place, but we can't use
+        # the actual $TMPDIR as that might be on a different device, and so we use a file next to where
+        # the final file will be, so we just need to rename the file at the end, not move it.
+        if isinstance(filename, str):
+            filename = Path(filename)
+        target_dir = filename.parent
+
+        with tempfile.NamedTemporaryFile(dir=target_dir, delete=False) as tempory_file:
+            # Local import due to circular dependancy
+            from yirgacheffe.layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
+            with RasterLayer.empty_raster_layer_like(self, filename=tempory_file.name) as layer:
+                if parallelism is None:
+                    result = self.save(layer, and_sum=and_sum)
+                else:
+                    result = self.parallel_save(layer, and_sum=and_sum, parallelism=parallelism)
+
+            os.makedirs(target_dir, exist_ok=True)
+            os.rename(src=tempory_file.name, dst=filename)
+
+        return result
 
 class ShaderStyleOperation(LayerOperation):
 

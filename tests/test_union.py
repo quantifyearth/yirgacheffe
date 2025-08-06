@@ -52,7 +52,7 @@ def test_find_union_with_null() -> None:
         ConstantLayer(0.0)
     ]
     union = RasterLayer.find_union(layers)
-    assert union == layers[1].area
+    assert union == layers[0].area
 
 def test_find_union_different_pixel_pitch() -> None:
     layers = [

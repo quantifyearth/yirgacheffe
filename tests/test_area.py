@@ -19,3 +19,13 @@ def test_area_operators(lhs: Area, rhs: Area, is_equal: bool, overlaps: bool) ->
     assert (lhs != rhs) == (not is_equal)
     assert (lhs.overlaps(rhs)) == overlaps
     assert (rhs.overlaps(lhs)) == overlaps
+    assert not lhs.is_world
+    assert not rhs.is_world
+
+def test_global_area() -> None:
+    area = Area.world()
+    assert area.is_world
+
+    other_area = Area(-10.0, 10.0, 10.0, -10.0)
+    assert area.overlaps(other_area)
+    assert other_area.overlaps(area)

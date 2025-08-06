@@ -1,3 +1,4 @@
+from __future__ import annotations
 import math
 import sys
 from collections import namedtuple
@@ -37,6 +38,17 @@ class Area:
     right: float
     bottom: float
 
+    @staticmethod
+    def world() -> Area:
+        """Creates an area that covers the entire planet.
+
+        Returns
+        -------
+        Area
+            An area where the extents are nan, but is_world returns true.
+        """
+        return Area(float("nan"), float("nan"), float("nan"), float("nan"))
+
     def __hash__(self):
         return (self.left, self.top, self.right, self.bottom).__hash__()
 
@@ -69,6 +81,17 @@ class Area:
             bottom=self.bottom - offset
         )
 
+    @property
+    def is_world(self) -> bool:
+        """Returns true if this is a global area, independant of projection.
+
+        Returns
+        -------
+        bool
+            True is the Area was created with `world` otherwise False.
+        """
+        return math.isnan(self.left)
+
     def overlaps(self, other) -> bool:
         """Check if this area overlaps with another area.
 
@@ -82,6 +105,10 @@ class Area:
         bool
             True if the two areas intersect, otherwise false.
         """
+
+        if self.is_world or other.is_world:
+            return True
+
         return (
             (self.left <= other.left <= self.right) or
             (self.left <= other.right <= self.right) or

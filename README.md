@@ -28,12 +28,12 @@ The motivation for Yirgacheffe layers is to make working with gdal data slightly
 For example, if we wanted to do a simple [Area of Habitat](https://github.com/quantifyearth/aoh-calculator/) calculation, whereby we find the pixels where a species resides by combining its range polygon, its habitat preferences, and its elevation preferences, the code would be like this:
 
 ```python
-from yirgacheffe.layer import RasterLayer, VectorLayer
+import yirgaceffe as yg
 
-habitat_map = RasterLayer.layer_from_file("habitats.tif")
-elevation_map = RasterLayer.layer_from_file('elevation.tif')
-range_polygon = VectorLayer.layer_from_file('species123.geojson', raster_like=habitat_map)
-area_per_pixel_map = RasterLayer.layer_from_file('area_per_pixel.tif')
+habitat_map = yg.read_raster("habitats.tif")
+elevation_map = yg.read_raster('elevation.tif')
+range_polygon = yg.read_shape_like('species123.geojson', like=habitat_map)
+area_per_pixel_map = yg.read_raster('area_per_pixel.tif')
 
 refined_habitat = habitat_map.isin([...species habitat codes...])
 refined_elevation = (elevation_map >= species_min) && (elevation_map <= species_max)
@@ -46,8 +46,8 @@ print(f'area for species 123: {aoh.sum()}')
 Similarly, you could save the result to a new raster layer:
 
 ```python
-with RasterLayer.empty_raster_layer_like(aoh, filename="result.tif") as result:
-    aoh.save(result)
+    ...
+    aoh.to_geotiff("result.tif")
 ```
 
 Yirgacheffe will automatically infer if you want to do an intersection of maps or a union of the maps based on the operators you use (see below for a full table). You can explicitly override that if you want.
@@ -85,27 +85,28 @@ If you have set either the intersection window or union window on a layer and yo
 If doing per-layer operations isn't applicable for your application, you can read the pixel values for all layers (including VectorLayers) by calling `read_array` similarly to how you would for gdal. The data you access will be relative to the specified window - that is, if you've called either `set_window_for_intersection` or `set_window_for_union` then `read_array` will be relative to that and Yirgacheffe will clip or expand the data with zero values as necessary.
 
 
-### Todo but not supported
-
-Yirgacheffe is work in progress, so things planned but not supported currently:
-
-* Dynamic pixel scale adjustment - all raster layers must be provided at the same pixel scale currently  *NOW IN EXPERIMENTAL TESTING, SEE BELOW*
-* A fold operation
-* CUDA/Metal support via CUPY/MLX
-* Dispatching work across multiple CPUs *NOW IN EXPERIMENTAL TESTING, SEE BELOW*
-
-
-
 ## Layer types
+
+Note that as part of the move to the next major release, 2.0, we are adding simpler ways to create layers. Not all of those have been implemented yet, which is why this section has some inconsistencies. However, given many of the common cases are already covered, we present the new 2.0 style methods (`read_raster` and similar) here so you can write cleaner code today rather than making people wait for the final 2.0 release.
 
 ### RasterLayer
 
 This is your basic GDAL raster layer, which you load from a geotiff.
 
 ```python
+from yirgaceffe.layers import RasterLayer
+
 with RasterLayer.layer_from_file('test1.tif') as layer:
-    data = layer.read_array(0, 0, 10, 10)
-    ...
+    total = layer.sum()
+```
+
+The new 2.0 way of doing this is:
+
+```python
+import yirgacheffe as yg
+
+with yg.read_raster('test.tif') as layer:
+    total = layer.sum()
 ```
 
 You can also create empty layers ready for you to store results, either by taking the dimensions from an existing layer. In both these cases you can either provide a filename to which the data will be written, or if you do not provide a filename then the layer will only exist in memory - this will be more efficient if the layer is being used for intermediary results.
@@ -142,51 +143,30 @@ This layer will load vector data and rasterize it on demand as part of a calcula
 Because it will be rasterized you need to specify the pixel scale and map projection to be used when rasterising the data, and the common way to do that is by using one of your other layers.
 
 ```python
-with VectorLayer.layer_from_file('range.gpkg', 'id_no == 42', layer1.pixel_scale, layer1.projection) as layer:
+from yirgaceffe import WGS_84_PROJECTION
+from yirgaceffe.window import PixelScale
+from yirgaceffe.layers import VectorLayer
+
+with VectorLayer.layer_from_file('range.gpkg', PixelScale(0.001, -0.001), WGS_84_PROJECTION) as layer:
     ...
 ```
 
-This class was formerly called `DynamicVectorRangeLayer`, a name now deprecated.
-
-
-### UniformAreaLayer
-
-In certain calculations you find you have a layer where all the rows of data are the same - notably geotiffs that contain the area of a given pixel do this due to how conventional map projections work. It's hugely inefficient to load the full map into memory, so whilst you could just load them as `Layer` types, we recommend you do:
+The new 2.0 way of doing this is:
 
 ```python
-with UniformAreaLayer('area.tiff') as layer:
-    ....
+import yirgacheffe as yg
+
+with yg.read_shape('range.gpkg', (0.001, -0.001), WGS_84_PROJECTION) as layer:
+    ...
 ```
 
-Note that loading this data can still be very slow, due to how image compression works. So if you plan to use area.tiff more than once, we recommend use save an optimised version - this will do the slow uncompression once and then save a minimal file to speed up future processing:
+It is more common that when a shape file is loaded that its pixel size and projection will want to be made to match that of an existing raster (as per the opening area of habitat example). For that there is the following convenience method:
+
 
 ```python
-if not os.path.exists('yirgacheffe_area.tiff'):
-    UniformAreaLayer.generate_narrow_area_projection('area.tiff', 'yirgacheffe_area.tiff')
-area_layer = UniformAreaLayer('yirgacheffe_area.tiff')
-```
-
-
-### ConstantLayer
-
-This is there to simplify code when you have some optional layers. Rather than littering your code with checks, you can just use a constant layer, which can be included in calculations and will just return an fixed value as if it wasn't there. Useful with 0.0 or 1.0 for sum or multiplication null layers.
-
-```python
-try:
-    area_layer = UniformAreaLayer('myarea.tiff')
-except FileDoesNotExist:
-    area_layer = ConstantLayer(0.0)
-```
-
-
-### H3CellLayer
-
-If you have H3 installed, you can generate a mask layer based on an H3 cell identifier, where pixels inside the cell will have a value of 1, and those outside will have a value of 0.
-
-Becuase it will be rasterized you need to specify the pixel scale and map projection to be used when rasterising the data, and the common way to do that is by using one of your other layers.
-
-```python
-hex_cell_layer = H3CellLayer('88972eac11fffff', layer1.pixel_scale, layer1.projection)
+with yg.read_raster("test.tif") as raster_layer:
+    with yg.read_shape_like('range.gpkg', raster_layer) as shape_layer:
+        ...
 ```
 
 ### GroupLayer
@@ -215,6 +195,15 @@ with GroupLayer.layer_from_directory('.') as all_tiles:
     ...
 ```
 
+The new 2.0 way of doing this is:
+
+```python
+import yirgacheffe as yg
+
+with yg.read_rasters(['tile_N10_E10.tif', 'tile_N20_E10.tif']) as all_tiles:
+    ...
+```
+
 ### TiledGroupLayer
 
 This is a specialisation of GroupLayer, which you can use if your layers are all the same size and form a grid, as is often the case with map tiles. In this case the rendering code can be optimised and this class is significantly faster that GroupLayer.
@@ -225,10 +214,58 @@ tile2 = RasterLayer.layer_from_file('tile_N20_E10.tif')
 all_tiles = TiledGroupLayer([tile1, tile2])
 ```
 
+The new 2.0 way of doing this is:
+
+```python
+import yirgacheffe as yg
+
+with yg.read_rasters(['tile_N10_E10.tif', 'tile_N20_E10.tif'], tiled=True) as all_tiles:
+    ...
+```
+
 Notes:
 
 * You can have missing tiles, and these will be filled in with zeros.
 * You can have tiles that overlap, so long as they still conform to the rule that all tiles are the same size and on a grid.
+
+### ConstantLayer
+
+This is there to simplify code when you have some optional layers. Rather than littering your code with checks, you can just use a constant layer, which can be included in calculations and will just return an fixed value as if it wasn't there. Useful with 0.0 or 1.0 for sum or multiplication null layers.
+
+```python
+try:
+    area_layer = RasterLayer.layer_from_file('myarea.tiff')
+except FileDoesNotExist:
+    area_layer = ConstantLayer(0.0)
+```
+
+### H3CellLayer
+
+If you have H3 installed, you can generate a mask layer based on an H3 cell identifier, where pixels inside the cell will have a value of 1, and those outside will have a value of 0.
+
+Becuase it will be rasterized you need to specify the pixel scale and map projection to be used when rasterising the data, and the common way to do that is by using one of your other layers.
+
+```python
+hex_cell_layer = H3CellLayer('88972eac11fffff', layer1.pixel_scale, layer1.projection)
+```
+
+
+### UniformAreaLayer
+
+In certain calculations you find you have a layer where all the rows of data are the same - notably geotiffs that contain the area of a given pixel do this due to how conventional map projections work. It's hugely inefficient to load the full map into memory, so whilst you could just load them as `Layer` types, we recommend you do:
+
+```python
+with UniformAreaLayer('area.tiff') as layer:
+    ....
+```
+
+Note that loading this data can still be very slow, due to how image compression works. So if you plan to use area.tiff more than once, we recommend use save an optimised version - this will do the slow uncompression once and then save a minimal file to speed up future processing:
+
+```python
+if not os.path.exists('yirgacheffe_area.tiff'):
+    UniformAreaLayer.generate_narrow_area_projection('area.tiff', 'yirgacheffe_area.tiff')
+area_layer = UniformAreaLayer('yirgacheffe_area.tiff')
+```
 
 
 ## Supported operations on layers
@@ -254,6 +291,24 @@ with RasterLayer.layer_from_file('test1.tif') as layer1:
     with RasterLayer.empty_raster_layer_like(layer1, 'result.tif') as result:
         calc = layer1 * 42.0
         calc.save(result)
+```
+
+
+The new 2.0 way of doing these are:
+
+```python
+with yg.read_raster('test1.tif') as layer1:
+    with yg.read_raster('test2.tif') as layer2:
+        result = layer1 + layer2
+        result.to_geotiff("result.tif")
+```
+
+or
+
+```python
+with yg.read_raster('test1.tif') as layer1:
+    result = layer1 * 42.0
+    result.to_geotiff("result.tif")
 ```
 
 ### Boolean testing
