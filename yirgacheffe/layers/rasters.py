@@ -88,7 +88,7 @@ class RasterLayer(YirgacheffeLayer):
     @staticmethod
     def empty_raster_layer_like(
         layer: Any,
-        filename: Optional[str]=None,
+        filename: Optional[Union[Path,str]]=None,
         area: Optional[Area]=None,
         datatype: Optional[Union[int, DataType]]=None,
         compress: bool=True,
