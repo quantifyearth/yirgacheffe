@@ -1,7 +1,10 @@
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-from .layers import GroupLayer, RasterLayer, VectorLayer, YirgacheffeLayer
+from .layers.base import YirgacheffeLayer
+from .layers.group import GroupLayer, TiledGroupLayer
+from .layers.rasters import RasterLayer
+from .layers.vectors import VectorLayer
 from .window import PixelScale
 from .operators import DataType
 
@@ -26,7 +29,8 @@ def read_raster(
     return RasterLayer.layer_from_file(filename, band)
 
 def read_rasters(
-    filenames : Union[List[Path],List[str]]
+    filenames : Union[List[Path],List[str]],
+    tiled: bool=False
 ) -> GroupLayer:
     """Open a set of raster files (e.g., GeoTIFFs) as a single layer.
 
@@ -34,13 +38,20 @@ def read_rasters(
     ----------
     filenames : List[Path]
         List of paths of raster files to open.
+    tiled : bool, default=False
+        If you know that the rasters for a regular tileset, then setting this flag allows
+        Yirgacheffe to perform certain optimisations that significantly improve performance for
+        this use case.
 
     Returns
     -------
     GroupLayer
         Returns an layer representing the raster data.
     """
-    return GroupLayer.layer_from_files(filenames)
+    if not tiled:
+        return GroupLayer.layer_from_files(filenames)
+    else:
+        return TiledGroupLayer.layer_from_files(filenames)
 
 def read_shape(
     filename: Union[Path,str],

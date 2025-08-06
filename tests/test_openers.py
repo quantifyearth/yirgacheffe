@@ -73,22 +73,6 @@ def test_open_multiband_raster() -> None:
                 actual = layer.read_array(0, 0, 4, 2)
                 assert (data == actual).all()
 
-def test_empty_rasters_list():
-    with pytest.raises(ValueError):
-        _ = yg.read_rasters([])
-
-def test_valid_rasters_list():
-    with tempfile.TemporaryDirectory() as tempdir:
-        path = Path(tempdir) / "test.tif"
-        area = Area(-10, 10, 10, -10)
-        dataset = gdal_dataset_of_region(area, 0.2, filename=path)
-        dataset.Close()
-        assert path.exists
-
-        with yg.read_rasters([path]) as group:
-            assert group.area == area
-            assert group.window == Window(0, 0, 100, 100)
-
 def test_shape_from_nonexistent_file() -> None:
     with pytest.raises(FileNotFoundError):
         _ = yg.read_shape("this_file_does_not_exist.gpkg", (1.0, -1.0), WGS_84_PROJECTION)
@@ -153,3 +137,29 @@ def test_open_shape_like() -> None:
                 assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
                 assert layer.window == Window(0, 0, 20, 10)
                 assert layer.projection == raster_layer.projection
+
+@pytest.mark.parametrize("tiled", [False, True])
+def test_empty_rasters_list(tiled):
+    with pytest.raises(ValueError):
+        _ = yg.read_rasters([], tiled=tiled)
+
+@pytest.mark.parametrize("tiled", [False, True])
+def test_open_two_raster_areas_side_by_side(tiled):
+    with tempfile.TemporaryDirectory() as tempdir:
+        path1 = Path(tempdir) / "test1.tif"
+        area1 = Area(-10, 10, 10, -10)
+        dataset1 = gdal_dataset_of_region(area1, 0.2, filename=path1)
+        dataset1.Close()
+
+        path2 = Path(tempdir) / "test2.tif"
+        area2 = Area(10, 10, 30, -10)
+        dataset2 = gdal_dataset_of_region(area2, 0.2, filename=path2)
+        dataset2.Close()
+
+        with yg.read_rasters([path1, path2], tiled=tiled) as group:
+            assert group.area == Area(-10, 10, 30, -10)
+            assert group.window == Window(0, 0, 200, 100)
+
+            with yg.read_raster(path1) as raster1:
+                with yg.read_raster(path2) as raster2:
+                    assert group.sum() == raster1.sum() + raster2.sum()
