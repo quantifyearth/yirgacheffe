@@ -312,7 +312,15 @@ class RasterLayer(YirgacheffeLayer):
         assert self._dataset
         return self._dataset.GetRasterBand(self._band).GetNoDataValue()
 
-    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
+    def _read_array_with_window(
+        self,
+        xoffset: int,
+        yoffset: int,
+        xsize: int,
+        ysize: int,
+        window: Window,
+        ignore_nodata: bool
+    ) -> Any:
         if self._dataset is None:
             self._unpark()
         assert self._dataset
@@ -342,7 +350,6 @@ class RasterLayer(YirgacheffeLayer):
         if target_window == intersection:
             # The target window is a subset of or equal to the source, so we can just ask for the data
             data = backend.promote(self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args))
-            return data
         else:
             # We should read the intersection from the array, and the rest should be zeros
             subset = backend.promote(self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args))
@@ -357,4 +364,9 @@ class RasterLayer(YirgacheffeLayer):
                 )
             )).astype(int)
             data = backend.pad(subset, region, mode='constant')
-            return data
+
+        nodata = self.nodata
+        if not ignore_nodata and nodata is not None:
+            data = backend.where(data == nodata, float("nan"), data)
+
+        return data

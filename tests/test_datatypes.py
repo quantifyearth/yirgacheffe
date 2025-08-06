@@ -44,7 +44,6 @@ def test_round_trip_from_gdal(ytype) -> None:
 def test_round_trip_float64() -> None:
     backend_type = backend.dtype_to_backed(DataType.Float64)
     ytype = backend.backend_to_dtype(backend_type)
-    print(BACKEND, "sad")
     match BACKEND:
         case "NUMPY":
             assert ytype == DataType.Float64

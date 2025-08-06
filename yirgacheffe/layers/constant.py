@@ -25,11 +25,27 @@ class ConstantLayer(YirgacheffeLayer):
     def set_window_for_intersection(self, _intersection: Area) -> None:
         pass
 
-    def read_array(self, _x: int, _y: int, width: int, height: int) -> Any:
+    def read_array(self, _x: int, _y: int, width: int, height: int, _ignore_nodata: bool = False) -> Any:
         return backend.full((height, width), self.value)
 
-    def read_array_with_window(self, _x: int, _y: int, width: int, height: int, _window: Window) -> Any:
+    def _read_array_with_window(
+        self,
+        _x: int,
+        _y: int,
+        width: int,
+        height: int,
+        _window: Window,
+        _ignore_nodata: bool
+    ) -> Any:
         return backend.full((height, width), self.value)
 
-    def read_array_for_area(self, _target_area: Area, x: int, y: int, width: int, height: int) -> Any:
-        return self.read_array(x, y, width, height)
+    def _read_array_for_area(
+        self,
+        _target_area: Area,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        ignore_nodata: bool = False
+    ) -> Any:
+        return self.read_array(x, y, width, height, ignore_nodata)
