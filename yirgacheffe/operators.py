@@ -10,9 +10,10 @@ from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Dict, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
 from osgeo import gdal
 from dill import dumps, loads # type: ignore
 
@@ -655,7 +656,7 @@ class LayerOperation(LayerMathMixin):
                     or (computation_window.ysize != destination_window.ysize):
                 raise ValueError("Destination raster window size does not match input raster window size.")
 
-            np_dtype = {
+            np_type_map : Dict[int, np.dtype] = {
                 gdal.GDT_Byte:    np.dtype('byte'),
                 gdal.GDT_Float32: np.dtype('float32'),
                 gdal.GDT_Float64: np.dtype('float64'),
@@ -666,7 +667,8 @@ class LayerOperation(LayerMathMixin):
                 gdal.GDT_UInt16:  np.dtype('uint16'),
                 gdal.GDT_UInt32:  np.dtype('uint32'),
                 gdal.GDT_UInt64:  np.dtype('uint64'),
-            }[band.DataType]
+            }
+            np_dtype = np_type_map[band.DataType]
         else:
             band = None
             np_dtype = np.dtype('float64')
@@ -683,7 +685,11 @@ class LayerOperation(LayerMathMixin):
                 mem_sem_cast = []
                 for _ in range(worker_count):
                     shared_buf = smm.SharedMemory(size=np_dtype.itemsize * self.ystep * computation_window.xsize)
-                    cast_buf = np.ndarray((self.ystep, computation_window.xsize), dtype=np_dtype, buffer=shared_buf.buf)
+                    cast_buf : npt.NDArray = np.ndarray(
+                        (self.ystep, computation_window.xsize),
+                        dtype=np_dtype,
+                        buffer=shared_buf.buf
+                    )
                     cast_buf[:] = np.zeros((self.ystep, computation_window.xsize), np_dtype)
                     mem_sem_cast.append((shared_buf, Semaphore(), cast_buf))
 
