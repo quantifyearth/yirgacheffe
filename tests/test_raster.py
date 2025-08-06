@@ -56,12 +56,12 @@ def test_open_file() -> None:
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
         dataset.Close()
         assert os.path.exists(path)
-        layer = RasterLayer.layer_from_file(path)
-        assert layer.area == area
-        assert layer.pixel_scale == (0.02, -0.02)
-        assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
-        assert layer.window == Window(0, 0, 1000, 1000)
-        del layer
+        with RasterLayer.layer_from_file(path) as layer:
+            assert layer.area == area
+            assert layer.pixel_scale == (0.02, -0.02)
+            assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+            assert layer.window == Window(0, 0, 1000, 1000)
+            del layer
 
 @pytest.mark.parametrize("initial_area",
     [

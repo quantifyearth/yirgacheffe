@@ -305,6 +305,13 @@ class RasterLayer(YirgacheffeLayer):
         assert self._dataset
         return DataType.of_gdal(self._dataset.GetRasterBand(1).DataType)
 
+    @property
+    def nodata(self) -> Optional[Any]:
+        if self._dataset is None:
+            self._unpark()
+        assert self._dataset
+        return self._dataset.GetRasterBand(self._band).GetNoDataValue()
+
     def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
         if self._dataset is None:
             self._unpark()
