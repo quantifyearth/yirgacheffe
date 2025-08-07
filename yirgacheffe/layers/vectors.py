@@ -366,7 +366,6 @@ class VectorLayer(YirgacheffeLayer):
         y: int,
         width: int,
         height: int,
-        _ignore_nodata : bool
     ) -> Any:
         assert self._pixel_scale is not None
 
@@ -407,8 +406,8 @@ class VectorLayer(YirgacheffeLayer):
         res = backend.promote(dataset.ReadAsArray(0, 0, width, height))
         return res
 
-    def _read_array_with_window(self, _x, _y, _width, _height, _window, _ignore_nodata : bool = False) -> Any:
+    def _read_array_with_window(self, _x, _y, _width, _height, _window) -> Any:
         assert NotRequired
 
-    def read_array(self, x: int, y: int, width: int, height: int, ignore_nodata : bool = False) -> Any:
-        return self._read_array_for_area(self._active_area, x, y, width, height, ignore_nodata)
+    def read_array(self, x: int, y: int, width: int, height: int) -> Any:
+        return self._read_array_for_area(self._active_area, x, y, width, height)

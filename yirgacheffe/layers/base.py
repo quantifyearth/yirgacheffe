@@ -238,7 +238,6 @@ class YirgacheffeLayer(LayerMathMixin):
         _xsize: int,
         _ysize: int,
         _window: Window,
-        _ignore_nodata: bool
     ) -> Any:
         raise NotImplementedError("Must be overridden by subclass")
 
@@ -249,7 +248,6 @@ class YirgacheffeLayer(LayerMathMixin):
         y: int,
         width: int,
         height: int,
-        ignore_nodata: bool
     ) -> Any:
         assert self._pixel_scale is not None
 
@@ -267,9 +265,9 @@ class YirgacheffeLayer(LayerMathMixin):
                 (self._pixel_scale.ystep * -1.0)
             ),
         )
-        return self._read_array_with_window(x, y, width, height, target_window, ignore_nodata)
+        return self._read_array_with_window(x, y, width, height, target_window)
 
-    def read_array(self, x: int, y: int, width: int, height: int, ignore_nodata: bool = False) -> Any:
+    def read_array(self, x: int, y: int, width: int, height: int) -> Any:
         """Reads data from the layer based on the current reference window.
 
         Arguments
@@ -282,15 +280,13 @@ class YirgacheffeLayer(LayerMathMixin):
             Width of data to read
         height : int
             Height of data to read
-        ignore_nodata : bool, default=False
-            If False, then nodata values will be substuted with NaN. If True the actual nodata value will be returned.
 
         Results
         -------
         Any
             An array of values from the layer.
         """
-        return self._read_array_with_window(x, y, width, height, self.window, ignore_nodata)
+        return self._read_array_with_window(x, y, width, height, self.window)
 
     def latlng_for_pixel(self, x_coord: int, y_coord: int) -> Tuple[float,float]:
         """Get geo coords for pixel. This is relative to the set view window."""

@@ -69,7 +69,6 @@ class RescaledRasterLayer(YirgacheffeLayer):
         xsize: int,
         ysize: int,
         window: Window,
-        _ignore_nodata: bool
     ) -> Any:
 
         # to avoid aliasing issues, we try to scale to the nearest pixel

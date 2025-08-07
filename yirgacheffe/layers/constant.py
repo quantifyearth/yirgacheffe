@@ -25,7 +25,7 @@ class ConstantLayer(YirgacheffeLayer):
     def set_window_for_intersection(self, _intersection: Area) -> None:
         pass
 
-    def read_array(self, _x: int, _y: int, width: int, height: int, _ignore_nodata: bool = False) -> Any:
+    def read_array(self, _x: int, _y: int, width: int, height: int) -> Any:
         return backend.full((height, width), self.value)
 
     def _read_array_with_window(
@@ -35,7 +35,6 @@ class ConstantLayer(YirgacheffeLayer):
         width: int,
         height: int,
         _window: Window,
-        _ignore_nodata: bool
     ) -> Any:
         return backend.full((height, width), self.value)
 
@@ -46,6 +45,5 @@ class ConstantLayer(YirgacheffeLayer):
         y: int,
         width: int,
         height: int,
-        ignore_nodata: bool = False
     ) -> Any:
-        return self.read_array(x, y, width, height, ignore_nodata)
+        return self.read_array(x, y, width, height)

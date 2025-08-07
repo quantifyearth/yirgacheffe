@@ -89,7 +89,6 @@ class H3CellLayer(YirgacheffeLayer):
         xsize: int,
         ysize: int,
         window: Window,
-        _ignore_nodata: bool
     ) -> Any:
         assert self._pixel_scale is not None
 

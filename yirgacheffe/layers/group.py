@@ -112,7 +112,6 @@ class GroupLayer(YirgacheffeLayer):
         xsize: int,
         ysize: int,
         window: Window,
-        ignore_nodata: bool
     ) -> Any:
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
@@ -164,17 +163,16 @@ class GroupLayer(YirgacheffeLayer):
                 intersection.yoff - adjusted_layer_window.yoff,
                 intersection.xsize,
                 intersection.ysize,
-                ignore_nodata=True,
             )
             result_x_offset = (intersection.xoff - xoffset) - window.xoff
             result_y_offset = (intersection.yoff - yoffset) - window.yoff
-            if ignore_nodata or layer.nodata is None:
+            if layer.nodata is None:
                 result[
                     result_y_offset:result_y_offset + intersection.ysize,
                     result_x_offset:result_x_offset + intersection.xsize
                 ] = data
             else:
-                masked = ma.masked_values(data, layer.nodata)
+                masked = ma.masked_invalid(data)
                 before = result[
                     result_y_offset:result_y_offset + intersection.ysize,
                     result_x_offset:result_x_offset + intersection.xsize
@@ -245,7 +243,6 @@ class TiledGroupLayer(GroupLayer):
         xsize: int,
         ysize: int,
         window: Window,
-        _ignore_nodata : bool,
     ) -> Any:
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
