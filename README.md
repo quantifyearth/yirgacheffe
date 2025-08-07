@@ -46,8 +46,8 @@ print(f'area for species 123: {aoh.sum()}')
 Similarly, you could save the result to a new raster layer:
 
 ```python
-    ...
-    aoh.to_geotiff("result.tif")
+...
+aoh.to_geotiff("result.tif")
 ```
 
 Yirgacheffe will automatically infer if you want to do an intersection of maps or a union of the maps based on the operators you use (see below for a full table). You can explicitly override that if you want.

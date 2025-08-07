@@ -1416,6 +1416,18 @@ def test_ceil_module() -> None:
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
 
+def test_to_geotiff_on_layer() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        filename = os.path.join(tempdir, "test.tif")
+        layer1.to_geotiff(filename)
+
+        with RasterLayer.layer_from_file(filename) as result:
+            actual = result.read_array(0, 0, 4, 2)
+            assert (data1 == actual).all()
+
 def test_to_geotiff_single_thread() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
