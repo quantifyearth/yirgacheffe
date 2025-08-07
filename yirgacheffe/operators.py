@@ -229,6 +229,14 @@ class LayerMathMixin:
     def parallel_sum(self, callback=None, parallelism=None, band=1):
         return LayerOperation(self).parallel_sum(callback, parallelism, band)
 
+    def to_geotiff(
+        self,
+        filename: Union[Path,str],
+        and_sum: bool = False,
+        parallelism:Optional[int]=None
+    ) -> Optional[float]:
+        return LayerOperation(self).to_geotiff(filename, and_sum, parallelism)
+
     def sum(self):
         return LayerOperation(self).sum()
 
