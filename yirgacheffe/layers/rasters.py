@@ -214,7 +214,12 @@ class RasterLayer(YirgacheffeLayer):
         return RasterLayer(dataset)
 
     @classmethod
-    def layer_from_file(cls, filename: Union[Path,str], band: int = 1) -> RasterLayer:
+    def layer_from_file(
+        cls,
+        filename: Union[Path,str],
+        band: int = 1,
+        ignore_nodata: bool = False,
+    ) -> RasterLayer:
         try:
             dataset = gdal.Open(filename, gdal.GA_ReadOnly)
         except RuntimeError as exc:
@@ -224,9 +229,15 @@ class RasterLayer(YirgacheffeLayer):
             _ = dataset.GetRasterBand(band)
         except RuntimeError as exc:
             raise InvalidRasterBand(band) from exc
-        return cls(dataset, str(filename), band)
+        return cls(dataset, str(filename), band, ignore_nodata)
 
-    def __init__(self, dataset: gdal.Dataset, name: Optional[str] = None, band: int = 1):
+    def __init__(
+        self,
+        dataset: gdal.Dataset,
+        name: Optional[str] = None,
+        band: int = 1,
+        ignore_nodata: bool = False,
+    ) -> None:
         if not dataset:
             raise ValueError("None is not a valid dataset")
 
@@ -256,6 +267,7 @@ class RasterLayer(YirgacheffeLayer):
         self._band = band
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
+        self._ignore_nodata = ignore_nodata
 
     @property
     def _raster_dimensions(self) -> Tuple[int,int]:
@@ -305,7 +317,21 @@ class RasterLayer(YirgacheffeLayer):
         assert self._dataset
         return DataType.of_gdal(self._dataset.GetRasterBand(1).DataType)
 
-    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
+    @property
+    def nodata(self) -> Optional[Any]:
+        if self._dataset is None:
+            self._unpark()
+        assert self._dataset
+        return self._dataset.GetRasterBand(self._band).GetNoDataValue()
+
+    def _read_array_with_window(
+        self,
+        xoffset: int,
+        yoffset: int,
+        xsize: int,
+        ysize: int,
+        window: Window,
+    ) -> Any:
         if self._dataset is None:
             self._unpark()
         assert self._dataset
@@ -335,7 +361,6 @@ class RasterLayer(YirgacheffeLayer):
         if target_window == intersection:
             # The target window is a subset of or equal to the source, so we can just ask for the data
             data = backend.promote(self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args))
-            return data
         else:
             # We should read the intersection from the array, and the rest should be zeros
             subset = backend.promote(self._dataset.GetRasterBand(self._band).ReadAsArray(*intersection.as_array_args))
@@ -350,4 +375,9 @@ class RasterLayer(YirgacheffeLayer):
                 )
             )).astype(int)
             data = backend.pad(subset, region, mode='constant')
-            return data
+
+        nodata = self.nodata
+        if not self._ignore_nodata and nodata is not None:
+            data = backend.where(data == nodata, float("nan"), data)
+
+        return data

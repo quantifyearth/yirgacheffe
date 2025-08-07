@@ -98,9 +98,9 @@ class LayerMathMixin:
     def _eval(self, area, index, step, target_window=None):
         try:
             window = self.window if target_window is None else target_window
-            return self.read_array_for_area(area, 0, index, window.xsize, step)
+            return self._read_array_for_area(area, 0, index, window.xsize, step)
         except AttributeError:
-            return self.read_array_for_area(area, 0, index, target_window.xsize if target_window else 1, step)
+            return self._read_array_for_area(area, 0, index, target_window.xsize if target_window else 1, step)
 
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(

@@ -62,7 +62,14 @@ class RescaledRasterLayer(YirgacheffeLayer):
     def datatype(self) -> DataType:
         return self._src.datatype
 
-    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
+    def _read_array_with_window(
+        self,
+        xoffset: int,
+        yoffset: int,
+        xsize: int,
+        ysize: int,
+        window: Window,
+    ) -> Any:
 
         # to avoid aliasing issues, we try to scale to the nearest pixel
         # and recrop when scaling bigger

@@ -82,7 +82,14 @@ class H3CellLayer(YirgacheffeLayer):
     def datatype(self) -> DataType:
         return DataType.Float64
 
-    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
+    def _read_array_with_window(
+        self,
+        xoffset: int,
+        yoffset: int,
+        xsize: int,
+        ysize: int,
+        window: Window,
+    ) -> Any:
         assert self._pixel_scale is not None
 
         if (xsize <= 0) or (ysize <= 0):

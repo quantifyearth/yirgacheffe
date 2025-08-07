@@ -56,12 +56,12 @@ class UniformAreaLayer(RasterLayer):
                 return False
         return True
 
-    def __init__(self, dataset, name: Optional[str] = None, band: int = 1):
+    def __init__(self, dataset, name: Optional[str] = None, band: int = 1, ignore_nodata: bool = False):
         if dataset.RasterXSize > 1:
             raise ValueError("Expected a shrunk dataset")
         self.databand = dataset.GetRasterBand(1).ReadAsArray(0, 0, 1, dataset.RasterYSize)
 
-        super().__init__(dataset, name, band)
+        super().__init__(dataset, name, band, ignore_nodata)
 
         transform = dataset.GetGeoTransform()
 
@@ -84,7 +84,14 @@ class UniformAreaLayer(RasterLayer):
         )
         self._raster_xsize = self.window.xsize
 
-    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
+    def _read_array_with_window(
+        self,
+        xoffset: int,
+        yoffset: int,
+        xsize: int,
+        ysize: int,
+        window: Window,
+    ) -> Any:
         if ysize <= 0:
             raise ValueError("Request dimensions must be positive and non-zero")
         offset = window.yoff + yoffset

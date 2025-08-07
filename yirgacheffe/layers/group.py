@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Any, List, Optional, Union
 
 import numpy as np
-from yirgacheffe.operators import DataType
+from numpy import ma
 
+from ..operators import DataType
 from ..rounding import are_pixel_scales_equal_enough, round_down_pixels
 from ..window import Area, Window
 from .base import YirgacheffeLayer
@@ -104,8 +105,14 @@ class GroupLayer(YirgacheffeLayer):
         except AttributeError:
             pass # called from Base constructor before we've added the extra field
 
-    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
-
+    def _read_array_with_window(
+        self,
+        xoffset: int,
+        yoffset: int,
+        xsize: int,
+        ysize: int,
+        window: Window,
+    ) -> Any:
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
@@ -139,12 +146,15 @@ class GroupLayer(YirgacheffeLayer):
         if len(contributing_layers) == 1:
             layer, adjusted_layer_window, intersection = contributing_layers[0]
             if target_window == intersection:
-                return layer.read_array(
+                data = layer.read_array(
                     intersection.xoff - adjusted_layer_window.xoff,
                     intersection.yoff - adjusted_layer_window.yoff,
                     intersection.xsize,
                     intersection.ysize
                 )
+                if layer.nodata is not None:
+                    data[data.isnan()] = 0.0
+                return data
 
         result = np.zeros((ysize, xsize), dtype=float)
         for layer, adjusted_layer_window, intersection in contributing_layers:
@@ -152,14 +162,26 @@ class GroupLayer(YirgacheffeLayer):
                 intersection.xoff - adjusted_layer_window.xoff,
                 intersection.yoff - adjusted_layer_window.yoff,
                 intersection.xsize,
-                intersection.ysize
+                intersection.ysize,
             )
             result_x_offset = (intersection.xoff - xoffset) - window.xoff
             result_y_offset = (intersection.yoff - yoffset) - window.yoff
-            result[
-                result_y_offset:result_y_offset + intersection.ysize,
-                result_x_offset:result_x_offset + intersection.xsize
-            ] = data
+            if layer.nodata is None:
+                result[
+                    result_y_offset:result_y_offset + intersection.ysize,
+                    result_x_offset:result_x_offset + intersection.xsize
+                ] = data
+            else:
+                masked = ma.masked_invalid(data)
+                before = result[
+                    result_y_offset:result_y_offset + intersection.ysize,
+                    result_x_offset:result_x_offset + intersection.xsize
+                ]
+                merged = ma.where(masked.mask, before, masked)
+                result[
+                    result_y_offset:result_y_offset + intersection.ysize,
+                    result_x_offset:result_x_offset + intersection.xsize
+                ] = merged
 
         return backend.promote(result)
 
@@ -214,7 +236,14 @@ class TiledGroupLayer(GroupLayer):
     * You can have missing tiles, and it'll fill in zeros.
     * The tiles can overlap - e.g., JRC Annual Change tiles all overlap by a few pixels on all edges.
     """
-    def read_array_with_window(self, xoffset: int, yoffset: int, xsize: int, ysize: int, window: Window) -> Any:
+    def _read_array_with_window(
+        self,
+        xoffset: int,
+        yoffset: int,
+        xsize: int,
+        ysize: int,
+        window: Window,
+    ) -> Any:
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 

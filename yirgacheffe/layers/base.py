@@ -66,6 +66,10 @@ class YirgacheffeLayer(LayerMathMixin):
             raise AttributeError("Layer has no window")
         return self._window
 
+    @property
+    def nodata(self) -> None:
+        return None
+
     @staticmethod
     def find_intersection(layers: Sequence[YirgacheffeLayer]) -> Area:
         if not layers:
@@ -227,10 +231,24 @@ class YirgacheffeLayer(LayerMathMixin):
         self._window = new_window
         self._active_area = new_area
 
-    def read_array_with_window(self, _x: int, _y: int, _xsize: int, _ysize: int, window: Window) -> Any:
+    def _read_array_with_window(
+        self,
+        _x: int,
+        _y: int,
+        _xsize: int,
+        _ysize: int,
+        _window: Window,
+    ) -> Any:
         raise NotImplementedError("Must be overridden by subclass")
 
-    def read_array_for_area(self, target_area: Area, x: int, y: int, width: int, height: int) -> Any:
+    def _read_array_for_area(
+        self,
+        target_area: Area,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+    ) -> Any:
         assert self._pixel_scale is not None
 
         target_window = Window(
@@ -247,10 +265,28 @@ class YirgacheffeLayer(LayerMathMixin):
                 (self._pixel_scale.ystep * -1.0)
             ),
         )
-        return self.read_array_with_window(x, y, width, height, target_window)
+        return self._read_array_with_window(x, y, width, height, target_window)
 
     def read_array(self, x: int, y: int, width: int, height: int) -> Any:
-        return self.read_array_with_window(x, y, width, height, self.window)
+        """Reads data from the layer based on the current reference window.
+
+        Arguments
+        ---------
+        x : int
+            X axis offset for reading
+        y : int
+            Y axis offset for reading
+        width : int
+            Width of data to read
+        height : int
+            Height of data to read
+
+        Results
+        -------
+        Any
+            An array of values from the layer.
+        """
+        return self._read_array_with_window(x, y, width, height, self.window)
 
     def latlng_for_pixel(self, x_coord: int, y_coord: int) -> Tuple[float,float]:
         """Get geo coords for pixel. This is relative to the set view window."""

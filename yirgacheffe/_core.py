@@ -10,7 +10,8 @@ from .operators import DataType
 
 def read_raster(
     filename: Union[Path,str],
-    band: int = 1
+    band: int = 1,
+    ignore_nodata: bool = False,
 ) -> RasterLayer:
     """Open a raster file (e.g., GeoTIFF).
 
@@ -19,14 +20,16 @@ def read_raster(
     filename : Path
         Path of raster file to open.
     band : int, default=1
-        For multi-band rasters, which band to use (defaults to first if not specified).
+        For multi-band rasters, which band to use (defaults to first if not specified)
+    ignore_nodata : bool, default=False
+        If the GeoTIFF has a NODATA value, don't subsitute that value for NaN
 
     Returns
     -------
     RasterLayer
         Returns an layer representing the raster data.
     """
-    return RasterLayer.layer_from_file(filename, band)
+    return RasterLayer.layer_from_file(filename, band, ignore_nodata)
 
 def read_rasters(
     filenames : Union[List[Path],List[str]],

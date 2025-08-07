@@ -82,7 +82,7 @@ If you have set either the intersection window or union window on a layer and yo
 
 ### Direct access to data
 
-If doing per-layer operations isn't applicable for your application, you can read the pixel values for all layers (including VectorLayers) by calling `read_array` similarly to how you would for gdal. The data you access will be relative to the specified window - that is, if you've called either `set_window_for_intersection` or `set_window_for_union` then `read_array` will be relative to that and Yirgacheffe will clip or expand the data with zero values as necessary.
+If doing per-layer operations isn't applicable for your application, you can read the pixel values for all layers (including VectorLayers) by calling `read_array` similarly to how you would for GDAL. The data you access will be relative to the specified window - that is, if you've called either `set_window_for_intersection` or `set_window_for_union` then `read_array` will be relative to that and Yirgacheffe will clip or expand the data with zero values as necessary.
 
 
 ## Layer types
@@ -135,6 +135,7 @@ with RasterLayer.layer_from_file('test1.tif') as source:
     scaled = RasterLayer.scaled_raster_from_raster(source, PixelScale(0.0001, -0.0001), 'scaled.tif')
 ```
 
+If the data is from a GeoTIFF that has a nodata value specified, then pixel values with that specified nodata value in them will be converted to NaN. You can override that by providing `ignore_nodata=True` as an optional argument to `layer_from_file` (or with the new 2.0 API, `read_raster`). You can find out if a layer has a nodata value by accessing the `nodata` property - it is None if there is no such value.
 
 ### VectorLayer
 
@@ -203,6 +204,9 @@ import yirgacheffe as yg
 with yg.read_rasters(['tile_N10_E10.tif', 'tile_N20_E10.tif']) as all_tiles:
     ...
 ```
+
+If any of the layers have a `nodata` value specified, then any pixel with that value will be masked out to allow data from other layers to be visible.
+
 
 ### TiledGroupLayer
 

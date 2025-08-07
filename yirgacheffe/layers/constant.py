@@ -28,8 +28,22 @@ class ConstantLayer(YirgacheffeLayer):
     def read_array(self, _x: int, _y: int, width: int, height: int) -> Any:
         return backend.full((height, width), self.value)
 
-    def read_array_with_window(self, _x: int, _y: int, width: int, height: int, _window: Window) -> Any:
+    def _read_array_with_window(
+        self,
+        _x: int,
+        _y: int,
+        width: int,
+        height: int,
+        _window: Window,
+    ) -> Any:
         return backend.full((height, width), self.value)
 
-    def read_array_for_area(self, _target_area: Area, x: int, y: int, width: int, height: int) -> Any:
+    def _read_array_for_area(
+        self,
+        _target_area: Area,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+    ) -> Any:
         return self.read_array(x, y, width, height)

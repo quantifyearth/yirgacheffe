@@ -359,7 +359,14 @@ class VectorLayer(YirgacheffeLayer):
     def datatype(self) -> DataType:
         return self._datatype
 
-    def read_array_for_area(self, target_area: Area, x: int, y: int, width: int, height: int) -> Any:
+    def _read_array_for_area(
+        self,
+        target_area: Area,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+    ) -> Any:
         assert self._pixel_scale is not None
 
         if self._original is None:
@@ -399,8 +406,8 @@ class VectorLayer(YirgacheffeLayer):
         res = backend.promote(dataset.ReadAsArray(0, 0, width, height))
         return res
 
-    def read_array_with_window(self, _x, _y, _width, _height, _window) -> Any:
+    def _read_array_with_window(self, _x, _y, _width, _height, _window) -> Any:
         assert NotRequired
 
     def read_array(self, x: int, y: int, width: int, height: int) -> Any:
-        return self.read_array_for_area(self._active_area, x, y, width, height)
+        return self._read_array_for_area(self._active_area, x, y, width, height)
