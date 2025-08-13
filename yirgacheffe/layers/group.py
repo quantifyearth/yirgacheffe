@@ -58,7 +58,7 @@ class GroupLayer(YirgacheffeLayer):
             raise GroupLayerEmpty("Expected one or more layers")
         if not are_pixel_scales_equal_enough([x.pixel_scale for x in layers]):
             raise ValueError("Not all layers are at the same pixel scale")
-        if not all(x.projection == layers[0].projection for x in layers):
+        if not all(x.map_projection == layers[0].map_projection for x in layers):
             raise ValueError("Not all layers are the same projection")
         for layer in layers:
             if layer._active_area != layer._underlying_area:
@@ -66,7 +66,7 @@ class GroupLayer(YirgacheffeLayer):
 
         # area/window are superset of all tiles
         union = YirgacheffeLayer.find_union(layers)
-        super().__init__(union, layers[0].pixel_scale, layers[0].projection, name=name)
+        super().__init__(union, layers[0].map_projection, name=name)
 
         # We store them in reverse order so that from the user's perspective
         # the first layer in the list will be the most important in terms

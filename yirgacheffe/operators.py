@@ -442,9 +442,13 @@ class LayerOperation(LayerMathMixin):
     @property
     def projection(self):
         try:
-            return self.lhs.projection
+            projection = self.lhs.projection
         except AttributeError:
-            return self.rhs.projection
+            projection = None
+
+        if projection is None:
+            projection = self.rhs.projection
+        return projection
 
     def _eval(self, area: Area, index: int, step: int, target_window:Optional[Window]=None):
 

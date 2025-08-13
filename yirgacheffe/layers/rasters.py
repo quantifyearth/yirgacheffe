@@ -7,7 +7,7 @@ import numpy as np
 from osgeo import gdal
 
 from ..constants import WGS_84_PROJECTION
-from ..window import Area, PixelScale, Window
+from ..window import Area, MapProjection, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
 from ..operators import DataType
@@ -242,18 +242,17 @@ class RasterLayer(YirgacheffeLayer):
             raise ValueError("None is not a valid dataset")
 
         transform = dataset.GetGeoTransform()
-        scale = PixelScale(transform[1], transform[5])
+        projection = MapProjection(dataset.GetProjection(), transform[1], transform[5])
         area = Area(
             left=transform[0],
             top=transform[3],
-            right=transform[0] + (dataset.RasterXSize * scale.xstep),
-            bottom=transform[3] + (dataset.RasterYSize * scale.ystep),
+            right=transform[0] + (dataset.RasterXSize * projection.xstep),
+            bottom=transform[3] + (dataset.RasterYSize * projection.ystep),
         )
 
         super().__init__(
             area,
-            scale,
-            dataset.GetProjection(),
+            projection,
             name=name
         )
 

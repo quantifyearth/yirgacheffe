@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from tests.helpers import gdal_dataset_of_region, make_vectors_with_id
-from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe.window import Area, MapProjection, PixelScale, Window
 from yirgacheffe.layers import ConstantLayer, GroupLayer, RasterLayer, RescaledRasterLayer, \
     UniformAreaLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
@@ -181,7 +181,7 @@ def test_pickle_rescaled_raster_layer() -> None:
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10)
         raster = RasterLayer(gdal_dataset_of_region(area, 0.02, filename=path))
-        layer = RescaledRasterLayer(raster, PixelScale(0.01, -0.01))
+        layer = RescaledRasterLayer(raster, MapProjection(WGS_84_PROJECTION, 0.01, -0.01))
 
         p = pickle.dumps(layer)
         restore = pickle.loads(p)

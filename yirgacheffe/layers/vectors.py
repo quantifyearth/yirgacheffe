@@ -7,7 +7,7 @@ from typing_extensions import NotRequired
 from osgeo import gdal, ogr
 
 from ..operators import DataType
-from ..window import Area, PixelScale
+from ..window import Area, MapProjection, PixelScale
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 from .._backends import backend
@@ -84,10 +84,11 @@ class RasteredVectorLayer(RasterLayer):
         else:
             datatype_arg = datatype
 
+        map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+
         vector_layer = RasteredVectorLayer(
             layer,
-            scale,
-            projection,
+            map_projection,
             datatype=datatype_arg,
             burn_value=burn_value
         )
@@ -101,8 +102,7 @@ class RasteredVectorLayer(RasterLayer):
     def __init__(
         self,
         layer: ogr.Layer,
-        scale: PixelScale,
-        projection: str,
+        projection: MapProjection,
         datatype: Union[int, DataType] = DataType.Byte,
         burn_value: Union[int,float,str] = 1,
     ):
@@ -132,7 +132,7 @@ class RasteredVectorLayer(RasterLayer):
         # Get the area, but scale it to the pixel resolution that we're using. Note that
         # the pixel scale GDAL uses can have -ve values, but those will mess up the
         # ceil/floor math, so we use absolute versions when trying to round.
-        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+        abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
         area = Area(
             left=floor(min(x[0] for x in envelopes) / abs_xstep) * abs_xstep,
             top=ceil(max(x[3] for x in envelopes) / abs_ystep) * abs_ystep,
@@ -152,8 +152,8 @@ class RasteredVectorLayer(RasterLayer):
         if not dataset:
             raise MemoryError('Failed to create memory mask')
 
-        dataset.SetProjection(projection)
-        dataset.SetGeoTransform([area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep])
+        dataset.SetProjection(projection.name)
+        dataset.SetGeoTransform([area.left, projection.xstep, 0.0, area.top, 0.0, projection.ystep])
         if isinstance(burn_value, (int, float)):
             gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[burn_value], options=["ALL_TOUCHED=TRUE"])
         elif isinstance(burn_value, str):
@@ -180,8 +180,9 @@ class VectorLayer(YirgacheffeLayer):
     ) -> VectorLayer:
         if other_layer is None:
             raise ValueError("like layer can not be None")
-        if other_layer.pixel_scale is None:
-            raise ValueError("Reference layer must have pixel scale")
+        map_projection = other_layer.map_projection
+        if map_projection is None:
+            raise ValueError("Reference layer must have projectione")
 
         vectors = ogr.Open(filename)
         if vectors is None:
@@ -194,10 +195,10 @@ class VectorLayer(YirgacheffeLayer):
             if isinstance(datatype, int):
                 datatype = DataType.of_gdal(datatype)
 
+
         vector_layer = VectorLayer(
             layer,
-            other_layer.pixel_scale,
-            other_layer.projection,
+            map_projection,
             name=str(filename),
             datatype=datatype if datatype is not None else other_layer.datatype,
             burn_value=burn_value,
@@ -241,10 +242,11 @@ class VectorLayer(YirgacheffeLayer):
         else:
             datatype_arg = datatype
 
+        map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+
         vector_layer = VectorLayer(
             layer,
-            scale,
-            projection,
+            map_projection,
             name=str(filename),
             datatype=datatype_arg,
             burn_value=burn_value,
@@ -262,8 +264,7 @@ class VectorLayer(YirgacheffeLayer):
     def __init__(
         self,
         layer: ogr.Layer,
-        scale: PixelScale,
-        projection: str,
+        projection: MapProjection,
         name: Optional[str] = None,
         datatype: Union[int,DataType] = DataType.Byte,
         burn_value: Union[int,float,str] = 1,
@@ -302,7 +303,7 @@ class VectorLayer(YirgacheffeLayer):
         # Get the area, but scale it to the pixel resolution that we're using. Note that
         # the pixel scale GDAL uses can have -ve values, but those will mess up the
         # ceil/floor math, so we use absolute versions when trying to round.
-        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+        abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
 
         # Lacking any other reference, we will make the raster align with
         # (0.0, 0.0), if sometimes we want to align with an existing raster, so if
@@ -321,7 +322,7 @@ class VectorLayer(YirgacheffeLayer):
             bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
         )
 
-        super().__init__(area, scale, projection)
+        super().__init__(area, projection)
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)
@@ -367,7 +368,7 @@ class VectorLayer(YirgacheffeLayer):
         width: int,
         height: int,
     ) -> Any:
-        assert self._pixel_scale is not None
+        assert self._projection is not None
 
         if self._original is None:
             self._unpark()
@@ -387,14 +388,14 @@ class VectorLayer(YirgacheffeLayer):
         if not dataset:
             raise MemoryError('Failed to create memory mask')
 
-        dataset.SetProjection(self._projection)
+        dataset.SetProjection(self._projection.name)
         dataset.SetGeoTransform([
-            target_area.left + (x * self._pixel_scale.xstep),
-            self._pixel_scale.xstep,
+            target_area.left + (x * self._projection.xstep),
+            self._projection.xstep,
             0.0,
-            target_area.top + (y * self._pixel_scale.ystep),
+            target_area.top + (y * self._projection.ystep),
             0.0,
-            self._pixel_scale.ystep
+            self._projection.ystep
         ])
         if isinstance(self.burn_value, (int, float)):
             gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[self.burn_value], options=["ALL_TOUCHED=TRUE"])

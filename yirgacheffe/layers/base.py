@@ -3,7 +3,7 @@ from typing import Any, Optional, Sequence, Tuple
 
 from ..operators import DataType, LayerMathMixin
 from ..rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
-from ..window import Area, PixelScale, Window
+from ..window import Area, MapProjection, PixelScale, Window
 
 class YirgacheffeLayer(LayerMathMixin):
     """The common base class for the different layer types. Most still inherit from RasterLayer as deep down
@@ -12,11 +12,13 @@ class YirgacheffeLayer(LayerMathMixin):
 
     def __init__(self,
         area: Area,
-        pixel_scale: Optional[PixelScale],
-        projection: str,
+        projection: Optional[MapProjection],
         name: Optional[str] = None
     ):
-        self._pixel_scale = pixel_scale
+        # This is just to catch code that uses the old private API
+        if projection is not None and not isinstance(projection, MapProjection):
+            raise TypeError("projection value of wrong type")
+
         self._underlying_area = area
         self._active_area = area
         self._projection = projection
@@ -49,12 +51,22 @@ class YirgacheffeLayer(LayerMathMixin):
         raise NotImplementedError("Must be overridden by subclass")
 
     @property
-    def projection(self) -> str:
-        return self._projection
+    def projection(self) -> Optional[str]:
+        if self._projection:
+            return self._projection.name
+        else:
+            return None
 
     @property
     def pixel_scale(self) -> Optional[PixelScale]:
-        return self._pixel_scale
+        if self._projection:
+            return PixelScale(self._projection.xstep, self._projection.ystep)
+        else:
+            return None
+
+    @property
+    def map_projection(self) -> Optional[MapProjection]:
+        return self._projection
 
     @property
     def area(self) -> Area:
@@ -109,11 +121,11 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def geo_transform(self) -> Tuple[float, float, float, float, float, float]:
-        if self._pixel_scale is None:
+        if self._projection is None:
             raise ValueError("No geo transform for layers without explicit pixel scale")
         return (
-            self._active_area.left, self._pixel_scale.xstep, 0.0,
-            self._active_area.top, 0.0, self._pixel_scale.ystep
+            self._active_area.left, self._projection.xstep, 0.0,
+            self._active_area.top, 0.0, self._projection.ystep
         )
 
     def check_pixel_scale(self, scale: PixelScale) -> bool:
@@ -124,21 +136,21 @@ class YirgacheffeLayer(LayerMathMixin):
             almost_equal(our_scale.ystep, scale.ystep)
 
     def set_window_for_intersection(self, new_area: Area) -> None:
-        if self._pixel_scale is None:
+        if self._projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
 
         new_window = Window(
-            xoff=round_down_pixels((new_area.left - self._underlying_area.left) / self._pixel_scale.xstep,
-                self._pixel_scale.xstep),
-            yoff=round_down_pixels((self._underlying_area.top - new_area.top) / (self._pixel_scale.ystep * -1.0),
-                self._pixel_scale.ystep * -1.0),
+            xoff=round_down_pixels((new_area.left - self._underlying_area.left) / self._projection.xstep,
+                self._projection.xstep),
+            yoff=round_down_pixels((self._underlying_area.top - new_area.top) / (self._projection.ystep * -1.0),
+                self._projection.ystep * -1.0),
             xsize=round_up_pixels(
-                (new_area.right - new_area.left) / self._pixel_scale.xstep,
-                self._pixel_scale.xstep
+                (new_area.right - new_area.left) / self._projection.xstep,
+                self._projection.xstep
             ),
             ysize=round_up_pixels(
-                (new_area.top - new_area.bottom) / (self._pixel_scale.ystep * -1.0),
-                (self._pixel_scale.ystep * -1.0)
+                (new_area.top - new_area.bottom) / (self._projection.ystep * -1.0),
+                (self._projection.ystep * -1.0)
             ),
         )
         if (new_window.xoff < 0) or (new_window.yoff < 0):
@@ -156,21 +168,21 @@ class YirgacheffeLayer(LayerMathMixin):
         self._active_area = new_area
 
     def set_window_for_union(self, new_area: Area) -> None:
-        if self._pixel_scale is None:
+        if self._projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
 
         new_window = Window(
-            xoff=round_down_pixels((new_area.left - self._underlying_area.left) / self._pixel_scale.xstep,
-                self._pixel_scale.xstep),
-            yoff=round_down_pixels((self._underlying_area.top - new_area.top) / (self._pixel_scale.ystep * -1.0),
-                self._pixel_scale.ystep * -1.0),
+            xoff=round_down_pixels((new_area.left - self._underlying_area.left) / self._projection.xstep,
+                self._projection.xstep),
+            yoff=round_down_pixels((self._underlying_area.top - new_area.top) / (self._projection.ystep * -1.0),
+                self._projection.ystep * -1.0),
             xsize=round_up_pixels(
-                (new_area.right - new_area.left) / self._pixel_scale.xstep,
-                self._pixel_scale.xstep
+                (new_area.right - new_area.left) / self._projection.xstep,
+                self._projection.xstep
             ),
             ysize=round_up_pixels(
-                (new_area.top - new_area.bottom) / (self._pixel_scale.ystep * -1.0),
-                (self._pixel_scale.ystep * -1.0)
+                (new_area.top - new_area.bottom) / (self._projection.ystep * -1.0),
+                (self._projection.ystep * -1.0)
             ),
         )
         if (new_window.xoff > 0) or (new_window.yoff > 0):
@@ -189,13 +201,13 @@ class YirgacheffeLayer(LayerMathMixin):
 
     def reset_window(self) -> None:
         self._active_area = self._underlying_area
-        if self._pixel_scale:
-            abs_xstep, abs_ystep = abs(self._pixel_scale.xstep), abs(self._pixel_scale.ystep)
+        if self._projection:
+            abs_xstep, abs_ystep = abs(self._projection.xstep), abs(self._projection.ystep)
             self._window = Window(
                 xoff=0,
                 yoff=0,
-                xsize=round_up_pixels((self.area.right - self.area.left) / self._pixel_scale.xstep, abs_xstep),
-                ysize=round_up_pixels((self.area.bottom - self.area.top) / self._pixel_scale.ystep, abs_ystep),
+                xsize=round_up_pixels((self.area.right - self.area.left) / self._projection.xstep, abs_xstep),
+                ysize=round_up_pixels((self.area.bottom - self.area.top) / self._projection.ystep, abs_ystep),
             )
 
     def offset_window_by_pixels(self, offset: int) -> None:
@@ -249,20 +261,20 @@ class YirgacheffeLayer(LayerMathMixin):
         width: int,
         height: int,
     ) -> Any:
-        assert self._pixel_scale is not None
+        assert self._projection is not None
 
         target_window = Window(
-            xoff=round_down_pixels((target_area.left - self._underlying_area.left) / self._pixel_scale.xstep,
-                self._pixel_scale.xstep),
-            yoff=round_down_pixels((self._underlying_area.top - target_area.top) / (self._pixel_scale.ystep * -1.0),
-                self._pixel_scale.ystep * -1.0),
+            xoff=round_down_pixels((target_area.left - self._underlying_area.left) / self._projection.xstep,
+                self._projection.xstep),
+            yoff=round_down_pixels((self._underlying_area.top - target_area.top) / (self._projection.ystep * -1.0),
+                self._projection.ystep * -1.0),
             xsize=round_up_pixels(
-                (target_area.right - target_area.left) / self._pixel_scale.xstep,
-                self._pixel_scale.xstep
+                (target_area.right - target_area.left) / self._projection.xstep,
+                self._projection.xstep
             ),
             ysize=round_up_pixels(
-                (target_area.top - target_area.bottom) / (self._pixel_scale.ystep * -1.0),
-                (self._pixel_scale.ystep * -1.0)
+                (target_area.top - target_area.bottom) / (self._projection.ystep * -1.0),
+                (self._projection.ystep * -1.0)
             ),
         )
         return self._read_array_with_window(x, y, width, height, target_window)
@@ -290,25 +302,19 @@ class YirgacheffeLayer(LayerMathMixin):
 
     def latlng_for_pixel(self, x_coord: int, y_coord: int) -> Tuple[float,float]:
         """Get geo coords for pixel. This is relative to the set view window."""
-        if "WGS 84" not in self.projection:
+        if self._projection is None or "WGS 84" not in self._projection.name:
             raise NotImplementedError("Not yet supported for other projections")
-        pixel_scale = self.pixel_scale
-        if pixel_scale is None:
-            raise ValueError("Layer has no pixel scale")
         return (
-            (y_coord * pixel_scale.ystep) + self.area.top,
-            (x_coord * pixel_scale.xstep) + self.area.left
+            (y_coord * self._projection.ystep) + self.area.top,
+            (x_coord * self._projection.xstep) + self.area.left
         )
 
     def pixel_for_latlng(self, lat: float, lng: float) -> Tuple[int,int]:
         """Get pixel for geo coords. This is relative to the set view window.
         Result is rounded down to nearest pixel."""
-        if "WGS 84" not in self.projection:
+        if self._projection is None or "WGS 84" not in self._projection.name:
             raise NotImplementedError("Not yet supported for other projections")
-        pixel_scale = self.pixel_scale
-        if pixel_scale is None:
-            raise ValueError("Layer has no pixel scale")
         return (
-            round_down_pixels((lng - self.area.left) / pixel_scale.xstep, abs(pixel_scale.xstep)),
-            round_down_pixels((lat - self.area.top) / pixel_scale.ystep, abs(pixel_scale.ystep)),
+            round_down_pixels((lng - self.area.left) / self._projection.xstep, abs(self._projection.xstep)),
+            round_down_pixels((lat - self.area.top) / self._projection.ystep, abs(self._projection.ystep)),
         )

@@ -8,6 +8,39 @@ from typing import List, Optional, Tuple
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
 @dataclass
+class MapProjection:
+    """Records the map projection and the size of the pixels in a layer.
+
+    This superceeeds the old PixelScale class, which will be removed in version 2.0.
+
+    Parameters
+    ----------
+    name : str
+        The map projection used.
+    xstep : float
+        The number of units horizontal distance a step of one pixel makes in the map projection.
+    ystep : float
+        The number of units verticle distance a step of one pixel makes in the map projection.
+
+    Attributes
+    ----------
+    name : str
+        The map projection used.
+    xstep : float
+        The number of units horizontal distance a step of one pixel makes in the map projection.
+    ystep : float
+        The number of units verticle distance a step of one pixel makes in the map projection.
+    """
+
+    name : str
+    xstep : float
+    ystep : float
+
+    @property
+    def scale(self) -> PixelScale:
+        return PixelScale(self.xstep, self.ystep)
+
+@dataclass
 class Area:
     """Class to hold a geospatial area of data in the given projection.
 
