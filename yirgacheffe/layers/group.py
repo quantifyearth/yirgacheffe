@@ -7,7 +7,7 @@ import numpy as np
 from numpy import ma
 
 from ..operators import DataType
-from ..rounding import are_pixel_scales_equal_enough, round_down_pixels
+from ..rounding import round_down_pixels
 from ..window import Area, Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
@@ -56,10 +56,8 @@ class GroupLayer(YirgacheffeLayer):
     ) -> None:
         if not layers:
             raise GroupLayerEmpty("Expected one or more layers")
-        if not are_pixel_scales_equal_enough([x.pixel_scale for x in layers]):
-            raise ValueError("Not all layers are at the same pixel scale")
         if not all(x.map_projection == layers[0].map_projection for x in layers):
-            raise ValueError("Not all layers are the same projection")
+            raise ValueError("Not all layers are the same projection/scale")
         for layer in layers:
             if layer._active_area != layer._underlying_area:
                 raise ValueError("Layers can not currently be constrained")

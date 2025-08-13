@@ -12,13 +12,14 @@ from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
 from typing import Callable, Dict, Optional, Union
 
+import deprecation
 import numpy as np
 import numpy.typing as npt
 from osgeo import gdal
 from dill import dumps, loads # type: ignore
 
-from . import constants
-from .rounding import are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
+from . import constants, __version__
+from .rounding import round_up_pixels, round_down_pixels
 from .window import Area, PixelScale, Window
 from ._backends import backend
 from ._backends.enumeration import operators as op
@@ -314,7 +315,7 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not are_pixel_scales_equal_enough([lhs.pixel_scale, rhs.pixel_scale]):
+                if not lhs.map_projection == rhs.map_projection:
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.rhs = rhs
         else:
@@ -329,7 +330,7 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not are_pixel_scales_equal_enough([lhs.pixel_scale, other.pixel_scale]):
+                if not lhs.map_projection == other.map_projection:
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.other = other
         else:
@@ -404,6 +405,12 @@ class LayerOperation(LayerMathMixin):
                 assert False, "Should not be reached"
 
     @property
+    @deprecation.deprecated(
+        deprecated_in="1.7",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `map_projection` instead."
+    )
     def pixel_scale(self) -> PixelScale:
         # Because we test at construction that pixel scales for RHS/other are roughly equal,
         # I believe this should be sufficient...
@@ -418,19 +425,19 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def window(self) -> Window:
-        pixel_scale = self.pixel_scale
+        projection = self.map_projection
         area = self.area
         assert area is not None
 
         return Window(
-            xoff=round_down_pixels(area.left / pixel_scale.xstep, pixel_scale.xstep),
-            yoff=round_down_pixels(area.top / (pixel_scale.ystep * -1.0), pixel_scale.ystep * -1.0),
+            xoff=round_down_pixels(area.left / projection.xstep, projection.xstep),
+            yoff=round_down_pixels(area.top / (projection.ystep * -1.0), projection.ystep * -1.0),
             xsize=round_up_pixels(
-                (area.right - area.left) / pixel_scale.xstep, pixel_scale.xstep
+                (area.right - area.left) / projection.xstep, projection.xstep
             ),
             ysize=round_up_pixels(
-                (area.top - area.bottom) / (pixel_scale.ystep * -1.0),
-                (pixel_scale.ystep * -1.0)
+                (area.top - area.bottom) / (projection.ystep * -1.0),
+                (projection.ystep * -1.0)
             ),
         )
 
@@ -440,6 +447,12 @@ class LayerOperation(LayerMathMixin):
         return self.lhs.datatype
 
     @property
+    @deprecation.deprecated(
+        deprecated_in="1.7",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `map_projection` instead."
+    )
     def projection(self):
         try:
             projection = self.lhs.projection
@@ -450,13 +463,24 @@ class LayerOperation(LayerMathMixin):
             projection = self.rhs.projection
         return projection
 
+    @property
+    def map_projection(self):
+        try:
+            projection = self.lhs.map_projection
+        except AttributeError:
+            projection = None
+
+        if projection is None:
+            projection = self.rhs.map_projection
+        return projection
+
     def _eval(self, area: Area, index: int, step: int, target_window:Optional[Window]=None):
 
         if self.buffer_padding:
             if target_window:
                 target_window = target_window.grow(self.buffer_padding)
-            pixel_scale = self.pixel_scale
-            area = area.grow(self.buffer_padding * pixel_scale.xstep)
+            projection = self.map_projection
+            area = area.grow(self.buffer_padding * projection.xstep)
             # The index doesn't need updating because we updated area/window
             step += (2 * self.buffer_padding)
 

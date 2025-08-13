@@ -36,6 +36,14 @@ class MapProjection:
     xstep : float
     ystep : float
 
+    def __eq__(self, other) -> bool:
+        if other is None:
+            return True
+        # to avoid circular dependancies
+        from .rounding import are_pixel_scales_equal_enough  # pylint: disable=C0415
+        return (self.name == other.name) and \
+            are_pixel_scales_equal_enough([self.scale, other.scale])
+
     @property
     def scale(self) -> PixelScale:
         return PixelScale(self.xstep, self.ystep)

@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import Any, Optional, Sequence, Tuple
 
+import deprecation
+
+from .. import __version__
 from ..operators import DataType, LayerMathMixin
-from ..rounding import almost_equal, are_pixel_scales_equal_enough, round_up_pixels, round_down_pixels
+from ..rounding import almost_equal, round_up_pixels, round_down_pixels
 from ..window import Area, MapProjection, PixelScale, Window
 
 class YirgacheffeLayer(LayerMathMixin):
@@ -51,6 +54,12 @@ class YirgacheffeLayer(LayerMathMixin):
         raise NotImplementedError("Must be overridden by subclass")
 
     @property
+    @deprecation.deprecated(
+        deprecated_in="1.7",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `map_projection` instead."
+    )
     def projection(self) -> Optional[str]:
         if self._projection:
             return self._projection.name
@@ -58,6 +67,12 @@ class YirgacheffeLayer(LayerMathMixin):
             return None
 
     @property
+    @deprecation.deprecated(
+        deprecated_in="1.7",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `map_projection` instead."
+    )
     def pixel_scale(self) -> Optional[PixelScale]:
         if self._projection:
             return PixelScale(self._projection.xstep, self._projection.ystep)
@@ -89,8 +104,11 @@ class YirgacheffeLayer(LayerMathMixin):
 
         # This only makes sense (currently) if all layers
         # have the same pixel pitch (modulo desired accuracy)
-        if not are_pixel_scales_equal_enough([x.pixel_scale for x in layers]):
-            raise ValueError("Not all layers are at the same pixel scale")
+        projections = [x.map_projection for x in layers if x.map_projection is not None]
+        if not projections:
+            raise ValueError("No layers have a projection")
+        if not all(projections[0] == x for x in projections[1:]):
+            raise ValueError("Not all layers are at the same projectin or pixel scale")
 
         intersection = Area(
             left=max(x._underlying_area.left for x in layers),
@@ -109,8 +127,11 @@ class YirgacheffeLayer(LayerMathMixin):
 
         # This only makes sense (currently) if all layers
         # have the same pixel pitch (modulo desired accuracy)
-        if not are_pixel_scales_equal_enough([x.pixel_scale for x in layers]):
-            raise ValueError("Not all layers are at the same pixel scale")
+        projections = [x.map_projection for x in layers if x.map_projection is not None]
+        if not projections:
+            raise ValueError("No layers have a projection")
+        if not all(projections[0] == x for x in projections[1:]):
+            raise ValueError("Not all layers are at the same projectin or pixel scale")
 
         return Area(
             left=min(x._underlying_area.left for x in layers),

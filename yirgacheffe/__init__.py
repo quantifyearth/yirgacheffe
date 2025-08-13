@@ -1,7 +1,7 @@
 from osgeo import gdal
 try:
     from importlib import metadata
-    __version__ = metadata.version(__name__)
+    __version__: str = metadata.version(__name__)
 except ModuleNotFoundError:
     __version__ = "unknown"
 

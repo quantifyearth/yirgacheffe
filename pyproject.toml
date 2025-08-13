@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yirgacheffe"
-version = "1.6.1"
+version = "1.7.0"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
@@ -18,6 +18,7 @@ dependencies = [
     "scikit-image",
     "torch",
     "dill",
+    "deprecation",
 ]
 requires-python = ">=3.10"
 
@@ -36,4 +37,8 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "h3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "deprecation.*"
 ignore_missing_imports = true
