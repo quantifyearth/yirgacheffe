@@ -8,7 +8,7 @@ import pytest
 import yirgacheffe as yg
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import InvalidRasterBand
-from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe.window import Area, MapProjection, Window
 from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data, \
     make_vectors_with_id, make_vectors_with_mutlile_ids
 
@@ -75,7 +75,7 @@ def test_open_multiband_raster() -> None:
 
 def test_shape_from_nonexistent_file() -> None:
     with pytest.raises(FileNotFoundError):
-        _ = yg.read_shape("this_file_does_not_exist.gpkg", (1.0, -1.0), WGS_84_PROJECTION)
+        _ = yg.read_shape("this_file_does_not_exist.gpkg", (WGS_84_PROJECTION, (1.0, -1.0)))
 
 def test_open_gpkg() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -83,11 +83,39 @@ def test_open_gpkg() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        with yg.read_shape(path, PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
+        with yg.read_shape(path, (WGS_84_PROJECTION, (1.0, -1.0))) as layer:
             assert layer.area == area
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
+            assert layer.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
             assert layer.projection == WGS_84_PROJECTION
+
+def test_open_gpkg_with_mapprojection() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        area = Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        with yg.read_shape(path, MapProjection(WGS_84_PROJECTION, 1.0, -1.0)) as layer:
+            assert layer.area == area
+            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.window == Window(0, 0, 20, 10)
+            assert layer.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+            assert layer.projection == WGS_84_PROJECTION
+
+def test_open_gpkg_with_no_projection() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        area = Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        with yg.read_shape(path) as layer:
+            assert layer.area == area
+            assert layer.projection is None
+            with pytest.raises(AttributeError):
+                _ = layer.geo_transform
+            with pytest.raises(AttributeError):
+                _ = layer.window
 
 def test_open_gpkg_direct_scale() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -95,7 +123,7 @@ def test_open_gpkg_direct_scale() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        with yg.read_shape(path, (1.0, -1.0), WGS_84_PROJECTION) as layer:
+        with yg.read_shape(path, (WGS_84_PROJECTION, (1.0, -1.0))) as layer:
             assert layer.area == area
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
@@ -110,7 +138,7 @@ def test_open_gpkg_with_filter() -> None:
         }
         make_vectors_with_mutlile_ids(areas, path)
 
-        with yg.read_shape(path, (1.0, -1.0), WGS_84_PROJECTION, "id_no=42") as layer:
+        with yg.read_shape(path, (WGS_84_PROJECTION, (1.0, -1.0)), "id_no=42") as layer:
             assert layer.area == Area(-10.0, 10.0, 0.0, 0.0)
             assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
             assert layer.window == Window(0, 0, 10, 10)

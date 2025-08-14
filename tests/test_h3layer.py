@@ -5,7 +5,7 @@ from osgeo import gdal
 
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, H3CellLayer
-from yirgacheffe.window import Area, PixelScale
+from yirgacheffe.window import Area, MapProjection
 from yirgacheffe._backends import backend
 
 # work around of pylint
@@ -21,7 +21,7 @@ demote_array = backend.demote_array
 )
 def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
     if is_valid:
-        with H3CellLayer(cell_id, PixelScale(0.001, -0.001), WGS_84_PROJECTION) as layer:
+        with H3CellLayer(cell_id, MapProjection(WGS_84_PROJECTION, 0.001, -0.001)) as layer:
             assert layer.zoom == expected_zoom
             assert layer.projection == WGS_84_PROJECTION
 
@@ -35,7 +35,7 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
             assert one_count != 0
     else:
         with pytest.raises(ValueError):
-            with H3CellLayer(cell_id, PixelScale(0.001, -0.001), WGS_84_PROJECTION) as _layer:
+            with H3CellLayer(cell_id, MapProjection(WGS_84_PROJECTION, 0.001, -0.001)) as _layer:
                 pass
 
 @pytest.mark.parametrize(
@@ -53,8 +53,10 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
 def test_h3_layer_magnifications(lat: float, lng: float) -> None:
     for zoom in range(6, 10):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
-        h3_layer = H3CellLayer(cell_id, PixelScale(0.000898315284120,-0.000898315284120), WGS_84_PROJECTION)
-
+        h3_layer = H3CellLayer(
+            cell_id,
+            MapProjection(WGS_84_PROJECTION, 0.000898315284120,-0.000898315284120)
+        )
         on_cell_count = h3_layer.sum()
         total_count = h3_layer.window.xsize * h3_layer.window.ysize
         assert 0 < on_cell_count < total_count
@@ -74,14 +76,18 @@ def test_h3_layer_magnifications(lat: float, lng: float) -> None:
 def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
     for zoom in range(6, 10):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
-        scale = PixelScale(0.000898315284120,-0.000898315284120)
-        h3_layer = H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
+        projection = MapProjection(
+            WGS_84_PROJECTION,
+            0.000898315284120,
+            -0.000898315284120
+        )
+        h3_layer = H3CellLayer(cell_id, projection)
 
         on_cell_count = h3_layer.sum()
         assert on_cell_count > 0.0
 
         before_window = h3_layer.window
-        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+        abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
         expanded_area = Area(
             left=h3_layer.area.left - (12 * abs_xstep),
             top=h3_layer.area.top + (12 * abs_ystep),
@@ -115,14 +121,18 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
 def test_h3_layer_clipped(lat: float, lng: float) -> None:
     for zoom in range(6, 8):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
-        scale = PixelScale(0.000898315284120,-0.000898315284120)
-        h3_layer = H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
+        projection = MapProjection(
+            WGS_84_PROJECTION,
+            0.000898315284120,
+            -0.000898315284120
+        )
+        h3_layer = H3CellLayer(cell_id, projection)
 
         on_cell_count = h3_layer.sum()
         assert on_cell_count > 0.0
 
         before_window = h3_layer.window
-        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+        abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
         expanded_area = Area(
             left=h3_layer.area.left + (2 * abs_xstep),
             top=h3_layer.area.top - (2 * abs_ystep),
@@ -151,8 +161,8 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
 )
 def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     cell_id = h3.latlng_to_cell(lat, lng, 3)
-    scale = PixelScale(0.01, -0.01)
-    h3_layer = H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
+    projection = MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
+    h3_layer = H3CellLayer(cell_id, projection)
 
     # Just sanity check this test has caught a cell that wraps the entire planet and is testing
     # what we think it is testing:
@@ -165,14 +175,14 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     # check they are all of a similarish size - we had a bug early on where we'd
     # mistakenly invert the area for the band, counting all the cells across the planet
     for cell_id in h3.grid_ring(cell_id, 1):
-        neighbour = H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
+        neighbour = H3CellLayer(cell_id, projection)
         neighbour_area = neighbour.sum()
         # We're happy if they're within 10% for now
         assert abs((neighbour_area - area) / area) < 0.1
 
 
     before_window = h3_layer.window
-    _, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+    _, abs_ystep = abs(projection.xstep), abs(projection.ystep)
     expanded_area = Area(
         left=h3_layer.area.left,
         top=h3_layer.area.top + (22 * abs_ystep),
@@ -198,7 +208,11 @@ def test_h3_layer_overlapped():
     # This is based on a regression, where somehow I made tiles not tesselate properly
     left, top = (121.26706, 19.45338)
     right, bottom = (121.62494, 19.18478)
-    scale = PixelScale(0.000898315284120,-0.000898315284120)
+    projection = MapProjection(
+        WGS_84_PROJECTION,
+        0.000898315284120,
+        -0.000898315284120
+    )
 
     cells = h3.geo_to_cells(h3.LatLngPoly([
         (top, left),
@@ -208,13 +222,13 @@ def test_h3_layer_overlapped():
     ],), 7)
 
     tiles = [
-        H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
+        H3CellLayer(cell_id, projection)
     for cell_id in cells]
 
     union = RasterLayer.find_union(tiles)
     union = union.grow(0.02)
 
-    scratch = RasterLayer.empty_raster_layer(union, scale, gdal.GDT_Float64)
+    scratch = RasterLayer.empty_raster_layer(union, projection.scale, gdal.GDT_Float64)
 
     # In scratch we should only have 0 or 1 values, but if there are any overlaps we should get 2s...
 

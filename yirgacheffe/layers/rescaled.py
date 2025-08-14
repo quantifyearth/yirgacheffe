@@ -6,7 +6,7 @@ from typing import Any, Optional, Union
 from skimage import transform
 from yirgacheffe.operators import DataType
 
-from ..window import PixelScale, Window
+from ..window import MapProjection, PixelScale, Window
 from .rasters import RasterLayer, YirgacheffeLayer
 from .._backends import backend
 
@@ -24,30 +24,33 @@ class RescaledRasterLayer(YirgacheffeLayer):
         nearest_neighbour: bool = True,
     ) -> RescaledRasterLayer:
         src = RasterLayer.layer_from_file(filename, band=band)
-        return RescaledRasterLayer(src, pixel_scale, nearest_neighbour, src.name)
+        source_projection = src.map_projection
+        if source_projection is None:
+            raise ValueError("Source raster must have projection and scale")
+        target_projection = MapProjection(source_projection.name, pixel_scale.xstep, pixel_scale.ystep)
+        return RescaledRasterLayer(src, target_projection, nearest_neighbour, src.name)
 
     def __init__(
         self,
         src: RasterLayer,
-        pixel_scale: PixelScale,
+        target_projection: MapProjection,
         nearest_neighbour: bool = True,
         name: Optional[str] = None,
     ):
         super().__init__(
             src.area,
-            pixel_scale=pixel_scale,
-            projection=src.projection,
+            target_projection,
             name=name
         )
 
         self._src = src
         self._nearest_neighbour = nearest_neighbour
 
-        src_pixel_scale = src.pixel_scale
-        assert src_pixel_scale # from raster we should always have one
+        src_projection = src.map_projection
+        assert src_projection # from raster we should always have one
 
-        self._x_scale = src_pixel_scale.xstep / pixel_scale.xstep
-        self._y_scale = src_pixel_scale.ystep / pixel_scale.ystep
+        self._x_scale = src_projection.xstep / target_projection.xstep
+        self._y_scale = src_projection.ystep / target_projection.ystep
 
     def close(self):
         self._src.close()

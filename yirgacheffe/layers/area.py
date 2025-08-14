@@ -65,13 +65,13 @@ class UniformAreaLayer(RasterLayer):
 
         transform = dataset.GetGeoTransform()
 
-        pixel_scale = self.pixel_scale
-        assert pixel_scale # from raster we should always have one
+        projection = self.map_projection
+        assert projection is not None # from raster we should always have one
 
         self._underlying_area = Area(
-            floor(-180 / pixel_scale.xstep) * pixel_scale.xstep,
+            floor(-180 / projection.xstep) * projection.xstep,
             self.area.top,
-            ceil(180 / pixel_scale.xstep) * pixel_scale.xstep,
+            ceil(180 / projection.xstep) * projection.xstep,
             self.area.bottom
         )
         self._active_area = self._underlying_area

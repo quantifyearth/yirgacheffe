@@ -1,10 +1,9 @@
 from typing import Any, Union
 
 from ..operators import DataType
-from ..window import Area, PixelScale, Window
+from ..window import Area, MapProjection, PixelScale, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
-from ..constants import WGS_84_PROJECTION
 
 
 class ConstantLayer(YirgacheffeLayer):
@@ -12,7 +11,7 @@ class ConstantLayer(YirgacheffeLayer):
     missing (e.g., area) without having the calculation full of branches."""
     def __init__(self, value: Union[int,float]): # pylint: disable=W0231
         area = Area.world()
-        super().__init__(area, None, WGS_84_PROJECTION)
+        super().__init__(area, None)
         self.value = float(value)
 
     @property
@@ -41,6 +40,7 @@ class ConstantLayer(YirgacheffeLayer):
     def _read_array_for_area(
         self,
         _target_area: Area,
+        _target_projection: MapProjection,
         x: int,
         y: int,
         width: int,

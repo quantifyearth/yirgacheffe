@@ -1,18 +1,20 @@
 import numpy as np
 
 from tests.helpers import gdal_dataset_of_region, gdal_dataset_with_data
+from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, RescaledRasterLayer
-from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe.window import Area, MapProjection, Window
 
 
 def test_simple_scale_down() -> None:
     area = Area(-10, 10, 10, -10)
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
-        target_pixel_scale = PixelScale(0.01, -0.01)
-        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+        target_projection = MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
+        with RescaledRasterLayer(raster, target_projection) as layer:
             assert layer.area == area
-            assert layer.pixel_scale == target_pixel_scale
+            assert layer.map_projection == target_projection
+            assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
             assert layer.window == Window(0, 0, 2000, 2000)
 
@@ -20,10 +22,11 @@ def test_simple_scale_up() -> None:
     area = Area(-10, 10, 10, -10)
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
-        target_pixel_scale = PixelScale(0.04, -0.04)
-        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+        target_projection = MapProjection(WGS_84_PROJECTION, 0.04, -0.04)
+        with RescaledRasterLayer(raster, target_projection) as layer:
             assert layer.area == area
-            assert layer.pixel_scale == target_pixel_scale
+            assert layer.map_projection == target_projection
+            assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
             assert layer.window == Window(0, 0, 500, 500)
 
@@ -36,10 +39,11 @@ def test_scaling_up_pixels() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_pixel_scale = PixelScale(0.5, -0.5)
-        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+        target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
+        with RescaledRasterLayer(raster, target_projection) as layer:
             assert layer.area == Area(0, 0, 4, -4)
-            assert layer.pixel_scale == target_pixel_scale
+            assert layer.map_projection == target_projection
+            assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (0.0, 0.5, 0.0, 0.0, 0.0, -0.5)
             assert layer.window == Window(0, 0, 8, 8)
 
@@ -102,10 +106,11 @@ def test_scaling_down_pixels() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_pixel_scale = PixelScale(2.0, -2.0)
-        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+        target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
+        with RescaledRasterLayer(raster, target_projection) as layer:
             assert layer.area == Area(0, 0, 8, -8)
-            assert layer.pixel_scale == target_pixel_scale
+            assert layer.map_projection == target_projection
+            assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (0.0, 2.0, 0.0, 0.0, 0.0, -2.0)
             assert layer.window == Window(0, 0, 4, 4)
 
@@ -172,7 +177,7 @@ def test_rescaled_up_in_operation() -> None:
     dataset2 = gdal_dataset_with_data((0, 0), 2.0, data2)
     raster2 = RasterLayer(dataset2)
 
-    rescaled = RescaledRasterLayer(raster2, raster1.pixel_scale)
+    rescaled = RescaledRasterLayer(raster2, raster1.map_projection)
 
     assert raster1.window == rescaled.window
     assert raster1.area == rescaled.area
@@ -194,7 +199,7 @@ def test_rescaled_down_in_operation() -> None:
     dataset2 = gdal_dataset_with_data((0, 0), 2.0, data2)
     raster2 = RasterLayer(dataset2)
 
-    rescaled = RescaledRasterLayer(raster1, raster2.pixel_scale)
+    rescaled = RescaledRasterLayer(raster1, raster2.map_projection)
 
     assert raster2.window == rescaled.window
     assert raster2.area == rescaled.area
@@ -212,8 +217,8 @@ def test_rescaled_up_with_window_set() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_pixel_scale = PixelScale(0.5, -0.5)
-        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+        target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
+        with RescaledRasterLayer(raster, target_projection) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0)
 
             layer.set_window_for_intersection(Area(1.0, -1.0, 3.0, -3.0))
@@ -236,8 +241,8 @@ def test_rescaled_up_with_window_set_2() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_pixel_scale = PixelScale(0.5, -0.5)
-        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+        target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
+        with RescaledRasterLayer(raster, target_projection) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0)
 
             expected_raster = np.zeros((6, 6))
@@ -264,8 +269,8 @@ def test_rescaled_down_with_window_set() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_pixel_scale = PixelScale(2.0, -2.0)
-        with RescaledRasterLayer(raster, target_pixel_scale) as layer:
+        target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
+        with RescaledRasterLayer(raster, target_projection) as layer:
             assert layer.area == Area(0.0, 0.0, 8.0, -8.0)
 
             layer.set_window_for_intersection(Area(2.0, -2.0, 6.0, -6.0))

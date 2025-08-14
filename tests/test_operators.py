@@ -1,16 +1,18 @@
 import os
 import random
 import tempfile
+from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 
 import yirgacheffe
-from yirgacheffe.layers import RasterLayer, ConstantLayer
+from yirgacheffe.window import Area, PixelScale
+from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
 from yirgacheffe.operators import LayerOperation, DataType
 from yirgacheffe._backends import backend
-from tests.helpers import gdal_dataset_with_data
+from tests.helpers import gdal_dataset_with_data, gdal_dataset_of_region, make_vectors_with_id
 
 def test_add_byte_layers() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]]).astype(np.uint8)
@@ -50,6 +52,15 @@ def test_error_of_pixel_scale_wrong_three_param() -> None:
 
     with pytest.raises(ValueError):
         _ = LayerOperation.where(layer1, layer2, layer3)
+
+def test_incompatible_source_and_destination_projections() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+
+    with RasterLayer.empty_raster_layer(layer1.area, PixelScale(1.0, -1.0), layer1.datatype) as result:
+        with pytest.raises(ValueError):
+            layer1.save(result)
 
 @pytest.mark.parametrize("skip,expected_steps", [
     (1, [0.0, 0.5, 1.0]),
@@ -1497,3 +1508,50 @@ def test_to_geotiff_parallel_thread_and_sum(monkeypatch) -> None:
             expected = data1 * 2
             actual = result.read_array(0, 0, 4, 2)
             assert (expected == actual).all()
+
+def test_raster_and_vector() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        raster = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 1.0))
+        assert raster.sum() > 0.0
+
+        path = Path(tempdir) / "test.gpkg"
+        area = Area(-5.0, 5.0, 5.0, -5.0)
+        make_vectors_with_id(42, {area}, path)
+        assert path.exists
+
+        vector = VectorLayer.layer_from_file(path, None, PixelScale(1.0, -1.0), yirgacheffe.WGS_84_PROJECTION)
+
+        calc = raster * vector
+        assert calc.sum() > 0.0
+        assert calc.sum() < raster.sum()
+
+def test_raster_and_vector_mixed_projection() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        raster = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 1.1))
+        assert raster.sum() > 0.0
+
+        path = Path(tempdir) / "test.gpkg"
+        area = Area(-5.0, 5.0, 5.0, -5.0)
+        make_vectors_with_id(42, {area}, path)
+        assert path.exists
+
+        vector = VectorLayer.layer_from_file(path, None, PixelScale(1.0, -1.0), yirgacheffe.WGS_84_PROJECTION)
+
+        with pytest.raises(ValueError):
+            _ = raster * vector
+
+def test_raster_and_vector_no_scale_on_vector() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        raster = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 1.0))
+        assert raster.sum() > 0.0
+
+        path = Path(tempdir) / "test.gpkg"
+        area = Area(-5.0, 5.0, 5.0, -5.0)
+        make_vectors_with_id(42, {area}, path)
+        assert path.exists
+
+        vector = VectorLayer.layer_from_file(path, None, None, None)
+
+        calc = raster * vector
+        assert calc.sum() > 0.0
+        assert calc.sum() < raster.sum()

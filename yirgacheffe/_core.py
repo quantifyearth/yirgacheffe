@@ -5,7 +5,7 @@ from .layers.base import YirgacheffeLayer
 from .layers.group import GroupLayer, TiledGroupLayer
 from .layers.rasters import RasterLayer
 from .layers.vectors import VectorLayer
-from .window import PixelScale
+from .window import MapProjection
 from .operators import DataType
 
 def read_raster(
@@ -58,8 +58,7 @@ def read_rasters(
 
 def read_shape(
     filename: Union[Path,str],
-    scale: Union[PixelScale, Tuple[float,float]],
-    projection: str,
+    projection: Union[Optional[MapProjection],Optional[Tuple[str,Tuple[float,float]]]]=None,
     where_filter: Optional[str] = None,
     datatype: Optional[DataType] = None,
     burn_value: Union[int,float,str] = 1,
@@ -70,10 +69,8 @@ def read_shape(
     ----------
     filename : Path
         Path of raster file to open.
-    scale: PixelScale or tuple of float
-        The dimensions of each pixel.
-    projection: str
-        The map projection to use
+    projection: MapProjection or tuple, optional
+        The map projection to use,
     where_filter : str, optional
         For use with files with many entries (e.g., GPKG), applies this filter to the data.
     datatype: DataType, default=DataType.Byte
@@ -87,16 +84,17 @@ def read_shape(
         Returns an layer representing the vector data.
     """
 
-    if not isinstance(scale, PixelScale):
-        scale = PixelScale(scale[0], scale[1])
+    if projection is not None:
+        if not isinstance(projection, MapProjection):
+            projection_name, scale_tuple = projection
+            projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
 
-    return VectorLayer.layer_from_file(
+    return VectorLayer._future_layer_from_file(
         filename,
         where_filter,
-        scale,
         projection,
         datatype,
-        burn_value
+        burn_value,
     )
 
 def read_shape_like(

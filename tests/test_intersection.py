@@ -2,7 +2,7 @@ import pytest
 from osgeo import gdal
 
 from tests.helpers import gdal_dataset_of_region, gdal_empty_dataset_of_region
-from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe.window import Area, MapProjection, Window
 from yirgacheffe.layers import RasterLayer, ConstantLayer, H3CellLayer
 from yirgacheffe import WGS_84_PROJECTION
 
@@ -149,10 +149,10 @@ def test_intersection_stability():
     # a rounding error that causes set_window_for_* methods to wobble depending on how far
     # away from the top left thing where. adding round_down_pixels fixed this.
     cells = ["874b93aaeffffff", "874b93a85ffffff", "874b93aa3ffffff", "874b93a84ffffff", "874b93a80ffffff"]
-    scale = PixelScale(0.000898315284120,-0.000898315284120)
+    projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120,-0.000898315284120)
 
     tiles = [
-        H3CellLayer(cell_id, scale, WGS_84_PROJECTION)
+        H3CellLayer(cell_id, projection)
     for cell_id in cells]
 
     # composing the same tiles within different areas should not cause them to
@@ -160,8 +160,8 @@ def test_intersection_stability():
     union = RasterLayer.find_union(tiles)
     superunion = union.grow(0.02)
 
-    scratch1 = RasterLayer.empty_raster_layer(union, scale, gdal.GDT_Float64, name='s1')
-    scratch2 = RasterLayer.empty_raster_layer(superunion, scale, gdal.GDT_Float64, name='s2')
+    scratch1 = RasterLayer.empty_raster_layer(union, projection.scale, gdal.GDT_Float64, name='s1')
+    scratch2 = RasterLayer.empty_raster_layer(superunion, projection.scale, gdal.GDT_Float64, name='s2')
 
     relative_offsets = {}
 

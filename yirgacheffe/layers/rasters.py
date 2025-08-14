@@ -7,7 +7,7 @@ import numpy as np
 from osgeo import gdal
 
 from ..constants import WGS_84_PROJECTION
-from ..window import Area, PixelScale, Window
+from ..window import Area, MapProjection, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
 from ..operators import DataType
@@ -107,14 +107,14 @@ class RasterLayer(YirgacheffeLayer):
             if isinstance(datatype, int):
                 datatype = DataType.of_gdal(datatype)
 
-        scale = layer.pixel_scale
-        if scale is None:
+        projection = layer.map_projection
+        if projection is None:
             raise ValueError("Can not work out area without explicit pixel scale")
-        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+        abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
         width = round_up_pixels((area.right - area.left) / abs_xstep, abs_xstep)
         height = round_up_pixels((area.top - area.bottom) / abs_ystep, abs_ystep)
         geo_transform = (
-            area.left, scale.xstep, 0.0, area.top, 0.0, scale.ystep
+            area.left, projection.xstep, 0.0, area.top, 0.0, projection.ystep
         )
 
         if datatype is None:
@@ -150,7 +150,7 @@ class RasterLayer(YirgacheffeLayer):
             options,
         )
         dataset.SetGeoTransform(geo_transform)
-        dataset.SetProjection(layer.projection)
+        dataset.SetProjection(projection.name)
         if nodata is not None:
             dataset.GetRasterBand(1).SetNoDataValue(nodata)
 
@@ -168,11 +168,11 @@ class RasterLayer(YirgacheffeLayer):
         source_dataset = source._dataset
         assert source_dataset is not None
 
-        old_pixel_scale = source.pixel_scale
-        assert old_pixel_scale
+        old_projection = source.map_projection
+        assert old_projection is not None
 
-        x_scale = old_pixel_scale.xstep / new_pixel_scale.xstep
-        y_scale = old_pixel_scale.ystep / new_pixel_scale.ystep
+        x_scale = old_projection.xstep / new_pixel_scale.xstep
+        y_scale = old_projection.ystep / new_pixel_scale.ystep
         new_width = round_up_pixels(source_dataset.RasterXSize * x_scale,
             abs(new_pixel_scale.xstep))
         new_height = round_up_pixels(source_dataset.RasterYSize * y_scale,
@@ -242,18 +242,17 @@ class RasterLayer(YirgacheffeLayer):
             raise ValueError("None is not a valid dataset")
 
         transform = dataset.GetGeoTransform()
-        scale = PixelScale(transform[1], transform[5])
+        projection = MapProjection(dataset.GetProjection(), transform[1], transform[5])
         area = Area(
             left=transform[0],
             top=transform[3],
-            right=transform[0] + (dataset.RasterXSize * scale.xstep),
-            bottom=transform[3] + (dataset.RasterYSize * scale.ystep),
+            right=transform[0] + (dataset.RasterXSize * projection.xstep),
+            bottom=transform[3] + (dataset.RasterYSize * projection.ystep),
         )
 
         super().__init__(
             area,
-            scale,
-            dataset.GetProjection(),
+            projection,
             name=name
         )
 
