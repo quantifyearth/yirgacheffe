@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from osgeo import gdal
 
-from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data
+from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data, gdal_dataset_with_data
 from yirgacheffe.window import Area, PixelScale, Window
 from yirgacheffe.layers import RasterLayer, InvalidRasterBand
 from yirgacheffe.rounding import round_up_pixels
@@ -260,3 +260,12 @@ def test_multiband_raster() -> None:
         layer = layers[i]
         actual = layer.read_array(0, 0, 4, 2)
         assert (data == actual).all()
+
+def test_read_array_is_numpy():
+    # This test will fail if we use say the MLX backend without casting it back to numpy
+    data = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data)
+    with RasterLayer(dataset) as layer1:
+        actual = layer1.read_array(0, 0, 4, 2).astype(int)
+        expected = data.astype(int)
+        assert (actual == expected).all

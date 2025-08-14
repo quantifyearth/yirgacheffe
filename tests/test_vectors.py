@@ -19,7 +19,7 @@ def test_basic_vector_layer_no_filter_match() -> None:
             with RasteredVectorLayer.layer_from_file(path, "id_no = 123", PixelScale(1.0, -1.0), "WGS 84") as _layer:
                 pass
 
-def test_basic_dyanamic_vector_layer() -> None:
+def test_basic_dynamic_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
         area = Area(-10.0, 10.0, 10.0, 0.0)
@@ -30,6 +30,10 @@ def test_basic_dyanamic_vector_layer() -> None:
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.projection == WGS_84_PROJECTION
+
+            # The astype here is to catch escaping MLX types...
+            res = layer.read_array(0, 0, 20, 20).astype(int)
+            assert res.sum() > 0
 
 def test_rastered_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import copy
 from pathlib import Path
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Sequence, Union
 
 import numpy as np
 from numpy import ma
@@ -39,14 +39,14 @@ class GroupLayer(YirgacheffeLayer):
     @classmethod
     def layer_from_files(
         cls,
-        filenames: Union[List[Path],List[str]],
+        filenames: Sequence[Union[Path,str]],
         name: Optional[str] = None
     ) -> GroupLayer:
         if filenames is None:
             raise ValueError("filenames argument is None")
-        if len(filenames) < 1:
-            raise GroupLayerEmpty("No files found")
         rasters: List[YirgacheffeLayer] = [RasterLayer.layer_from_file(x) for x in filenames]
+        if len(rasters) < 1:
+            raise GroupLayerEmpty("No files found")
         return cls(rasters, name)
 
     def __init__(
@@ -144,7 +144,7 @@ class GroupLayer(YirgacheffeLayer):
         if len(contributing_layers) == 1:
             layer, adjusted_layer_window, intersection = contributing_layers[0]
             if target_window == intersection:
-                data = layer.read_array(
+                data = layer._read_array(
                     intersection.xoff - adjusted_layer_window.xoff,
                     intersection.yoff - adjusted_layer_window.yoff,
                     intersection.xsize,
@@ -156,11 +156,11 @@ class GroupLayer(YirgacheffeLayer):
 
         result = np.zeros((ysize, xsize), dtype=float)
         for layer, adjusted_layer_window, intersection in contributing_layers:
-            data = layer.read_array(
+            data = layer._read_array(
                 intersection.xoff - adjusted_layer_window.xoff,
                 intersection.yoff - adjusted_layer_window.yoff,
                 intersection.xsize,
-                intersection.ysize,
+                intersection.ysize
             )
             result_x_offset = (intersection.xoff - xoffset) - window.xoff
             result_y_offset = (intersection.yoff - yoffset) - window.yoff
@@ -269,7 +269,7 @@ class TiledGroupLayer(GroupLayer):
             intersection = Window.find_intersection_no_throw([target_window, adjusted_layer_window])
             if intersection is None:
                 continue
-            data = layer.read_array(
+            data = layer._read_array(
                 intersection.xoff - adjusted_layer_window.xoff,
                 intersection.yoff - adjusted_layer_window.yoff,
                 intersection.xsize,

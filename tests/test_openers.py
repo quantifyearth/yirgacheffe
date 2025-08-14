@@ -191,3 +191,25 @@ def test_open_two_raster_areas_side_by_side(tiled):
             with yg.read_raster(path1) as raster1:
                 with yg.read_raster(path2) as raster2:
                     assert group.sum() == raster1.sum() + raster2.sum()
+
+@pytest.mark.parametrize("tiled", [False, True])
+def test_open_two_raster_by_glob(tiled):
+    with tempfile.TemporaryDirectory() as tempdir:
+        temppath = Path(tempdir)
+        path1 = temppath / "test1.tif"
+        area1 = Area(-10, 10, 10, -10)
+        dataset1 = gdal_dataset_of_region(area1, 0.2, filename=path1)
+        dataset1.Close()
+
+        path2 = temppath / "test2.tif"
+        area2 = Area(10, 10, 30, -10)
+        dataset2 = gdal_dataset_of_region(area2, 0.2, filename=path2)
+        dataset2.Close()
+
+        with yg.read_rasters(temppath.glob("*.tif"), tiled=tiled) as group:
+            assert group.area == Area(-10, 10, 30, -10)
+            assert group.window == Window(0, 0, 200, 100)
+
+            with yg.read_raster(path1) as raster1:
+                with yg.read_raster(path2) as raster2:
+                    assert group.sum() == raster1.sum() + raster2.sum()
