@@ -33,7 +33,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install gdal[numpy]==3.11.0 scikit-image torch "h3==4.0.0b5" mlx[cpu]
-          python -m pip install pylint mypy pytest types-setuptools pytest-cov build twine
+          python -m pip install pylint mypy pytest types-setuptools pytest-cov build twine deprecation
 
       - name: Lint with pylint
         run: python3 -m pylint .
