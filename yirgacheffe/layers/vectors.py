@@ -195,7 +195,6 @@ class VectorLayer(YirgacheffeLayer):
             if isinstance(datatype, int):
                 datatype = DataType.of_gdal(datatype)
 
-
         vector_layer = VectorLayer(
             layer,
             map_projection,
@@ -218,8 +217,8 @@ class VectorLayer(YirgacheffeLayer):
         cls,
         filename: Union[Path,str],
         where_filter: Optional[str],
-        scale: PixelScale,
-        projection: str,
+        scale: Optional[PixelScale],
+        projection: Optional[str],
         datatype: Optional[Union[int, DataType]] = None,
         burn_value: Union[int,float,str] = 1,
         anchor: Tuple[float,float] = (0.0, 0.0)
@@ -242,7 +241,13 @@ class VectorLayer(YirgacheffeLayer):
         else:
             datatype_arg = datatype
 
-        map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+        if (projection is None) ^ (scale is None):
+            raise ValueError("Either both projection and scale must be provide, or neither")
+
+        if projection is not None and scale is not None:
+            map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+        else:
+            map_projection = None
 
         vector_layer = VectorLayer(
             layer,
@@ -264,7 +269,7 @@ class VectorLayer(YirgacheffeLayer):
     def __init__(
         self,
         layer: ogr.Layer,
-        projection: MapProjection,
+        projection: Optional[MapProjection],
         name: Optional[str] = None,
         datatype: Union[int,DataType] = DataType.Byte,
         burn_value: Union[int,float,str] = 1,
@@ -287,6 +292,7 @@ class VectorLayer(YirgacheffeLayer):
         self._original = None
         self._dataset_path: Optional[Path] = None
         self._filter: Optional[str] = None
+        self._anchor: Tuple[float,float] = (0.0, 0.0)
 
         # work out region for mask
         envelopes = []
@@ -299,30 +305,84 @@ class VectorLayer(YirgacheffeLayer):
             feature = layer.GetNextFeature()
         if len(envelopes) == 0:
             raise ValueError('No geometry found')
+        self._anchor = anchor
+        self._envelopes = envelopes
 
-        # Get the area, but scale it to the pixel resolution that we're using. Note that
-        # the pixel scale GDAL uses can have -ve values, but those will mess up the
-        # ceil/floor math, so we use absolute versions when trying to round.
-        abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
-
-        # Lacking any other reference, we will make the raster align with
-        # (0.0, 0.0), if sometimes we want to align with an existing raster, so if
-        # an anchor is specified, ensure we use that as our pixel space alignment
-        x_anchor = anchor[0]
-        y_anchor = anchor[1]
-        left_shift = x_anchor - abs_xstep
-        right_shift = x_anchor
-        top_shift = y_anchor
-        bottom_shift = y_anchor - abs_ystep
-
+        # if projection is not None:
+        #     # Get the area, but scale it to the pixel resolution that we're using. Note that
+        #     # the pixel scale GDAL uses can have -ve values, but those will mess up the
+        #     # ceil/floor math, so we use absolute versions when trying to round.
+        #     abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
+#
+        #     # Lacking any other reference, we will make the raster align with
+        #     # (0.0, 0.0), if sometimes we want to align with an existing raster, so if
+        #     # an anchor is specified, ensure we use that as our pixel space alignment
+        #     x_anchor = anchor[0]
+        #     y_anchor = anchor[1]
+        #     left_shift = x_anchor - abs_xstep
+        #     right_shift = x_anchor
+        #     top_shift = y_anchor
+        #     bottom_shift = y_anchor - abs_ystep
+#
+        #     area = Area(
+        #         left=(floor((min(x[0] for x in envelopes) - left_shift) / abs_xstep) * abs_xstep) + left_shift,
+        #         top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
+        #         right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
+        #         bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
+        #     )
+        # else:
+            # If we don't have  a projection just go with the idealised area
         area = Area(
-            left=(floor((min(x[0] for x in envelopes) - left_shift) / abs_xstep) * abs_xstep) + left_shift,
-            top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
-            right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
-            bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
+            left=floor(min(x[0] for x in envelopes)),
+            top=ceil(max(x[3] for x in envelopes)),
+            right=ceil(max(x[1] for x in envelopes)),
+            bottom=floor(min(x[2] for x in envelopes)),
         )
 
         super().__init__(area, projection)
+
+
+    def _get_operation_area(self, projection: Optional[MapProjection]=None) -> Area:
+        if self._projection is not None and projection is not None and self._projection != projection:
+            raise ValueError("Calculation projection does not match layer projection")
+
+        target_projection = projection if projection is not None else self._projection
+
+        if target_projection is None:
+            if self._active_area is not None:
+                return self._active_area
+            else:
+                return self._underlying_area
+        else:
+            # Get the area, but scale it to the pixel resolution that we're using. Note that
+            # the pixel scale GDAL uses can have -ve values, but those will mess up the
+            # ceil/floor math, so we use absolute versions when trying to round.
+            abs_xstep, abs_ystep = abs(target_projection.xstep), abs(target_projection.ystep)
+
+            # Lacking any other reference, we will make the raster align with
+            # (0.0, 0.0), if sometimes we want to align with an existing raster, so if
+            # an anchor is specified, ensure we use that as our pixel space alignment
+            x_anchor = self._anchor[0]
+            y_anchor = self._anchor[1]
+            left_shift = x_anchor - abs_xstep
+            right_shift = x_anchor
+            top_shift = y_anchor
+            bottom_shift = y_anchor - abs_ystep
+
+            envelopes = self._envelopes
+            return Area(
+                left=(floor((min(x[0] for x in envelopes) - left_shift) / abs_xstep) * abs_xstep) + left_shift,
+                top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
+                right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
+                bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
+            )
+
+    @property
+    def area(self) -> Area:
+        if self._active_area is not None:
+            return self._active_area
+        else:
+            return self._get_operation_area()
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)
@@ -363,12 +423,14 @@ class VectorLayer(YirgacheffeLayer):
     def _read_array_for_area(
         self,
         target_area: Area,
+        target_projection: Optional[MapProjection],
         x: int,
         y: int,
         width: int,
         height: int,
     ) -> Any:
-        assert self._projection is not None
+        projection = target_projection if target_projection is not None else self._projection
+        assert projection is not None
 
         if self._original is None:
             self._unpark()
@@ -388,14 +450,14 @@ class VectorLayer(YirgacheffeLayer):
         if not dataset:
             raise MemoryError('Failed to create memory mask')
 
-        dataset.SetProjection(self._projection.name)
+        dataset.SetProjection(projection.name)
         dataset.SetGeoTransform([
-            target_area.left + (x * self._projection.xstep),
-            self._projection.xstep,
+            target_area.left + (x * projection.xstep),
+            projection.xstep,
             0.0,
-            target_area.top + (y * self._projection.ystep),
+            target_area.top + (y * projection.ystep),
             0.0,
-            self._projection.ystep
+            projection.ystep
         ])
         if isinstance(self.burn_value, (int, float)):
             gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[self.burn_value], options=["ALL_TOUCHED=TRUE"])
@@ -411,4 +473,4 @@ class VectorLayer(YirgacheffeLayer):
         assert NotRequired
 
     def read_array(self, x: int, y: int, width: int, height: int) -> Any:
-        return self._read_array_for_area(self._active_area, x, y, width, height)
+        return self._read_array_for_area(self.area, None, x, y, width, height)

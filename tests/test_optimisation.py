@@ -16,8 +16,8 @@ class NaiveH3CellLayer(H3CellLayer):
     def read_array(self, xoffset, yoffset, xsize, ysize): # pylint: disable=W0237
         assert self._projection is not None
         res = np.zeros((ysize, xsize), dtype=float)
-        start_x = self._active_area.left + (xoffset * self._projection.xstep)
-        start_y = self._active_area.top + (yoffset * self._projection.ystep)
+        start_x = self.area.left + (xoffset * self._projection.xstep)
+        start_y = self.area.top + (yoffset * self._projection.ystep)
         for ypixel in range(ysize):
             lat = start_y + (ypixel * self._projection.ystep)
             for xpixel in range(xsize):

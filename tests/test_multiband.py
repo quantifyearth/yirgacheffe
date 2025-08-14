@@ -16,7 +16,7 @@ def test_simple_two_band_image() -> None:
         bands = 4
         target = RasterLayer.empty_raster_layer(
             Area(-1, 1, 1, -1),
-            PixelScale(1.0, 1.0),
+            PixelScale(1.0, -1.0),
             gdal.GDT_Byte,
             filename=target_path,
             bands=bands

@@ -1,7 +1,7 @@
 from typing import Any, Union
 
 from ..operators import DataType
-from ..window import Area, PixelScale, Window
+from ..window import Area, MapProjection, PixelScale, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
 
@@ -40,6 +40,7 @@ class ConstantLayer(YirgacheffeLayer):
     def _read_array_for_area(
         self,
         _target_area: Area,
+        _target_projection: MapProjection,
         x: int,
         y: int,
         width: int,

@@ -23,7 +23,7 @@ class YirgacheffeLayer(LayerMathMixin):
             raise TypeError("projection value of wrong type")
 
         self._underlying_area = area
-        self._active_area = area
+        self._active_area: Optional[Area] = None
         self._projection = projection
         self._window: Optional[Window] = None
         self.name = name
@@ -85,7 +85,15 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def area(self) -> Area:
-        return self._active_area
+        if self._active_area is not None:
+            return self._active_area
+        else:
+            return self._underlying_area
+
+    def _get_operation_area(self, projection: Optional[MapProjection]) -> Area:
+        if self._projection is not None and projection is not None and self._projection != projection:
+            raise ValueError("Calculation projection does not match layer projection")
+        return self.area
 
     @property
     def window(self) -> Window:
@@ -145,8 +153,8 @@ class YirgacheffeLayer(LayerMathMixin):
         if self._projection is None:
             raise ValueError("No geo transform for layers without explicit pixel scale")
         return (
-            self._active_area.left, self._projection.xstep, 0.0,
-            self._active_area.top, 0.0, self._projection.ystep
+            self.area.left, self._projection.xstep, 0.0,
+            self.area.top, 0.0, self._projection.ystep
         )
 
     def check_pixel_scale(self, scale: PixelScale) -> bool:
@@ -221,7 +229,7 @@ class YirgacheffeLayer(LayerMathMixin):
         self._active_area = new_area
 
     def reset_window(self) -> None:
-        self._active_area = self._underlying_area
+        self._active_area = None
         if self._projection:
             abs_xstep, abs_ystep = abs(self._projection.xstep), abs(self._projection.ystep)
             self._window = Window(
@@ -277,12 +285,14 @@ class YirgacheffeLayer(LayerMathMixin):
     def _read_array_for_area(
         self,
         target_area: Area,
+        target_projection: MapProjection,
         x: int,
         y: int,
         width: int,
         height: int,
     ) -> Any:
         assert self._projection is not None
+        assert self._projection == target_projection
 
         target_window = Window(
             xoff=round_down_pixels((target_area.left - self._underlying_area.left) / self._projection.xstep,

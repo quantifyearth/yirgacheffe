@@ -59,7 +59,7 @@ class GroupLayer(YirgacheffeLayer):
         if not all(x.map_projection == layers[0].map_projection for x in layers):
             raise ValueError("Not all layers are the same projection/scale")
         for layer in layers:
-            if layer._active_area != layer._underlying_area:
+            if layer._active_area is not None:
                 raise ValueError("Layers can not currently be constrained")
 
         # area/window are superset of all tiles
