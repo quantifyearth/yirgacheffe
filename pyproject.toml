@@ -19,6 +19,7 @@ dependencies = [
     "torch",
     "dill",
     "deprecation",
+    "tomli"
 ]
 requires-python = ">=3.10"
 
