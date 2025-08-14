@@ -251,7 +251,7 @@ class LayerMathMixin:
         self,
         filename: Union[Path,str],
         and_sum: bool = False,
-        parallelism:Optional[int]=None
+        parallelism:Optional[Union[int,bool]]=None
     ) -> Optional[float]:
         return LayerOperation(self).to_geotiff(filename, and_sum, parallelism)
 
@@ -899,7 +899,7 @@ class LayerOperation(LayerMathMixin):
         self,
         filename: Union[Path,str],
         and_sum: bool = False,
-        parallelism:Optional[int]=None
+        parallelism:Optional[Union[int,bool]] = None
     ) -> Optional[float]:
         """Saves a calculation to a raster file, optionally also returning the sum of pixels.
 
@@ -909,8 +909,9 @@ class LayerOperation(LayerMathMixin):
             Path of the raster to save the result to.
         and_sum : bool, default=False
             If true then the function will also calculate the sum of the raster as it goes and return that value.
-        parallelism : int, optional, default=None
-            If passed, attempt to use multiple CPU cores up to the number provided.
+        parallelism : int or bool, optional, default=None
+            If passed, attempt to use multiple CPU cores up to the number provided, or if set to True, yirgacheffe
+            will pick a sensible value.
 
         Returns
         -------
@@ -932,6 +933,9 @@ class LayerOperation(LayerMathMixin):
                 if parallelism is None:
                     result = self.save(layer, and_sum=and_sum)
                 else:
+                    if isinstance(parallelism, bool):
+                        # Parallel save treats None as "work it out"
+                        parallelism = None
                     result = self.parallel_save(layer, and_sum=and_sum, parallelism=parallelism)
 
             os.makedirs(target_dir, exist_ok=True)

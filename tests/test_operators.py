@@ -1472,42 +1472,54 @@ def test_to_geotiff_single_thread_and_sum() -> None:
             assert (expected == actual).all()
 
 @pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_to_geotiff_parallel_thread(monkeypatch) -> None:
-    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+@pytest.mark.parametrize("parallelism", [
+    2,
+    True,
+])
+def test_to_geotiff_parallel_thread(monkeypatch, parallelism) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            src_filename = os.path.join("src.tif")
+            dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=src_filename)
+            dataset.Close()
+            with yirgacheffe.read_raster(src_filename) as layer1:
+                calc = layer1 * 2
+                filename = os.path.join(tempdir, "test.tif")
+                calc.to_geotiff(filename, parallelism=parallelism)
 
-    calc = layer1 * 2
-
-    with tempfile.TemporaryDirectory() as tempdir:
-        filename = os.path.join(tempdir, "test.tif")
-        with monkeypatch.context() as m:
-            m.setattr(yirgacheffe.constants, "YSTEP", 1)
-            calc.to_geotiff(filename, parallelism=2)
-
-        with RasterLayer.layer_from_file(filename) as result:
-            expected = data1 * 2
-            actual = result.read_array(0, 0, 4, 2)
-            assert (expected == actual).all()
+                with RasterLayer.layer_from_file(filename) as result:
+                    expected = data1 * 2
+                    actual = result.read_array(0, 0, 4, 2)
+                    assert (expected == actual).all()
 
 @pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-def test_to_geotiff_parallel_thread_and_sum(monkeypatch) -> None:
-    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+@pytest.mark.parametrize("parallelism", [
+    2,
+    True,
+])
+def test_to_geotiff_parallel_thread_and_sum(monkeypatch, parallelism) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            src_filename = os.path.join("src.tif")
+            dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=src_filename)
+            dataset.Close()
+            with yirgacheffe.read_raster(src_filename) as layer1:
+                filename = os.path.join(tempdir, "test.tif")
+                calc = layer1 * 2
+                actual_sum = calc.to_geotiff(filename, and_sum=True, parallelism=parallelism)
 
-    calc = layer1 * 2
+                assert (data1.sum() * 2) == actual_sum
 
-    with tempfile.TemporaryDirectory() as tempdir:
-        filename = os.path.join(tempdir, "test.tif")
-        with monkeypatch.context() as m:
-            m.setattr(yirgacheffe.constants, "YSTEP", 1)
-            actual_sum = calc.to_geotiff(filename, and_sum=True)
-
-        assert (data1.sum() * 2) == actual_sum
-
-        with RasterLayer.layer_from_file(filename) as result:
-            expected = data1 * 2
-            actual = result.read_array(0, 0, 4, 2)
-            assert (expected == actual).all()
+                with RasterLayer.layer_from_file(filename) as result:
+                    expected = data1 * 2
+                    actual = result.read_array(0, 0, 4, 2)
+                    assert (expected == actual).all()
 
 def test_raster_and_vector() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
