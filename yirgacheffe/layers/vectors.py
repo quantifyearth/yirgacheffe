@@ -490,5 +490,9 @@ class VectorLayer(YirgacheffeLayer):
     def _read_array_with_window(self, _x, _y, _width, _height, _window) -> Any:
         assert NotRequired
 
-    def read_array(self, x: int, y: int, width: int, height: int) -> Any:
+    def _read_array(self, x: int, y: int, width: int, height: int) -> Any:
         return self._read_array_for_area(self.area, None, x, y, width, height)
+
+    def read_array(self, x: int, y: int, width: int, height: int) -> Any:
+        res = self._read_array(x, y, width, height)
+        return backend.demote_array(res)

@@ -7,6 +7,7 @@ from .. import __version__
 from ..operators import DataType, LayerMathMixin
 from ..rounding import almost_equal, round_up_pixels, round_down_pixels
 from ..window import Area, MapProjection, PixelScale, Window
+from .._backends import backend
 
 class YirgacheffeLayer(LayerMathMixin):
     """The common base class for the different layer types. Most still inherit from RasterLayer as deep down
@@ -310,6 +311,9 @@ class YirgacheffeLayer(LayerMathMixin):
         )
         return self._read_array_with_window(x, y, width, height, target_window)
 
+    def _read_array(self, x: int, y: int, width: int, height: int) -> Any:
+        return self._read_array_with_window(x, y, width, height, self.window)
+
     def read_array(self, x: int, y: int, width: int, height: int) -> Any:
         """Reads data from the layer based on the current reference window.
 
@@ -329,7 +333,8 @@ class YirgacheffeLayer(LayerMathMixin):
         Any
             An array of values from the layer.
         """
-        return self._read_array_with_window(x, y, width, height, self.window)
+        res = self._read_array(x, y, width, height)
+        return backend.demote_array(res)
 
     def latlng_for_pixel(self, x_coord: int, y_coord: int) -> Tuple[float,float]:
         """Get geo coords for pixel. This is relative to the set view window."""

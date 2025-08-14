@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 from .layers.base import YirgacheffeLayer
 from .layers.group import GroupLayer, TiledGroupLayer
@@ -32,7 +32,7 @@ def read_raster(
     return RasterLayer.layer_from_file(filename, band, ignore_nodata)
 
 def read_rasters(
-    filenames : Union[List[Path],List[str]],
+    filenames : Sequence[Union[Path,str]],
     tiled: bool=False
 ) -> GroupLayer:
     """Open a set of raster files (e.g., GeoTIFFs) as a single layer.
