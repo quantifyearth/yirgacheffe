@@ -223,6 +223,32 @@ class VectorLayer(YirgacheffeLayer):
         burn_value: Union[int,float,str] = 1,
         anchor: Tuple[float,float] = (0.0, 0.0)
     ) -> VectorLayer:
+        # In 2.0 we need to remove this and migrate to the MapProjection version
+        if (projection is None) ^ (scale is None):
+            raise ValueError("Either both projection and scale must be provide, or neither")
+        if projection is not None and scale is not None:
+            map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+        else:
+            map_projection = None
+        return cls._future_layer_from_file(
+            filename,
+            where_filter,
+            map_projection,
+            datatype,
+            burn_value,
+            anchor
+        )
+
+    @classmethod
+    def _future_layer_from_file(
+        cls,
+        filename: Union[Path,str],
+        where_filter: Optional[str],
+        projection: Optional[MapProjection],
+        datatype: Optional[Union[int, DataType]] = None,
+        burn_value: Union[int,float,str] = 1,
+        anchor: Tuple[float,float] = (0.0, 0.0)
+    ) -> VectorLayer:
         try:
             vectors = ogr.Open(filename)
         except RuntimeError as exc:
@@ -241,17 +267,9 @@ class VectorLayer(YirgacheffeLayer):
         else:
             datatype_arg = datatype
 
-        if (projection is None) ^ (scale is None):
-            raise ValueError("Either both projection and scale must be provide, or neither")
-
-        if projection is not None and scale is not None:
-            map_projection = MapProjection(projection, scale.xstep, scale.ystep)
-        else:
-            map_projection = None
-
         vector_layer = VectorLayer(
             layer,
-            map_projection,
+            projection,
             name=str(filename),
             datatype=datatype_arg,
             burn_value=burn_value,

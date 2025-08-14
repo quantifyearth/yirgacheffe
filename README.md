@@ -32,7 +32,7 @@ import yirgaceffe as yg
 
 habitat_map = yg.read_raster("habitats.tif")
 elevation_map = yg.read_raster('elevation.tif')
-range_polygon = yg.read_shape_like('species123.geojson', like=habitat_map)
+range_polygon = yg.read_shape('species123.geojson')
 area_per_pixel_map = yg.read_raster('area_per_pixel.tif')
 
 refined_habitat = habitat_map.isin([...species habitat codes...])
@@ -152,22 +152,22 @@ with VectorLayer.layer_from_file('range.gpkg', PixelScale(0.001, -0.001), WGS_84
     ...
 ```
 
-The new 2.0 way of doing this is:
+The new 2.0 way of doing this is, if you plan to use the vector layer in calculation with other raster layers that will have projection information:
 
 ```python
 import yirgacheffe as yg
 
-with yg.read_shape('range.gpkg', (0.001, -0.001), WGS_84_PROJECTION) as layer:
+with yg.read_shape('range.gpkg') as layer:
     ...
 ```
 
-It is more common that when a shape file is loaded that its pixel size and projection will want to be made to match that of an existing raster (as per the opening area of habitat example). For that there is the following convenience method:
-
+Of if you plan to use the layer on its own and want to specify a rasterisation projection you can do:
 
 ```python
-with yg.read_raster("test.tif") as raster_layer:
-    with yg.read_shape_like('range.gpkg', raster_layer) as shape_layer:
-        ...
+import yirgacheffe as yg
+
+with yg.read_shape('range.gpkg', (yg.WGS_84_PROJECTION, (0.001, -0.001))) as layer:
+    ...
 ```
 
 ### GroupLayer

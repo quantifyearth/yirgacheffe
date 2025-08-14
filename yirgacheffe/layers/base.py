@@ -151,7 +151,7 @@ class YirgacheffeLayer(LayerMathMixin):
     @property
     def geo_transform(self) -> Tuple[float, float, float, float, float, float]:
         if self._projection is None:
-            raise ValueError("No geo transform for layers without explicit pixel scale")
+            raise AttributeError("No geo transform for layers without explicit pixel scale")
         return (
             self.area.left, self._projection.xstep, 0.0,
             self.area.top, 0.0, self._projection.ystep
