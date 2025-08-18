@@ -659,7 +659,7 @@ class LayerOperation(LayerMathMixin):
 
         if (computation_window.xsize != destination_window.xsize) \
                 or (computation_window.ysize != destination_window.ysize):
-            raise ValueError("Destination raster window size does not match input raster window size.")
+            raise ValueError(f"Destination raster window size does not match input raster window size: {(destination_window.xsize, destination_window.ysize)} vs {(computation_window.xsize, computation_window.ysize)}")
 
         total = 0.0
 
