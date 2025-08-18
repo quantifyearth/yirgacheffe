@@ -1,9 +1,12 @@
+import tempfile
+from pathlib import Path
+
 import pytest
 from osgeo import gdal
 
-from tests.helpers import gdal_dataset_of_region, gdal_empty_dataset_of_region
+from tests.helpers import gdal_dataset_of_region, gdal_empty_dataset_of_region, make_vectors_with_id
 from yirgacheffe.window import Area, MapProjection, Window
-from yirgacheffe.layers import RasterLayer, ConstantLayer, H3CellLayer
+from yirgacheffe.layers import RasterLayer, ConstantLayer, H3CellLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
 
 
@@ -55,6 +58,36 @@ def test_find_intersection_with_constant() -> None:
     ]
     intersection = RasterLayer.find_intersection(layers)
     assert intersection == layers[0].area
+
+def test_find_intersection_with_vector_unbound() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = Area(left=58, top=74, right=180, bottom=42)
+        make_vectors_with_id(42, {area}, path)
+        assert path.exists
+
+        raster = RasterLayer(gdal_dataset_of_region(Area(left=-180.05, top=90.09, right=180.05, bottom=-90.09), 0.13))
+        vector = VectorLayer.layer_from_file(path, None, None, None)
+        assert vector.area == area
+
+        layers = [raster, vector]
+        intersection = RasterLayer.find_intersection(layers)
+        assert intersection == vector.area
+
+def test_find_intersection_with_vector_bound() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = Area(left=58, top=74, right=180, bottom=42)
+        make_vectors_with_id(42, {area}, path)
+        assert path.exists
+
+        raster = RasterLayer(gdal_dataset_of_region(Area(left=-180.05, top=90.09, right=180.05, bottom=-90.09), 0.13))
+        vector = VectorLayer.layer_from_file(path, None, raster.map_projection.scale, raster.map_projection.name)
+        assert vector.area != area
+
+        layers = [raster, vector]
+        intersection = RasterLayer.find_intersection(layers)
+        assert intersection == vector.area
 
 def test_find_intersection_different_pixel_pitch() -> None:
     layers = [
@@ -143,7 +176,7 @@ def test_find_intersection_nearly_same() -> None:
         assert layers[0].window.xsize == other.window.xsize
         assert layers[0].window.ysize == other.window.ysize
 
-def test_intersection_stability():
+def test_intersection_stability() -> None:
     # This test uses h3 tiles as a lazy way to get some bounded regions,
     # but the bug this test exercises is not h3 specific. This was another case of
     # a rounding error that causes set_window_for_* methods to wobble depending on how far

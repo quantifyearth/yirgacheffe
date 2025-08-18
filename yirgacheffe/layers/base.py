@@ -91,7 +91,7 @@ class YirgacheffeLayer(LayerMathMixin):
         else:
             return self._underlying_area
 
-    def _get_operation_area(self, projection: Optional[MapProjection]) -> Area:
+    def _get_operation_area(self, projection: Optional[MapProjection]=None) -> Area:
         if self._projection is not None and projection is not None and self._projection != projection:
             raise ValueError("Calculation projection does not match layer projection")
         return self.area
@@ -119,11 +119,12 @@ class YirgacheffeLayer(LayerMathMixin):
         if not all(projections[0] == x for x in projections[1:]):
             raise ValueError("Not all layers are at the same projectin or pixel scale")
 
+        layer_areas = [x._get_operation_area() for x in layers]
         intersection = Area(
-            left=max(x._underlying_area.left for x in layers),
-            top=min(x._underlying_area.top for x in layers),
-            right=min(x._underlying_area.right for x in layers),
-            bottom=max(x._underlying_area.bottom for x in layers)
+            left=max(x.left for x in layer_areas),
+            top=min(x.top for x in layer_areas),
+            right=min(x.right for x in layer_areas),
+            bottom=max(x.bottom for x in layer_areas)
         )
         if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
             raise ValueError('No intersection possible')
@@ -142,11 +143,12 @@ class YirgacheffeLayer(LayerMathMixin):
         if not all(projections[0] == x for x in projections[1:]):
             raise ValueError("Not all layers are at the same projectin or pixel scale")
 
+        layer_areas = [x._get_operation_area() for x in layers]
         return Area(
-            left=min(x._underlying_area.left for x in layers),
-            top=max(x._underlying_area.top for x in layers),
-            right=max(x._underlying_area.right for x in layers),
-            bottom=min(x._underlying_area.bottom for x in layers)
+            left=min(x.left for x in layer_areas),
+            top=max(x.top for x in layer_areas),
+            right=max(x.right for x in layer_areas),
+            bottom=min(x.bottom for x in layer_areas)
         )
 
     @property
