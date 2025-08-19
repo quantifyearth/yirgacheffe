@@ -1,3 +1,9 @@
+## v1.7.5 (19/8/2025)
+
+### Changed
+
+* Minor improvements to GitHub Actions workflows
+
 ## v1.7.4 (19/8/2025)
 
 ### Fixed
