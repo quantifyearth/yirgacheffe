@@ -114,8 +114,9 @@ class GroupLayer(YirgacheffeLayer):
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
-        scale = self.pixel_scale
-        assert scale is not None
+        map_projection = self.map_projection
+        assert map_projection is not None
+        scale = map_projection.scale
 
         target_window = Window(
             window.xoff + xoffset,
@@ -151,7 +152,7 @@ class GroupLayer(YirgacheffeLayer):
                     intersection.ysize
                 )
                 if layer.nodata is not None:
-                    data[data.isnan()] = 0.0
+                    data[np.isnan(data)] = 0.0
                 return data
 
         result = np.zeros((ysize, xsize), dtype=float)
