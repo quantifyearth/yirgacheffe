@@ -152,7 +152,7 @@ class GroupLayer(YirgacheffeLayer):
                     intersection.ysize
                 )
                 if layer.nodata is not None:
-                    data[np.isnan(data)] = 0.0
+                    data = backend.where(backend.isnan(data), 0.0, data)
                 return data
 
         result = np.zeros((ysize, xsize), dtype=float)

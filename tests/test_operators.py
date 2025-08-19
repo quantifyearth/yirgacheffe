@@ -1567,3 +1567,15 @@ def test_raster_and_vector_no_scale_on_vector() -> None:
         calc = raster * vector
         assert calc.sum() > 0.0
         assert calc.sum() < raster.sum()
+
+def test_isnan() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
+    dataset.GetRasterBand(1).SetNoDataValue(5.0)
+    with RasterLayer(dataset) as layer:
+        calc = layer.isnan()
+        with RasterLayer.empty_raster_layer_like(calc) as result:
+            calc.save(result)
+            actual = result.read_array(0, 0, 4, 2)
+            expected = data1 == 5.0
+            assert (expected == actual).all()

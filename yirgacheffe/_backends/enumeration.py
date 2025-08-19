@@ -38,6 +38,7 @@ class operators(Enum):
     FLOOR = 33
     ROUND = 34
     CEIL = 35
+    ISNAN = 36
 
 class dtype(Enum):
     Float32 = gdal.GDT_Float32

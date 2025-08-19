@@ -4,6 +4,10 @@
 
 * Fixed bug whereby reads from within a single tile that has nodata values in a group layer used the wrong numpy call to check for nan.
 
+### Added
+
+* Added `isnan` operator.
+
 ## v1.7.3 (18/8/2025)
 
 ### Fixed

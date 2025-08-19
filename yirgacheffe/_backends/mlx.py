@@ -40,6 +40,7 @@ maximum = mx.maximum
 minimum = mx.minimum
 zeros = mx.zeros
 pad = mx.pad
+isnan = mx.isnan
 isscalar = np.isscalar
 full = mx.full
 allclose = mx.allclose
@@ -218,4 +219,5 @@ operator_map : Dict[op,Callable] = {
     op.FLOOR: mx.floor,
     op.ROUND: mx.round,
     op.CEIL: mx.ceil,
+    op.ISNAN: mx.isnan,
 }

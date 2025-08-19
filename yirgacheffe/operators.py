@@ -139,6 +139,13 @@ class LayerMathMixin:
             test_elements=test_elements,
         )
 
+    def isnan(self):
+        return LayerOperation(
+            self,
+            op.ISNAN,
+            window_op=WindowOperation.NONE,
+        )
+
     def abs(self):
         return LayerOperation(
             self,

@@ -43,6 +43,7 @@ minimum = np.minimum
 zeros = np.zeros
 pad = np.pad
 sum_op = lambda a: np.sum(a.astype(np.float64))
+isnan = np.isnan
 isscalar = np.isscalar
 full = np.full
 allclose = np.allclose
@@ -156,4 +157,5 @@ operator_map : Dict[op,Callable] = {
     op.FLOOR: np.floor,
     op.ROUND: np.round,
     op.CEIL: np.ceil,
+    op.ISNAN: np.isnan,
 }
