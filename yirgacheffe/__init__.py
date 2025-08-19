@@ -12,7 +12,7 @@ except ModuleNotFoundError:
         pyproject_data = tomllib.load(f)
     __version__ = pyproject_data["project"]["version"]
 
-from ._core import read_raster, read_rasters, read_shape, read_shape_like
+from ._core import read_raster, read_rasters, read_shape, read_shape_like, constant, read_narrow_raster
 from .constants import WGS_84_PROJECTION
 
 gdal.UseExceptions()
