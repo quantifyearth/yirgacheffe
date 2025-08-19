@@ -4,8 +4,8 @@
 name: Python Publish CI
 
 on:
-  push:
-    branches: ["main"]
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -16,7 +16,7 @@ jobs:
     environment: publishing
     container: ghcr.io/osgeo/gdal:ubuntu-small-3.11.0
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         python-version: ["3.10"]
 
