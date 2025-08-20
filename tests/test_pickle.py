@@ -30,10 +30,9 @@ def test_pickle_raster_layer() -> None:
 
 def test_pickle_raster_mem_layer_fails() -> None:
     area = Area(-10, 10, 10, -10)
-    layer = RasterLayer(gdal_dataset_of_region(area, 0.02))
-
-    with pytest.raises(ValueError):
-        _ = pickle.dumps(layer)
+    with RasterLayer(gdal_dataset_of_region(area, 0.02)) as layer:
+        with pytest.raises(ValueError):
+            _ = pickle.dumps(layer)
 
 def test_pickle_dyanamic_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:

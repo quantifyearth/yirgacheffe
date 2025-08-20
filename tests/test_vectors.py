@@ -30,6 +30,7 @@ def test_basic_dynamic_vector_layer() -> None:
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.projection == WGS_84_PROJECTION
+            assert layer.map_projection.name == WGS_84_PROJECTION
 
             # The astype here is to catch escaping MLX types...
             res = layer.read_array(0, 0, 20, 20).astype(int)
@@ -46,6 +47,7 @@ def test_rastered_vector_layer() -> None:
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.projection == WGS_84_PROJECTION
+            assert layer.map_projection.name == WGS_84_PROJECTION
 
 def test_basic_dynamic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -100,6 +102,7 @@ def test_empty_layer_from_vector():
         empty = RasterLayer.empty_raster_layer_like(source)
         assert empty.pixel_scale == source.pixel_scale
         assert empty.projection == source.projection
+        assert empty.map_projection == source.map_projection
         assert empty.window == source.window
         assert empty.area == source.area
 
