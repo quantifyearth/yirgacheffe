@@ -174,7 +174,7 @@ class Window:
         Y axis offset
     xsize : int
         Width of data in pixels
-    bottom : float
+    ysize : float
         Height of data in pixels
 
     Attributes
@@ -185,7 +185,7 @@ class Window:
         Y axis offset
     xsize : int
         Width of data in pixels
-    bottom : float
+    ysize : float
         Height of data in pixels
     """
     xoff: int

@@ -8,11 +8,11 @@ import deprecation
 from osgeo import gdal, ogr
 
 from .. import __version__
-from ..operators import DataType
 from ..window import Area, MapProjection, PixelScale
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 from .._backends import backend
+from .._backends.enumeration import dtype as DataType
 
 def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> DataType: # pylint: disable=R0911
     if isinstance(burn_value, str):

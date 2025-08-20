@@ -8,7 +8,7 @@ import torch
 import yirgacheffe
 from tests.helpers import gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer
-from yirgacheffe.operators import LayerOperation
+from yirgacheffe._operators import LayerOperation
 
 # These tests are marked skip for MLX, because there seems to be a problem with
 # calling mx.eval in the tests for parallel save on Linux (which is what we use

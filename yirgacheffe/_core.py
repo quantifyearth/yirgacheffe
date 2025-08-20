@@ -8,7 +8,7 @@ from .layers.group import GroupLayer, TiledGroupLayer
 from .layers.rasters import RasterLayer
 from .layers.vectors import VectorLayer
 from .window import MapProjection
-from .operators import DataType
+from ._backends.enumeration import dtype as DataType
 
 def read_raster(
     filename: Union[Path,str],

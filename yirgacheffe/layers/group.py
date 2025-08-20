@@ -6,13 +6,12 @@ from typing import Any, List, Optional, Sequence, Union
 import numpy as np
 from numpy import ma
 
-from ..operators import DataType
 from ..rounding import round_down_pixels
 from ..window import Area, Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 from .._backends import backend
-
+from .._backends.enumeration import dtype as DataType
 
 class GroupLayerEmpty(ValueError):
     def __init__(self, msg):

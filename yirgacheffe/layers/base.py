@@ -4,10 +4,11 @@ from typing import Any, Optional, Sequence, Tuple
 import deprecation
 
 from .. import __version__
-from ..operators import DataType, LayerMathMixin
+from .._operators import LayerMathMixin
 from ..rounding import almost_equal, round_up_pixels, round_down_pixels
 from ..window import Area, MapProjection, PixelScale, Window
 from .._backends import backend
+from .._backends.enumeration import dtype as DataType
 
 class YirgacheffeLayer(LayerMathMixin):
     """The common base class for the different layer types. Most still inherit from RasterLayer as deep down

@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from skimage import transform
-from yirgacheffe.operators import DataType
 
 from ..window import MapProjection, PixelScale, Window
 from .rasters import RasterLayer, YirgacheffeLayer
 from .._backends import backend
+from .._backends.enumeration import dtype as DataType
 
 
 class RescaledRasterLayer(YirgacheffeLayer):

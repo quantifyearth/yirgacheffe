@@ -10,8 +10,8 @@ from ..constants import WGS_84_PROJECTION
 from ..window import Area, MapProjection, PixelScale, Window
 from ..rounding import round_up_pixels
 from .base import YirgacheffeLayer
-from ..operators import DataType
 from .._backends import backend
+from .._backends.enumeration import dtype as DataType
 
 class InvalidRasterBand(Exception):
     def __init__ (self, band):
