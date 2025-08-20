@@ -232,16 +232,32 @@ Notes:
 * You can have missing tiles, and these will be filled in with zeros.
 * You can have tiles that overlap, so long as they still conform to the rule that all tiles are the same size and on a grid.
 
-### ConstantLayer
+### Constants
 
-This is there to simplify code when you have some optional layers. Rather than littering your code with checks, you can just use a constant layer, which can be included in calculations and will just return an fixed value as if it wasn't there. Useful with 0.0 or 1.0 for sum or multiplication null layers.
+At times it is useful to have a fixed constant in an expression. Typically, similar to numpy, if an expression involving layers has a constant in, Yirgacheffe will apply that to all pixels in the equation without need for further elaboration:
+
+```python
+with yg.read_raster("some_data.tif") as layer:
+    doubled_layer = layer * 2.0
+    ...
+```
+
+This can be useful in tasks where you have an optional layer in your code. For example, here the code optionally loads an area-per-pixel layer, which if not present can just be substituted with a 1.0:
 
 ```python
 try:
-    area_layer = RasterLayer.layer_from_file('myarea.tiff')
+    area_layer = yg.read_raster('myarea.tiff')
 except FileDoesNotExist:
-    area_layer = ConstantLayer(0.0)
+    area_layer = 1.0
 ```
+
+However, as with numpy, Python can not make the correct inference if the constant value is the first term in the equation. In that case you need to explicitly wrap the value with `constant` to help Python understand what is happening:
+
+```python
+with yg.read_raster("some_data.tif") as layer:
+    result = yg.constant(1.0) / layer
+```
+
 
 ### H3CellLayer
 
