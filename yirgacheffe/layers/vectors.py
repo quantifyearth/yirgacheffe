@@ -4,8 +4,10 @@ from pathlib import Path
 from typing import Any, Optional, Tuple, Union
 from typing_extensions import NotRequired
 
+import deprecation
 from osgeo import gdal, ogr
 
+from .. import __version__
 from ..operators import DataType
 from ..window import Area, MapProjection, PixelScale
 from .base import YirgacheffeLayer
@@ -60,6 +62,12 @@ class RasteredVectorLayer(RasterLayer):
     VectorLayer."""
 
     @classmethod
+    @deprecation.deprecated(
+        deprecated_in="1.7",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `VectorLayer` instead."
+    )
     def layer_from_file( # type: ignore[override] # pylint: disable=W0221
         cls,
         filename: Union[Path,str],

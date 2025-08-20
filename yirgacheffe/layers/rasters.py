@@ -97,8 +97,6 @@ class RasterLayer(YirgacheffeLayer):
         threads: Optional[int]=None,
         bands: int=1
     ) -> RasterLayer:
-        width = layer.window.xsize
-        height = layer.window.ysize
         if area is None:
             area = layer.area
         assert area is not None
@@ -116,6 +114,12 @@ class RasterLayer(YirgacheffeLayer):
         geo_transform = (
             area.left, projection.xstep, 0.0, area.top, 0.0, projection.ystep
         )
+
+        if area is None:
+            og_width = layer.window.xsize
+            og_height = layer.window.ysize
+            assert (og_width == width) and (og_height == height), \
+                f"original size ({og_width}, {og_height}) != estimated ({width}, {height})"
 
         if datatype is None:
             datatype_arg = layer.datatype

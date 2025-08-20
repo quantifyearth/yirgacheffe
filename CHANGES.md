@@ -1,3 +1,14 @@
+## v1.7.6 (20/8/2025)
+
+### Fixed
+
+* Fixed issue whereby vector layers without explicit projection would use the abstract rather than concrete area value when generating a target raster.
+
+### Added
+
+* Added a core wrapper `constant` to save people using `ConstantLayer` explicitly
+* Added a core wrapper `read_narrow_raster` to save people using `UniformAreaLayer` explicitly
+
 ## v1.7.5 (19/8/2025)
 
 ### Changed

@@ -1,5 +1,6 @@
 import os
 import tempfile
+from math import ceil, floor
 from pathlib import Path
 
 import numpy as np
@@ -7,8 +8,9 @@ import pytest
 
 import yirgacheffe as yg
 from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.layers import InvalidRasterBand
+from yirgacheffe.layers import InvalidRasterBand, RasterLayer
 from yirgacheffe.window import Area, MapProjection, Window
+from yirgacheffe.operators import DataType
 from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data, \
     make_vectors_with_id, make_vectors_with_mutlile_ids
 
@@ -213,3 +215,54 @@ def test_open_two_raster_by_glob(tiled):
             with yg.read_raster(path1) as raster1:
                 with yg.read_raster(path2) as raster2:
                     assert group.sum() == raster1.sum() + raster2.sum()
+
+def test_open_uniform_area_layer() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        pixel_scale = 0.5
+        area = Area(
+            floor(-180 / pixel_scale) * pixel_scale,
+            ceil(90 / pixel_scale) * pixel_scale,
+            (floor(-180 / pixel_scale) * pixel_scale) + pixel_scale,
+            floor(-90 / pixel_scale) * pixel_scale
+        )
+        dataset = gdal_dataset_of_region(area, pixel_scale, filename=path)
+        assert dataset.RasterXSize == 1
+        assert dataset.RasterYSize == ceil(180 / pixel_scale)
+        dataset.Close()
+
+        with yg.read_narrow_raster(path) as layer:
+            assert layer.map_projection is not None
+            assert layer.map_projection.scale == (pixel_scale, -pixel_scale)
+            assert layer.area == Area(
+                floor(-180 / pixel_scale) * pixel_scale,
+                ceil(90 / pixel_scale) * pixel_scale,
+                ceil(180 / pixel_scale) * pixel_scale,
+                floor(-90 / pixel_scale) * pixel_scale
+            )
+            assert layer.window == Window(
+                0,
+                0,
+                ceil((layer.area.right - layer.area.left) / pixel_scale),
+                ceil((layer.area.top - layer.area.bottom) / pixel_scale)
+            )
+
+def test_incorrect_tiff_for_uniform_area() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.tif"
+        area = Area(-10, 10, 10, -10)
+        gdal_dataset_of_region(area, 1.0, filename=path)
+        assert path.exists()
+        with pytest.raises(ValueError):
+            _ = yg.read_narrow_raster(path)
+
+def test_constant() -> None:
+    with yg.constant(42.0) as layer:
+        area = Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0)
+        projection = MapProjection(WGS_84_PROJECTION, 0.1, -0.1)
+        with RasterLayer.empty_raster_layer(area, projection.scale, DataType.Float32) as result:
+            layer.save(result)
+
+            expected = np.full((20, 20), 42.0)
+            actual = result.read_array(0, 0, 20, 20)
+            assert (expected == actual).all()

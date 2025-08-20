@@ -91,6 +91,7 @@ def test_empty_layer_from_raster():
     empty = RasterLayer.empty_raster_layer_like(source)
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
+    assert empty.map_projection == source.map_projection
     assert empty.window == source.window
     assert empty.datatype == source.datatype
     assert empty.geo_transform == source.geo_transform
@@ -102,6 +103,7 @@ def test_empty_layer_from_raster_with_no_data_value(nodata):
     empty = RasterLayer.empty_raster_layer_like(source, nodata=nodata)
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
+    assert empty.map_projection == source.map_projection
     assert empty.window == source.window
     assert empty.datatype == source.datatype
     assert empty.geo_transform == source.geo_transform
@@ -113,6 +115,7 @@ def test_empty_layer_from_raster_with_new_smaller_area():
     empty = RasterLayer.empty_raster_layer_like(source, area=smaller_area)
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
+    assert empty.map_projection == source.map_projection
     assert empty.window == Window(0, 0, 100, 100)
     assert empty.datatype == source.datatype
     assert empty.geo_transform == (-1.0, 0.02, 0.0, 1.0, 0.0, -0.02)
@@ -123,6 +126,7 @@ def test_empty_layer_from_raster_new_datatype():
     empty = RasterLayer.empty_raster_layer_like(source, datatype=gdal.GDT_Float64)
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
+    assert empty.map_projection == source.map_projection
     assert empty.window == source.window
     assert empty.datatype == DataType.Float64
 
@@ -136,6 +140,7 @@ def test_empty_layer_from_raster_with_window():
     empty = RasterLayer.empty_raster_layer_like(source)
     assert empty.pixel_scale == source.pixel_scale
     assert empty.projection == source.projection
+    assert empty.map_projection == source.map_projection
     assert empty.window.xoff == 0
     assert empty.window.yoff == 0
     assert empty.window.xsize == source.window.xsize

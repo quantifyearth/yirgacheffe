@@ -1,7 +1,9 @@
 from pathlib import Path
 from typing import Optional, Sequence, Tuple, Union
 
+from .layers.area import UniformAreaLayer
 from .layers.base import YirgacheffeLayer
+from .layers.constant import ConstantLayer
 from .layers.group import GroupLayer, TiledGroupLayer
 from .layers.rasters import RasterLayer
 from .layers.vectors import VectorLayer
@@ -30,6 +32,33 @@ def read_raster(
         Returns an layer representing the raster data.
     """
     return RasterLayer.layer_from_file(filename, band, ignore_nodata)
+
+def read_narrow_raster(
+    filename: Union[Path,str],
+    band: int = 1,
+    ignore_nodata: bool = False,
+) -> RasterLayer:
+    """Open a 1 pixel wide raster file as a global raster.
+
+    This exists for the special use case where an area per pixel raster would have the same value per horizontal row
+    (e.g., a WGS84 map projection). For that case you can use this to load a raster that is 1 pixel wide and have
+    it automatically expanded to act like a global raster in calculations.
+
+    Parameters
+    ----------
+    filename : Path
+        Path of raster file to open.
+    band : int, default=1
+        For multi-band rasters, which band to use (defaults to first if not specified)
+    ignore_nodata : bool, default=False
+        If the GeoTIFF has a NODATA value, don't subsitute that value for NaN
+
+    Returns
+    -------
+    RasterLayer
+        Returns an layer representing the raster data.
+    """
+    return UniformAreaLayer.layer_from_file(filename, band, ignore_nodata)
 
 def read_rasters(
     filenames : Sequence[Union[Path,str]],
@@ -132,3 +161,23 @@ def read_shape_like(
         datatype,
         burn_value,
     )
+
+def constant(value: Union[int,float]) -> ConstantLayer:
+    """Generate a layer that has the same value in all pixels regardless of scale, projection, and area.
+
+    Generally this should not be necessary unless you must have the constant as the first term in an
+    expression, as Yirgacheffe will automatically convert numbers into constant layers. However if the
+    constant is the first term in the expression it must be wrapped by this call otherwise Python will
+    not know that it should be part of the Yirgacheffe expression.
+
+    Parameters
+    ----------
+    value : int or float
+        The value to be in each pixel of the expression term.
+
+    Returns
+    -------
+    ConstantLayer
+        Returns a constant layer of the provided value.
+    """
+    return ConstantLayer(value)
