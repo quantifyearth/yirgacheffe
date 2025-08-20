@@ -201,27 +201,91 @@ def test_constant_layer_result_lhs_multiply() -> None:
 
 def test_vector_layers_add() -> None:
     data1 = np.array([[1, 2], [3, 4]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
+    with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.1, data1)) as raster_layer:
+        with tempfile.TemporaryDirectory() as tempdir:
+            path = os.path.join(tempdir, "test.gpkg")
+            areas = {
+                (Area(-10.0, 10.0, 0.0, 0.0), 42),
+                (Area(0.0, 0.0, 10, -10), 43)
+            }
+            make_vectors_with_mutlile_ids(areas, path)
 
-    with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
-        areas = {
-            (Area(-10.0, 10.0, 0.0, 0.0), 42),
-            (Area(0.0, 0.0, 10, -10), 43)
-        }
-        make_vectors_with_mutlile_ids(areas, path)
+            burn_value = 2
+            with VectorLayer.layer_from_file(
+                path,
+                None,
+                raster_layer.map_projection.scale,
+                raster_layer.map_projection.name,
+                burn_value=burn_value
+            ) as vector_layer:
+                layer2_total = vector_layer.sum()
+                assert layer2_total == ((vector_layer.window.xsize * vector_layer.window.ysize) / 2) * burn_value
 
-        burn_value = 2
-        layer2 = VectorLayer.layer_from_file(path, None, layer1.pixel_scale, layer1.projection, burn_value=burn_value)
-        layer2_total = layer2.sum()
-        assert layer2_total == ((layer2.window.xsize * layer2.window.ysize) / 2) * burn_value
+                calc = raster_layer + vector_layer
 
-        calc = layer1 + layer2
+                assert calc.area == vector_layer.area
 
-        assert calc.area == layer2.area
+                total = calc.sum()
+                assert total == layer2_total + np.sum(data1)
 
-        total = calc.sum()
-        assert total == layer2_total + np.sum(data1)
+                with RasterLayer.empty_raster_layer_like(calc) as result:
+                    calc.save(result)
+                    total = result.sum()
+                    assert total == layer2_total + np.sum(data1)
+
+def test_vector_layers_add_unbound_rhs() -> None:
+    data1 = np.array([[1, 2], [3, 4]])
+    with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.1, data1)) as raster_layer:
+        with tempfile.TemporaryDirectory() as tempdir:
+            path = os.path.join(tempdir, "test.gpkg")
+            areas = {
+                (Area(-10.0, 10.0, 0.0, 0.0), 42),
+                (Area(0.0, 0.0, 10, -10), 43)
+            }
+            make_vectors_with_mutlile_ids(areas, path)
+
+            burn_value = 2
+            with VectorLayer.layer_from_file(path, None, None, None, burn_value=burn_value) as vector_layer:
+                calc = raster_layer + vector_layer
+
+                layer2_total = ((calc.window.xsize * calc.window.ysize) / 2) * burn_value
+
+                assert calc.area != vector_layer.area
+
+                total = calc.sum()
+                assert total == layer2_total + np.sum(data1)
+
+                with RasterLayer.empty_raster_layer_like(calc) as result:
+                    calc.save(result)
+                    total = result.sum()
+                    assert total == layer2_total + np.sum(data1)
+
+def test_vector_layers_add_unbound_lhs() -> None:
+    data1 = np.array([[1, 2], [3, 4]])
+    with RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.1, data1)) as raster_layer:
+        with tempfile.TemporaryDirectory() as tempdir:
+            path = os.path.join(tempdir, "test.gpkg")
+            areas = {
+                (Area(-10.0, 10.0, 0.0, 0.0), 42),
+                (Area(0.0, 0.0, 10, -10), 43)
+            }
+            make_vectors_with_mutlile_ids(areas, path)
+
+            burn_value = 2
+            with VectorLayer.layer_from_file(path, None, None, None, burn_value=burn_value) as vector_layer:
+                calc = vector_layer + raster_layer
+
+                layer2_total = ((calc.window.xsize * calc.window.ysize) / 2) * burn_value
+
+                assert calc.area != vector_layer.area
+
+                total = calc.sum()
+                assert total == layer2_total + np.sum(data1)
+
+                with RasterLayer.empty_raster_layer_like(calc) as result:
+                    calc.save(result)
+                    total = result.sum()
+                    assert total == layer2_total + np.sum(data1)
 
 def test_vector_layers_multiply() -> None:
     data1 = np.array([[1, 2], [3, 4]])

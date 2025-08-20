@@ -387,50 +387,9 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def area(self) -> Area:
-        # The type().__name__ here is to avoid a circular import dependancy
-        lhs_area = self.lhs.area
-        try:
-            rhs_area = self.rhs.area
-        except AttributeError:
-            rhs_area = None
-        try:
-            other_area = self.other.area
-        except AttributeError:
-            other_area = None
-
-        all_areas = [x for x in [lhs_area, rhs_area, other_area] if (x is not None) and (not x.is_world)]
-
-        match self.window_op:
-            case WindowOperation.NONE:
-                return all_areas[0]
-            case WindowOperation.LEFT:
-                return lhs_area
-            case WindowOperation.RIGHT:
-                assert rhs_area is not None
-                return rhs_area
-            case WindowOperation.INTERSECTION:
-                intersection = Area(
-                    left=max(x.left for x in all_areas),
-                    top=min(x.top for x in all_areas),
-                    right=min(x.right for x in all_areas),
-                    bottom=max(x.bottom for x in all_areas)
-                )
-                if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
-                    raise ValueError('No intersection possible')
-                return intersection
-            case WindowOperation.UNION:
-                return Area(
-                    left=min(x.left for x in all_areas),
-                    top=max(x.top for x in all_areas),
-                    right=max(x.right for x in all_areas),
-                    bottom=min(x.bottom for x in all_areas)
-                )
-            case _:
-                assert False, "Should not be reached"
+        return self._get_operation_area(self.map_projection)
 
     def _get_operation_area(self, projection: Optional[MapProjection]) -> Area:
-
-        # The type().__name__ here is to avoid a circular import dependancy
         lhs_area = self.lhs._get_operation_area(projection)
         try:
             rhs_area = self.rhs._get_operation_area(projection)
@@ -462,12 +421,13 @@ class LayerOperation(LayerMathMixin):
                     raise ValueError('No intersection possible')
                 return intersection
             case WindowOperation.UNION:
-                return Area(
+                union = Area(
                     left=min(x.left for x in all_areas),
                     top=max(x.top for x in all_areas),
                     right=max(x.right for x in all_areas),
                     bottom=min(x.bottom for x in all_areas)
                 )
+                return union
             case _:
                 assert False, "Should not be reached"
 
