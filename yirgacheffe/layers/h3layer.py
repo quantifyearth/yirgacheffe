@@ -3,12 +3,12 @@ from typing import Any, Tuple
 
 import h3
 import numpy as np
-from yirgacheffe.operators import DataType
 
 from ..rounding import round_up_pixels
 from ..window import Area, MapProjection, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
+from .._backends.enumeration import dtype as DataType
 
 class H3CellLayer(YirgacheffeLayer):
 

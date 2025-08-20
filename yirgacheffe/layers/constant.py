@@ -1,10 +1,9 @@
 from typing import Any, Union
 
-from ..operators import DataType
 from ..window import Area, MapProjection, PixelScale, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
-
+from .._backends.enumeration import dtype as DataType
 
 class ConstantLayer(YirgacheffeLayer):
     """This is a layer that will return the identity value - can be used when an input layer is
