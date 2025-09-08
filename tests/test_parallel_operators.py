@@ -1,4 +1,5 @@
 import os
+import resource
 import tempfile
 
 import numpy as np
@@ -42,7 +43,6 @@ def test_add_byte_layers_with_one_thread_uses_regular_save(monkeypatch) -> None:
             with pytest.raises(TypeError):
                 comp.parallel_save(result)
 
-
 @pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_add_byte_layers(monkeypatch) -> None:
     with monkeypatch.context() as m:
@@ -70,6 +70,39 @@ def test_add_byte_layers(monkeypatch) -> None:
             actual = result.read_array(0, 0, 4, 2)
 
             assert (expected == actual).all()
+
+@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+def test_rlimit_nofiles(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+
+            rlimit_log = []
+            def callback_rlimit_recorder(_progress: float) -> None:
+                rlimit_log.append(resource.getrlimit(resource.RLIMIT_NOFILE))
+
+            with RasterLayer.layer_from_file(path1) as layer:
+                with RasterLayer.empty_raster_layer_like(layer) as result:
+
+                    before_current_fd_limit, before_max_fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+                    comp = layer * 2
+                    comp.parallel_save(result, callback=callback_rlimit_recorder)
+
+                    after_current_fd_limit, after_max_fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+                    assert after_current_fd_limit == before_current_fd_limit
+                    assert after_max_fd_limit == before_max_fd_limit
+
+                    assert len(rlimit_log) > 0
+                    for recorded_current_fd_limit, recorded_max_fd_limit in rlimit_log:
+                        assert recorded_current_fd_limit == before_max_fd_limit
+                        assert recorded_max_fd_limit == before_max_fd_limit
 
 @pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_add_byte_layers_and_sum(monkeypatch) -> None:
