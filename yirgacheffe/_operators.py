@@ -2,10 +2,12 @@ import logging
 import math
 import multiprocessing
 import os
+import resource
 import sys
 import tempfile
 import time
 import types
+from contextlib import ExitStack
 from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
@@ -769,83 +771,92 @@ class LayerOperation(LayerMathMixin):
 
         total = 0.0
 
-        with multiprocessing.Manager() as manager:
-            with SharedMemoryManager() as smm:
+        with ExitStack() as stack:
+            # If we get this far, then we're going to do the multiprocessing path. In general we've had
+            # a lot of issues with limits on open file descriptors using multiprocessing on bigger machines
+            # with hundreds of cores, and so to avoid blowing up in a way that is confusing to non-compsci
+            # types, we just set the soft ulimit as high as we can
+            previous_fd_limit, max_fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+            resource.setrlimit(resource.RLIMIT_NOFILE, (max_fd_limit, max_fd_limit))
+            stack.callback(resource.setrlimit, resource.RLIMIT_NOFILE, (previous_fd_limit, max_fd_limit))
 
-                mem_sem_cast = []
-                for _ in range(worker_count):
-                    shared_buf = smm.SharedMemory(size=np_dtype.itemsize * self.ystep * computation_window.xsize)
-                    cast_buf : npt.NDArray = np.ndarray(
-                        (self.ystep, computation_window.xsize),
-                        dtype=np_dtype,
-                        buffer=shared_buf.buf
-                    )
-                    cast_buf[:] = np.zeros((self.ystep, computation_window.xsize), np_dtype)
-                    mem_sem_cast.append((shared_buf, Semaphore(), cast_buf))
+            with multiprocessing.Manager() as manager:
+                with SharedMemoryManager() as smm:
 
-                source_queue = manager.Queue()
-                result_queue = manager.Queue()
-
-                for yoffset in range(0, computation_window.ysize, self.ystep):
-                    step = ((computation_window.ysize - yoffset)
-                        if yoffset+self.ystep > computation_window.ysize
-                        else self.ystep)
-                    source_queue.put((
-                        yoffset,
-                        step
-                    ))
-                for _ in range(worker_count):
-                    source_queue.put(None)
-
-                if callback:
-                    callback(0.0)
-
-                workers = [Process(target=self._parallel_worker, args=(
-                    i,
-                    mem_sem_cast[i][0],
-                    mem_sem_cast[i][1],
-                    np_dtype,
-                    computation_window.xsize,
-                    source_queue,
-                    result_queue,
-                    computation_window
-                )) for i in range(worker_count)]
-                for worker in workers:
-                    worker.start()
-
-                sentinal_count = len(workers)
-                retired_blocks = 0
-                while sentinal_count > 0:
-                    res = result_queue.get()
-                    if res is None:
-                        sentinal_count -= 1
-                        continue
-                    index, yoffset, step = res
-                    _, sem, arr = mem_sem_cast[index]
-                    if band:
-                        band.WriteArray(
-                            arr[0:step],
-                            destination_window.xoff,
-                            yoffset + destination_window.yoff,
+                    mem_sem_cast = []
+                    for _ in range(worker_count):
+                        shared_buf = smm.SharedMemory(size=np_dtype.itemsize * self.ystep * computation_window.xsize)
+                        cast_buf : npt.NDArray = np.ndarray(
+                            (self.ystep, computation_window.xsize),
+                            dtype=np_dtype,
+                            buffer=shared_buf.buf
                         )
-                    if and_sum:
-                        total += np.sum(np.array(arr[0:step]).astype(np.float64))
-                    sem.release()
-                    retired_blocks += 1
-                    if callback:
-                        callback(retired_blocks / work_blocks)
+                        cast_buf[:] = np.zeros((self.ystep, computation_window.xsize), np_dtype)
+                        mem_sem_cast.append((shared_buf, Semaphore(), cast_buf))
 
-                processes = workers
-                while processes:
-                    candidates = [x for x in processes if not x.is_alive()]
-                    for candidate in candidates:
-                        candidate.join()
-                        if candidate.exitcode:
-                            for victim in processes:
-                                victim.kill()
-                            sys.exit(candidate.exitcode)
-                        processes.remove(candidate)
-                    time.sleep(0.01)
+                    source_queue = manager.Queue()
+                    result_queue = manager.Queue()
+
+                    for yoffset in range(0, computation_window.ysize, self.ystep):
+                        step = ((computation_window.ysize - yoffset)
+                            if yoffset+self.ystep > computation_window.ysize
+                            else self.ystep)
+                        source_queue.put((
+                            yoffset,
+                            step
+                        ))
+                    for _ in range(worker_count):
+                        source_queue.put(None)
+
+                    if callback:
+                        callback(0.0)
+
+                    workers = [Process(target=self._parallel_worker, args=(
+                        i,
+                        mem_sem_cast[i][0],
+                        mem_sem_cast[i][1],
+                        np_dtype,
+                        computation_window.xsize,
+                        source_queue,
+                        result_queue,
+                        computation_window
+                    )) for i in range(worker_count)]
+                    for worker in workers:
+                        worker.start()
+
+                    sentinal_count = len(workers)
+                    retired_blocks = 0
+                    while sentinal_count > 0:
+                        res = result_queue.get()
+                        if res is None:
+                            sentinal_count -= 1
+                            continue
+                        index, yoffset, step = res
+                        _, sem, arr = mem_sem_cast[index]
+                        if band:
+                            band.WriteArray(
+                                arr[0:step],
+                                destination_window.xoff,
+                                yoffset + destination_window.yoff,
+                            )
+                        if and_sum:
+                            total += np.sum(np.array(arr[0:step]).astype(np.float64))
+                        sem.release()
+                        retired_blocks += 1
+                        if callback:
+                            callback(retired_blocks / work_blocks)
+
+                    processes = workers
+                    while processes:
+                        candidates = [x for x in processes if not x.is_alive()]
+                        for candidate in candidates:
+                            candidate.join()
+                            if candidate.exitcode:
+                                for victim in processes:
+                                    victim.kill()
+                                sys.exit(candidate.exitcode)
+                            processes.remove(candidate)
+                        time.sleep(0.01)
 
         return total if and_sum else None
 
