@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yirgacheffe"
-version = "1.7.7"
+version = "1.7.8"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
@@ -34,6 +34,9 @@ Changelog = "https://github.com/quantifyearth/yirgacheffe/blob/main/CHANGES.md"
 
 [project.scripts]
 realpython = "reader.__main__:main"
+
+[tool.setuptools.package-data]
+yirgacheffe = ["py.typed"]
 
 [[tool.mypy.overrides]]
 module = "osgeo.*"
