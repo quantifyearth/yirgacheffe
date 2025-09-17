@@ -11,11 +11,20 @@ description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
 license = "ISC"
-keywords = ["gdal", "numpy", "math"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+keywords = ["gdal", "gis", "geospatial", "declarative"]
 dependencies = [
-    "numpy",
-    "gdal[numpy]",
-    "scikit-image",
+    "numpy>=1.24,<3.0",
+    "gdal[numpy]>=3.8,<4.0",
+    "scikit-image>=0.20,<1.0",
     "torch",
     "dill",
     "deprecation",
