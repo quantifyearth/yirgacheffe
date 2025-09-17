@@ -1,3 +1,20 @@
+
+## v1.7.8 (17/9/2025)
+
+### Added
+
+* Added marker for mypy that Yirgacheffe has type annotations
+
+## v1.7.7 (8/9/2025)
+
+### Added
+
+* Automatically set rlimit for NOFILES so that parallel operations of machines with many cores don't run out of file descriptors.
+
+### Removed
+
+* Removed internal classes `LayerOperation`, `LayerMathMixin`, and `LayerConstant` from public interface.
+
 ## v1.7.6 (20/8/2025)
 
 ### Fixed
