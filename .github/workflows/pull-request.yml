@@ -37,8 +37,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install gdal[numpy]==3.11.0 scikit-image torch "h3==4.0.0b5" mlx[cpu]==0.28
-          python -m pip install pylint mypy pytest types-setuptools pytest-cov build twine deprecation tomli
+          python -m pip install gdal[numpy]==3.11.0 mlx[cpu]==0.28
+          python -m pip install -e .[dev]
 
       - name: Lint with pylint
         run: python3 -m pylint .

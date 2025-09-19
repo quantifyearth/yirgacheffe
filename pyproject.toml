@@ -28,12 +28,23 @@ dependencies = [
     "torch",
     "dill",
     "deprecation",
-    "tomli"
+    "tomli",
+    "h3",
 ]
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
-dev = ["mypy", "pylint", "pytest", "h3", "pytest-cov", "mlx"]
+mlx = [
+    "mlx",
+]
+dev = [
+    "mypy",
+    "pylint",
+    "pytest",
+    "pytest-cov",
+    "build",
+    "twine",
+]
 
 [project.urls]
 Homepage = "https://github.com/quantifyearth/yirgacheffe"
