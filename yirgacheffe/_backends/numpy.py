@@ -67,7 +67,7 @@ def conv2d_op(data, weights):
     res = conv(preped_data)
     return res.detach().numpy()[0][0]
 
-def dtype_to_backed(dt):
+def dtype_to_backend(dt):
     match dt:
         case dtype.Float32:
             return np.float32
@@ -120,7 +120,7 @@ def backend_to_dtype(val):
             raise ValueError
 
 def astype_op(data, datatype):
-    return data.astype(dtype_to_backed(datatype))
+    return data.astype(dtype_to_backend(datatype))
 
 operator_map : Dict[op,Callable] = {
     op.ADD: np.ndarray.__add__,

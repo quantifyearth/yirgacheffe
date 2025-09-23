@@ -131,7 +131,7 @@ def conv2d_op(data, weights):
     return res[0]
 
 
-def dtype_to_backed(dt):
+def dtype_to_backend(dt):
     match dt:
         case dtype.Float32:
             return mx.float32
@@ -182,7 +182,7 @@ def backend_to_dtype(val):
             raise ValueError
 
 def astype_op(data, datatype):
-    return data.astype(dtype_to_backed(datatype))
+    return data.astype(dtype_to_backend(datatype))
 
 operator_map : Dict[op,Callable] = {
     op.ADD: mx.array.__add__,

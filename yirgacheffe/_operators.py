@@ -12,7 +12,7 @@ from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 import deprecation
 import numpy as np
@@ -26,6 +26,8 @@ from .window import Area, PixelScale, MapProjection, Window
 from ._backends import backend
 from ._backends.enumeration import operators as op
 from ._backends.enumeration import dtype as DataType
+from ._backends.numpy import dtype_to_backend as dtype_to_numpy
+from ._backends.numpy import backend_to_dtype as numpy_to_dtype
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -46,6 +48,11 @@ class LayerConstant:
 
     def _eval(self, _area, _projection, _index, _step, _target_window):
         return self.val
+
+    @property
+    def datatype(self) -> DataType:
+        numpy_type = np.result_type(self.val)
+        return numpy_to_dtype(numpy_type)
 
     @property
     def area(self) -> Area:
@@ -475,8 +482,16 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def datatype(self) -> DataType:
-        # TODO: Work out how to indicate type promotion via numpy
-        return self.lhs.datatype
+        internal_types: List[DataType] = [
+            self.lhs.datatype
+        ]
+        if self.rhs is not None:
+            internal_types.append(self.rhs.datatype)
+        if self.other is not None:
+            internal_types.append(self.other.datatype)
+        internal_types_as_numpy_types = [dtype_to_numpy(x) for x in internal_types]
+        coerced_type = np.result_type(*internal_types_as_numpy_types)
+        return numpy_to_dtype(coerced_type)
 
     @property
     @deprecation.deprecated(
