@@ -1,7 +1,7 @@
 from __future__ import annotations
 import copy
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, Sequence
 
 import numpy as np
 from numpy import ma
@@ -22,8 +22,8 @@ class GroupLayer(YirgacheffeLayer):
     @classmethod
     def layer_from_directory(
         cls,
-        directory_path: Union[Path,str],
-        name: Optional[str] = None,
+        directory_path: Path | str,
+        name: str | None = None,
         matching: str = "*.tif"
     ) -> GroupLayer:
         if directory_path is None:
@@ -38,20 +38,20 @@ class GroupLayer(YirgacheffeLayer):
     @classmethod
     def layer_from_files(
         cls,
-        filenames: Sequence[Union[Path,str]],
-        name: Optional[str] = None
+        filenames: Sequence[Path | str],
+        name: str | None = None
     ) -> GroupLayer:
         if filenames is None:
             raise ValueError("filenames argument is None")
-        rasters: List[YirgacheffeLayer] = [RasterLayer.layer_from_file(x) for x in filenames]
+        rasters: list[YirgacheffeLayer] = [RasterLayer.layer_from_file(x) for x in filenames]
         if len(rasters) < 1:
             raise GroupLayerEmpty("No files found")
         return cls(rasters, name)
 
     def __init__(
         self,
-        layers: List[YirgacheffeLayer],
-        name: Optional[str] = None
+        layers: list[YirgacheffeLayer],
+        name: str | None = None
     ) -> None:
         if not layers:
             raise GroupLayerEmpty("Expected one or more layers")
@@ -255,7 +255,7 @@ class TiledGroupLayer(GroupLayer):
             ysize
         )
 
-        partials: List[TileData] = []
+        partials: list[TileData] = []
         for layer in self.layers:
             # Normally this is hidden with set_window_for_...
             adjusted_layer_window = Window(
@@ -287,7 +287,7 @@ class TiledGroupLayer(GroupLayer):
         # the "obvious" tile. In which case, we should reject the smaller section. If we have
         # two tiles at the same offset and one is not a perfect subset of the other then the
         # tile set we were given is not regularly shaped, and so we should give up.
-        combed_partials: List[TileData] = []
+        combed_partials: list[TileData] = []
         previous_tile = None
         for tile in sorted_partials:
             if previous_tile is None:
@@ -312,7 +312,7 @@ class TiledGroupLayer(GroupLayer):
         expected_next_x = 0
         expected_next_y = 0
         data = None
-        row_chunk: Optional[np.ndarray] = None
+        row_chunk: np.ndarray | None = None
 
         # Allow for reading off top
         if combed_partials:

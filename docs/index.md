@@ -1,4 +1,4 @@
-# Yirgacheffe: a declarative geospatial library for Python to make data-science with maps easier
+# Yirgacheffe introduction
 
 ## Overview
 

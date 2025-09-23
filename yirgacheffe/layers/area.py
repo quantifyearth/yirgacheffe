@@ -1,6 +1,6 @@
 from math import ceil, floor
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy
 from osgeo import gdal
@@ -19,7 +19,7 @@ class UniformAreaLayer(RasterLayer):
     """
 
     @staticmethod
-    def generate_narrow_area_projection(source_filename: Union[Path,str], target_filename: Union[Path,str]) -> None:
+    def generate_narrow_area_projection(source_filename: Path | str, target_filename: Path | str) -> None:
         source = gdal.Open(source_filename, gdal.GA_ReadOnly)
         if source is None:
             raise FileNotFoundError(source_filename)
@@ -57,7 +57,7 @@ class UniformAreaLayer(RasterLayer):
                 return False
         return True
 
-    def __init__(self, dataset, name: Optional[str] = None, band: int = 1, ignore_nodata: bool = False):
+    def __init__(self, dataset, name: str | None = None, band: int = 1, ignore_nodata: bool = False):
         if dataset.RasterXSize > 1:
             raise ValueError("Expected a shrunk dataset")
         self.databand = dataset.GetRasterBand(1).ReadAsArray(0, 0, 1, dataset.RasterYSize)

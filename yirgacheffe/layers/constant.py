@@ -1,4 +1,4 @@
-from typing import Any, Union
+from typing import Any
 
 from ..window import Area, MapProjection, PixelScale, Window
 from .base import YirgacheffeLayer
@@ -8,7 +8,7 @@ from .._backends.enumeration import dtype as DataType
 class ConstantLayer(YirgacheffeLayer):
     """This is a layer that will return the identity value - can be used when an input layer is
     missing (e.g., area) without having the calculation full of branches."""
-    def __init__(self, value: Union[int,float]): # pylint: disable=W0231
+    def __init__(self, value: int | float): # pylint: disable=W0231
         area = Area.world()
         super().__init__(area, None)
         self.value = float(value)

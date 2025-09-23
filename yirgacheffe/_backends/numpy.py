@@ -1,4 +1,4 @@
-from typing import Callable, Dict
+from typing import Callable
 
 import numpy as np
 import torch
@@ -122,7 +122,7 @@ def backend_to_dtype(val):
 def astype_op(data, datatype):
     return data.astype(dtype_to_backend(datatype))
 
-operator_map : Dict[op,Callable] = {
+operator_map: dict[op, Callable] = {
     op.ADD: np.ndarray.__add__,
     op.SUB: np.ndarray.__sub__,
     op.MUL: np.ndarray.__mul__,

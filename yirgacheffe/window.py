@@ -3,7 +3,6 @@ import math
 import sys
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
@@ -13,23 +12,15 @@ class MapProjection:
 
     This superceeeds the old PixelScale class, which will be removed in version 2.0.
 
-    Parameters
-    ----------
-    name : str
-        The map projection used.
-    xstep : float
-        The number of units horizontal distance a step of one pixel makes in the map projection.
-    ystep : float
-        The number of units verticle distance a step of one pixel makes in the map projection.
+    Args:
+        name: The map projection used.
+        xstep: The number of units horizontal distance a step of one pixel makes in the map projection.
+        ystep: The number of units vertical distance a step of one pixel makes in the map projection.
 
-    Attributes
-    ----------
-    name : str
-        The map projection used.
-    xstep : float
-        The number of units horizontal distance a step of one pixel makes in the map projection.
-    ystep : float
-        The number of units verticle distance a step of one pixel makes in the map projection.
+    Attributes:
+        name: The map projection used.
+        xstep: The number of units horizontal distance a step of one pixel makes in the map projection.
+        ystep: The number of units vertical distance a step of one pixel makes in the map projection.
     """
 
     name : str
@@ -52,27 +43,17 @@ class MapProjection:
 class Area:
     """Class to hold a geospatial area of data in the given projection.
 
-    Parameters
-    ----------
-    left : float
-        Left most point in the projection space
-    top : float
-        Top most point in the projection space
-    right : float
-        Right most point in the projection space
-    bottom : float
-        Bottom most point in the projection space
+    Args:
+        left: Left most point in the projection space.
+        top: Top most point in the projection space.
+        right: Right most point in the projection space.
+        bottom: Bottom most point in the projection space.
 
-    Attributes
-    ----------
-    left : float
-        Left most point in the projection space
-    top : float
-        Top most point in the projection space
-    right : float
-        Right most point in the projection space
-    bottom : float
-        Bottom most point in the projection space
+    Attributes:
+        left: Left most point in the projection space.
+        top: Top most point in the projection space.
+        right: Right most point in the projection space.
+        bottom: Bottom most point in the projection space.
     """
     left: float
     top: float
@@ -83,9 +64,7 @@ class Area:
     def world() -> Area:
         """Creates an area that covers the entire planet.
 
-        Returns
-        -------
-        Area
+        Returns:
             An area where the extents are nan, but is_world returns true.
         """
         return Area(float("nan"), float("nan"), float("nan"), float("nan"))
@@ -99,21 +78,16 @@ class Area:
             math.isclose(self.top, other.top, abs_tol=1e-09) and \
             math.isclose(self.bottom, other.bottom, abs_tol=1e-09)
 
-    def grow(self, offset: float):
+    def grow(self, offset: float) -> Area:
         """Expand the area in all directions by the given amount.
 
         Generates a new area that is an expanded version of the current area.
 
-        Parameters
-        ----------
-        offset : float
-            The amount by which to grow the area
+        Args:
+            offset: The amount by which to grow the area.
 
-        Returns
-        -------
-        Area
+        Returns:
             A new area of the expanded size.
-
         """
         return Area(
             left=self.left - offset,
@@ -124,26 +98,20 @@ class Area:
 
     @property
     def is_world(self) -> bool:
-        """Returns true if this is a global area, independant of projection.
+        """Returns true if this is a global area, independent of projection.
 
-        Returns
-        -------
-        bool
-            True is the Area was created with `world` otherwise False.
+        Returns:
+            True if the Area was created with `world` otherwise False.
         """
         return math.isnan(self.left)
 
-    def overlaps(self, other) -> bool:
+    def overlaps(self, other: Area) -> bool:
         """Check if this area overlaps with another area.
 
-        Parameters
-        ----------
-        other : Area
-            The other area to compare this area with
+        Args:
+            other: The other area to compare this area with.
 
-        Returns
-        -------
-        bool
+        Returns:
             True if the two areas intersect, otherwise false.
         """
 
@@ -166,27 +134,17 @@ class Area:
 class Window:
     """Class to hold the pixel dimensions of data in the given projection.
 
-    Parameters
-    ----------
-    xoff : int
-        X axis offset
-    yoff : int
-        Y axis offset
-    xsize : int
-        Width of data in pixels
-    ysize : float
-        Height of data in pixels
+    Args:
+        xoff: X axis offset.
+        yoff: Y axis offset.
+        xsize: Width of data in pixels.
+        ysize: Height of data in pixels.
 
-    Attributes
-    ----------
-    xoff : int
-        X axis offset
-    yoff : int
-        Y axis offset
-    xsize : int
-        Width of data in pixels
-    ysize : float
-        Height of data in pixels
+    Attributes:
+        xoff: X axis offset.
+        yoff: Y axis offset.
+        xsize: Width of data in pixels.
+        ysize: Height of data in pixels.
     """
     xoff: int
     yoff: int
@@ -194,7 +152,7 @@ class Window:
     ysize: int
 
     @property
-    def as_array_args(self) -> Tuple[int,...]:
+    def as_array_args(self) -> tuple[int, ...]:
         """A tuple containing xoff, yoff, xsize, and ysize."""
         return (self.xoff, self.yoff, self.xsize, self.ysize)
 
@@ -235,16 +193,11 @@ class Window:
 
         Generates a new window that is an expanded version of the current window.
 
-        Parameters
-        ----------
-        pixels : int
-            The amount by which to grow the window in pixels
+        Args:
+            pixels: The amount by which to grow the window in pixels.
 
-        Returns
-        -------
-        Window
+        Returns:
             A new window of the expanded size.
-
         """
         return Window(
             xoff=self.xoff - pixels,
@@ -254,7 +207,7 @@ class Window:
         )
 
     @staticmethod
-    def find_intersection(windows: List) -> "Window":
+    def find_intersection(windows: list) -> "Window":
         if not windows:
             raise ValueError("Expected list of windows")
         # This isn't very pythonic, as it was originally written, but
@@ -277,7 +230,7 @@ class Window:
         )
 
     @staticmethod
-    def find_intersection_no_throw(windows: List) -> Optional["Window"]:
+    def find_intersection_no_throw(windows: list) -> "Window" | None:
         if not windows:
             raise ValueError("Expected list of windows")
         # This isn't very pythonic, as it was originally written, but
