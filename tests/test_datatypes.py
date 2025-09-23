@@ -22,7 +22,7 @@ from tests.helpers import gdal_dataset_with_data
 ])
 def test_round_trip(gtype) -> None:
     ytype = DataType.of_gdal(gtype)
-    backend_type = backend.dtype_to_backed(ytype)
+    backend_type = backend.dtype_to_backend(ytype)
     assert backend.backend_to_dtype(backend_type) == ytype
 
 @pytest.mark.parametrize("ytype", [
@@ -42,7 +42,7 @@ def test_round_trip_from_gdal(ytype) -> None:
     assert DataType.of_gdal(gtype) == ytype
 
 def test_round_trip_float64() -> None:
-    backend_type = backend.dtype_to_backed(DataType.Float64)
+    backend_type = backend.dtype_to_backend(DataType.Float64)
     ytype = backend.backend_to_dtype(backend_type)
     match BACKEND:
         case "NUMPY":
