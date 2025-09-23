@@ -27,7 +27,7 @@ class RasterLayer(YirgacheffeLayer):
         area: Area,
         scale: PixelScale,
         datatype: Union[int, DataType],
-        filename: Optional[str]=None,
+        filename: Optional[Union[Path,str]]=None,
         projection: str=WGS_84_PROJECTION,
         name: Optional[str]=None,
         compress: bool=True,
@@ -165,7 +165,7 @@ class RasterLayer(YirgacheffeLayer):
         cls,
         source: RasterLayer,
         new_pixel_scale: PixelScale,
-        filename: Optional[str]=None,
+        filename: Optional[Union[Path,str]]=None,
         compress: bool=True,
         algorithm: int=gdal.GRA_NearestNeighbour,
     ) -> RasterLayer:

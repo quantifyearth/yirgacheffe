@@ -1,5 +1,6 @@
 from math import ceil, floor
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any, Optional, Union
 
 import numpy
 from osgeo import gdal
@@ -18,7 +19,7 @@ class UniformAreaLayer(RasterLayer):
     """
 
     @staticmethod
-    def generate_narrow_area_projection(source_filename: str, target_filename: str) -> None:
+    def generate_narrow_area_projection(source_filename: Union[Path,str], target_filename: Union[Path,str]) -> None:
         source = gdal.Open(source_filename, gdal.GA_ReadOnly)
         if source is None:
             raise FileNotFoundError(source_filename)
