@@ -1,6 +1,6 @@
-# Documentation for `Area`
+# `Window`
 
-::: yirgacheffe.Area
+::: yirgacheffe.Window
     handler: python
     options:
         show_root_heading: false

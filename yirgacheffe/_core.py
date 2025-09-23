@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Sequence
 
@@ -24,6 +26,11 @@ def read_raster(
 
     Returns:
         An layer representing the raster data.
+
+    Examples:
+        >>> import yirgacheffe as yg
+        >>> with yg.read_raster('test.tif') as layer:
+        ...     total = layer.sum()
     """
     return RasterLayer.layer_from_file(filename, band, ignore_nodata)
 
@@ -62,6 +69,11 @@ def read_rasters(
 
     Returns:
         An layer representing the raster data.
+
+    Examples:
+        >>> import yirgacheffe as yg
+        >>> with yg.read_rasters(['tile_N10_E10.tif', 'tile_N20_E10.tif']) as all_tiles:
+        ...    ...
     """
     if not tiled:
         return GroupLayer.layer_from_files(filenames)
@@ -86,6 +98,11 @@ def read_shape(
 
     Returns:
         An layer representing the vector data.
+
+    Examples:
+        >>> import yirgacheffe as yg
+        >>> with yg.read_shape('range.gpkg') as layer:
+        ...    ...
     """
 
     if projection is not None:

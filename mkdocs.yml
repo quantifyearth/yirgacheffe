@@ -1,0 +1,23 @@
+site_name: "Yirgacheffe"
+
+theme:
+  name: "material"
+  logo: "assets/yirgacheffe.svg"
+  primary: "#065f65"
+  features:
+    - header.autohide: false
+
+extra_css:
+  - css/extra.css
+
+plugins:
+- search
+- mkdocstrings
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences

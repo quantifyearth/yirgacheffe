@@ -2,7 +2,6 @@ from __future__ import annotations
 from math import ceil, floor
 from pathlib import Path
 from typing import Any
-from typing_extensions import NotRequired
 
 import deprecation
 from osgeo import gdal, ogr
@@ -496,7 +495,7 @@ class VectorLayer(YirgacheffeLayer):
         return res
 
     def _read_array_with_window(self, _x, _y, _width, _height, _window) -> Any:
-        assert NotRequired
+        raise NotImplementedError("VectorLayer does not support windowed reading")
 
     def _read_array(self, x: int, y: int, width: int, height: int) -> Any:
         return self._read_array_for_area(self.area, None, x, y, width, height)

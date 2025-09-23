@@ -188,7 +188,7 @@ class Window:
             ((self.xoff + self.xsize) >= (other.xoff + other.xsize)) and \
             ((self.yoff + self.ysize) >= (other.yoff + other.ysize))
 
-    def grow(self, pixels: int):
+    def grow(self, pixels: int) -> Window:
         """Expand the area in all directions by the given amount.
 
         Generates a new window that is an expanded version of the current window.
@@ -207,7 +207,7 @@ class Window:
         )
 
     @staticmethod
-    def find_intersection(windows: list) -> "Window":
+    def find_intersection(windows: list) -> Window:
         if not windows:
             raise ValueError("Expected list of windows")
         # This isn't very pythonic, as it was originally written, but
@@ -230,7 +230,7 @@ class Window:
         )
 
     @staticmethod
-    def find_intersection_no_throw(windows: list) -> "Window" | None:
+    def find_intersection_no_throw(windows: list) -> Window | None:
         if not windows:
             raise ValueError("Expected list of windows")
         # This isn't very pythonic, as it was originally written, but
