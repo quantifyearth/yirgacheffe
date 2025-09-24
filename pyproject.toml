@@ -46,6 +46,8 @@ dev = [
     "twine",
     "mkdocs-material",
     "mkdocstrings-python",
+    "mike",
+    "mkdocs-gen-files",
 ]
 
 [project.urls]
