@@ -51,10 +51,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/quantifyearth/yirgacheffe"
+Homepage = "https://yirgacheffe.org/"
 Repository = "https://github.com/quantifyearth/yirgacheffe.git"
 Issues = "https://github.com/quantifyearth/yirgacheffe/issues"
-Changelog = "https://github.com/quantifyearth/yirgacheffe/blob/main/CHANGES.md"
+Changelog = "https://yirgacheffe.org/latest/changelog/"
 
 [project.scripts]
 realpython = "reader.__main__:main"
