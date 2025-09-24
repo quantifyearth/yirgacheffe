@@ -71,3 +71,6 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "deprecation.*"
 ignore_missing_imports = true
+
+[tool.setuptools.packages.find]
+exclude = ["site*", "docs*", "tests*"]
