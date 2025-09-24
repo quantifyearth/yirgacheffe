@@ -1,5 +1,7 @@
 # Introduction
 
+<img src="assets/yirgacheffe-banner.svg" alt="Description" width="1020" height="510">
+
 ## Overview
 
 Yirgacheffe is an attempt to wrap raster and polygon geospatial datasets such that you can do computational work on them as a whole or at the pixel level, but without having to do a lot of the grunt work of working out where you need to be in rasters, or managing how much you can load into memory safely.
@@ -105,11 +107,13 @@ Because of the number of tricks that Python plays under the hood this feature ne
 
 Yirgacheffe has multiple backends, with more planned. Currently you can set the `YIRGACHEFFE_BACKEND` environmental variable to select which one to use. The default is `NUMPY`:
 
-* NUMPY: CPU based calculation using [numpy](https://numpy.org/)
-* MLX: Apple/Intel GPU support with CPU fallback based on [MLX](https://ml-explore.github.io/mlx/build/html/index.html)
+* `NUMPY`: CPU based calculation using [numpy](https://numpy.org/)
+* `MLX`: Apple/Intel GPU support with CPU fallback based on [MLX](https://ml-explore.github.io/mlx/build/html/index.html)
 
 Note that GPU isn't always faster than CPU - it very much depends on the workload, so testing your particular use-case is important.
 
-## Source
+## About
+
+Yirgacheffe was created by [Michael Dales](https://digitalflapjack.com/) whilst working on multiple geospatial projects as a way to hide the boilerplate associated with working with large raster and polygon geospatial datasets.
 
 The code for Yirgcheffe is [available on Github](https://github.com/quantifyearth/yirgacheffe/).

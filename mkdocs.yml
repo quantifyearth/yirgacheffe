@@ -2,7 +2,7 @@ site_name: "Yirgacheffe"
 
 theme:
   name: "material"
-  logo: "assets/yirgacheffe.svg"
+  logo: "assets/yirgacheffe-min.svg"
   primary: "#065f65"
   features:
     - header.autohide: false
