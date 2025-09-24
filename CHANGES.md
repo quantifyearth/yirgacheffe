@@ -1,3 +1,22 @@
+## v1.8.0 (24/9/2025)
+
+### Added
+
+* Mkdocs based documentation.
+
+### Changed
+
+* Modernised type hints to use latest Python standards.
+
+## v1.7.9 (23/9/2025)
+
+### Fixed
+
+* Fix type inference for expressions so that `to_geotiff` selects correct GeoTIFF file type to store results as.
+
+### Changed
+
+* Improved typing of methods that take a filename to use both Path and str.
 
 ## v1.7.8 (17/9/2025)
 
