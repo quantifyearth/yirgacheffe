@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any, Sequence
 
 import deprecation
 
@@ -17,17 +17,17 @@ class YirgacheffeLayer(LayerMathMixin):
 
     def __init__(self,
         area: Area,
-        projection: Optional[MapProjection],
-        name: Optional[str] = None
+        projection: MapProjection | None,
+        name: str | None = None
     ):
         # This is just to catch code that uses the old private API
         if projection is not None and not isinstance(projection, MapProjection):
             raise TypeError("projection value of wrong type")
 
         self._underlying_area = area
-        self._active_area: Optional[Area] = None
+        self._active_area: Area | None = None
         self._projection = projection
-        self._window: Optional[Window] = None
+        self._window: Window | None = None
         self.name = name
 
         self.reset_window()
@@ -48,7 +48,7 @@ class YirgacheffeLayer(LayerMathMixin):
         pass
 
     @property
-    def _raster_dimensions(self) -> Tuple[int,int]:
+    def _raster_dimensions(self) -> tuple[int, int]:
         raise AttributeError("Does not have raster")
 
     @property
@@ -62,7 +62,7 @@ class YirgacheffeLayer(LayerMathMixin):
         current_version=__version__,
         details="Use `map_projection` instead."
     )
-    def projection(self) -> Optional[str]:
+    def projection(self) -> str | None:
         if self._projection:
             return self._projection.name
         else:
@@ -75,14 +75,14 @@ class YirgacheffeLayer(LayerMathMixin):
         current_version=__version__,
         details="Use `map_projection` instead."
     )
-    def pixel_scale(self) -> Optional[PixelScale]:
+    def pixel_scale(self) -> PixelScale | None:
         if self._projection:
             return PixelScale(self._projection.xstep, self._projection.ystep)
         else:
             return None
 
     @property
-    def map_projection(self) -> Optional[MapProjection]:
+    def map_projection(self) -> MapProjection | None:
         return self._projection
 
     @property
@@ -92,7 +92,7 @@ class YirgacheffeLayer(LayerMathMixin):
         else:
             return self._underlying_area
 
-    def _get_operation_area(self, projection: Optional[MapProjection]=None) -> Area:
+    def _get_operation_area(self, projection: MapProjection | None = None) -> Area:
         if self._projection is not None and projection is not None and self._projection != projection:
             raise ValueError("Calculation projection does not match layer projection")
         return self.area
@@ -153,7 +153,7 @@ class YirgacheffeLayer(LayerMathMixin):
         )
 
     @property
-    def geo_transform(self) -> Tuple[float, float, float, float, float, float]:
+    def geo_transform(self) -> tuple[float, float, float, float, float, float]:
         if self._projection is None:
             raise AttributeError("No geo transform for layers without explicit pixel scale")
         return (
@@ -320,26 +320,19 @@ class YirgacheffeLayer(LayerMathMixin):
     def read_array(self, x: int, y: int, width: int, height: int) -> Any:
         """Reads data from the layer based on the current reference window.
 
-        Arguments
-        ---------
-        x : int
-            X axis offset for reading
-        y : int
-            Y axis offset for reading
-        width : int
-            Width of data to read
-        height : int
-            Height of data to read
+        Args:
+            x: X axis offset for reading
+            y: Y axis offset for reading
+            width: Width of data to read
+            height: Height of data to read
 
-        Results
-        -------
-        Any
+        Returns:
             An array of values from the layer.
         """
         res = self._read_array(x, y, width, height)
         return backend.demote_array(res)
 
-    def latlng_for_pixel(self, x_coord: int, y_coord: int) -> Tuple[float,float]:
+    def latlng_for_pixel(self, x_coord: int, y_coord: int) -> tuple[float, float]:
         """Get geo coords for pixel. This is relative to the set view window."""
         if self._projection is None or "WGS 84" not in self._projection.name:
             raise NotImplementedError("Not yet supported for other projections")
@@ -348,7 +341,7 @@ class YirgacheffeLayer(LayerMathMixin):
             (x_coord * self._projection.xstep) + self.area.left
         )
 
-    def pixel_for_latlng(self, lat: float, lng: float) -> Tuple[int,int]:
+    def pixel_for_latlng(self, lat: float, lng: float) -> tuple[int, int]:
         """Get pixel for geo coords. This is relative to the set view window.
         Result is rounded down to nearest pixel."""
         if self._projection is None or "WGS 84" not in self._projection.name:

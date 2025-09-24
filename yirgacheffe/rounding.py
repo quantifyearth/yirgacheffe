@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import math
 import sys
-from typing import List, Optional
 
 from .window import PixelScale
 
@@ -39,10 +40,10 @@ def round_down_pixels(value: float, pixelscale: float) -> int:
     else:
         return math.floor(value)
 
-def are_pixel_scales_equal_enough(pixel_scales: List[Optional[PixelScale]]) -> bool:
+def are_pixel_scales_equal_enough(pixel_scales: list[PixelScale | None]) -> bool:
     # some layers (e.g., constant layers) have no scale, and always work, so filter
     # them out first
-    cleaned_pixel_scales: List[PixelScale] = [x for x in pixel_scales if x is not None]
+    cleaned_pixel_scales: list[PixelScale] = [x for x in pixel_scales if x is not None]
 
     try:
         first = cleaned_pixel_scales[0]

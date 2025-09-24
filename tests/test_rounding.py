@@ -1,5 +1,4 @@
 import sys
-from typing import List
 
 import pytest
 
@@ -84,5 +83,5 @@ def test_pixel_rounding_down(pixels: float, scale: float, expected: int) -> None
         ),
     ]
 )
-def test_pixel_scale_comparison(pixel_scales: List[PixelScale], expected: bool) -> None:
+def test_pixel_scale_comparison(pixel_scales: list[PixelScale], expected: bool) -> None:
     assert are_pixel_scales_equal_enough(pixel_scales) == expected

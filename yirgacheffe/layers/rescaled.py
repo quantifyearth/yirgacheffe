@@ -1,7 +1,7 @@
 from __future__ import annotations
 from math import floor, ceil
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from skimage import transform
 
@@ -18,7 +18,7 @@ class RescaledRasterLayer(YirgacheffeLayer):
     @classmethod
     def layer_from_file(
         cls,
-        filename: Union[Path,str],
+        filename: Path | str,
         pixel_scale: PixelScale,
         band: int = 1,
         nearest_neighbour: bool = True,
@@ -35,7 +35,7 @@ class RescaledRasterLayer(YirgacheffeLayer):
         src: RasterLayer,
         target_projection: MapProjection,
         nearest_neighbour: bool = True,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         super().__init__(
             src.area,

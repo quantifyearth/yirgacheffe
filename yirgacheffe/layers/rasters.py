@@ -1,7 +1,7 @@
 from __future__ import annotations
 import math
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 from osgeo import gdal
@@ -26,14 +26,14 @@ class RasterLayer(YirgacheffeLayer):
     def empty_raster_layer(
         area: Area,
         scale: PixelScale,
-        datatype: Union[int, DataType],
-        filename: Optional[Union[Path,str]]=None,
+        datatype: int | DataType,
+        filename: Path | str | None = None,
         projection: str=WGS_84_PROJECTION,
-        name: Optional[str]=None,
+        name: str | None = None,
         compress: bool=True,
-        nodata: Optional[Union[float,int]]=None,
-        nbits: Optional[int]=None,
-        threads: Optional[int]=None,
+        nodata: float | int | None = None,
+        nbits: int | None = None,
+        threads: int | None = None,
         bands: int=1
     ) -> RasterLayer:
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
@@ -88,13 +88,13 @@ class RasterLayer(YirgacheffeLayer):
     @staticmethod
     def empty_raster_layer_like(
         layer: Any,
-        filename: Optional[Union[Path,str]]=None,
-        area: Optional[Area]=None,
-        datatype: Optional[Union[int, DataType]]=None,
+        filename: Path | str | None = None,
+        area: Area | None = None,
+        datatype: int | DataType | None = None,
         compress: bool=True,
-        nodata: Optional[Union[float,int]]=None,
-        nbits: Optional[int]=None,
-        threads: Optional[int]=None,
+        nodata: float | int | None = None,
+        nbits: int | None = None,
+        threads: int | None = None,
         bands: int=1
     ) -> RasterLayer:
         if area is None:
@@ -165,7 +165,7 @@ class RasterLayer(YirgacheffeLayer):
         cls,
         source: RasterLayer,
         new_pixel_scale: PixelScale,
-        filename: Optional[Union[Path,str]]=None,
+        filename: Path | str | None = None,
         compress: bool=True,
         algorithm: int=gdal.GRA_NearestNeighbour,
     ) -> RasterLayer:
@@ -220,7 +220,7 @@ class RasterLayer(YirgacheffeLayer):
     @classmethod
     def layer_from_file(
         cls,
-        filename: Union[Path,str],
+        filename: Path | str,
         band: int = 1,
         ignore_nodata: bool = False,
     ) -> RasterLayer:
@@ -238,7 +238,7 @@ class RasterLayer(YirgacheffeLayer):
     def __init__(
         self,
         dataset: gdal.Dataset,
-        name: Optional[str] = None,
+        name: str | None = None,
         band: int = 1,
         ignore_nodata: bool = False,
     ) -> None:
@@ -273,7 +273,7 @@ class RasterLayer(YirgacheffeLayer):
         self._ignore_nodata = ignore_nodata
 
     @property
-    def _raster_dimensions(self) -> Tuple[int,int]:
+    def _raster_dimensions(self) -> tuple[int, int]:
         return (self._raster_xsize, self._raster_ysize)
 
     def close(self):
@@ -321,7 +321,7 @@ class RasterLayer(YirgacheffeLayer):
         return DataType.of_gdal(self._dataset.GetRasterBand(1).DataType)
 
     @property
-    def nodata(self) -> Optional[Any]:
+    def nodata(self) -> Any | None:
         if self._dataset is None:
             self._unpark()
         assert self._dataset

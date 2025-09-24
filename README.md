@@ -1,4 +1,4 @@
-# Yirgacheffe: a gdal wrapper that does the tricky bits
+# Yirgacheffe: a declarative geospatial library for Python to make data-science with maps easier
 
 ## Overview
 

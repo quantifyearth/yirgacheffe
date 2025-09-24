@@ -1,5 +1,4 @@
 import math
-from typing import Tuple
 
 import pytest
 
@@ -58,7 +57,7 @@ def test_pixel_from_latlng_unsupported_projection() -> None:
         ),
     ]
 )
-def test_latlng_for_pixel(area: Area, pixel: Tuple[int,int], expected: Tuple[float,float]) -> None:
+def test_latlng_for_pixel(area: Area, pixel: tuple[int, int], expected: tuple[float, float]) -> None:
     layer = YirgacheffeLayer(
         area,
         MapProjection(WGS_84_PROJECTION, 0.2, -0.2),
@@ -87,7 +86,7 @@ def test_latlng_for_pixel(area: Area, pixel: Tuple[int,int], expected: Tuple[flo
         ),
     ]
 )
-def test_pixel_for_latlng(area: Area, coord: Tuple[float,float], expected: Tuple[int,int]) -> None:
+def test_pixel_for_latlng(area: Area, coord: tuple[float, float], expected: tuple[int, int]) -> None:
     layer = YirgacheffeLayer(
         area,
         MapProjection(WGS_84_PROJECTION, 0.2, -0.2),
@@ -140,8 +139,8 @@ def test_pixel_for_latlng(area: Area, coord: Tuple[float,float], expected: Tuple
 def test_latlng_for_pixel_with_intersection(
     area: Area,
     window: Area,
-    pixel: Tuple[int,int],
-    expected: Tuple[float,float]
+    pixel: tuple[int, int],
+    expected: tuple[float, float]
 ) -> None:
     layer = YirgacheffeLayer(
         area,
@@ -178,8 +177,8 @@ def test_latlng_for_pixel_with_intersection(
 def test_pixel_for_latlng_with_intersection(
     area: Area,
     window: Area,
-    coord: Tuple[float,float],
-    expected: Tuple[int,int]
+    coord: tuple[float, float],
+    expected: tuple[int, int]
 ) -> None:
     layer = YirgacheffeLayer(
         area,

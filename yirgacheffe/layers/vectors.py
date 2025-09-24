@@ -1,8 +1,7 @@
 from __future__ import annotations
 from math import ceil, floor
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union
-from typing_extensions import NotRequired
+from typing import Any
 
 import deprecation
 from osgeo import gdal, ogr
@@ -70,12 +69,12 @@ class RasteredVectorLayer(RasterLayer):
     )
     def layer_from_file( # type: ignore[override] # pylint: disable=W0221
         cls,
-        filename: Union[Path,str],
-        where_filter: Optional[str],
+        filename: Path | str,
+        where_filter: str | None,
         scale: PixelScale,
         projection: str,
-        datatype: Optional[Union[int, DataType]] = None,
-        burn_value: Union[int,float,str] = 1,
+        datatype: int | DataType | None = None,
+        burn_value: int | float | str = 1,
     ) -> RasteredVectorLayer:
         vectors = ogr.Open(filename)
         if vectors is None:
@@ -111,14 +110,14 @@ class RasteredVectorLayer(RasterLayer):
         self,
         layer: ogr.Layer,
         projection: MapProjection,
-        datatype: Union[int, DataType] = DataType.Byte,
-        burn_value: Union[int,float,str] = 1,
+        datatype: int | DataType = DataType.Byte,
+        burn_value: int | float | str = 1,
     ):
         if layer is None:
             raise ValueError('No layer provided')
         self.layer = layer
 
-        self._original: Optional[Any] = None
+        self._original: Any | None = None
 
         if isinstance(datatype, int):
             datatype_arg = DataType.of_gdal(datatype)
@@ -180,11 +179,11 @@ class VectorLayer(YirgacheffeLayer):
     @classmethod
     def layer_from_file_like(
         cls,
-        filename: Union[Path,str],
+        filename: Path | str,
         other_layer: YirgacheffeLayer,
-        where_filter: Optional[str]=None,
-        datatype: Optional[Union[int, DataType]] = None,
-        burn_value: Union[int,float,str] = 1,
+        where_filter: str | None = None,
+        datatype: int | DataType | None = None,
+        burn_value: int | float | str = 1,
     ) -> VectorLayer:
         if other_layer is None:
             raise ValueError("like layer can not be None")
@@ -223,13 +222,13 @@ class VectorLayer(YirgacheffeLayer):
     @classmethod
     def layer_from_file(
         cls,
-        filename: Union[Path,str],
-        where_filter: Optional[str],
-        scale: Optional[PixelScale],
-        projection: Optional[str],
-        datatype: Optional[Union[int, DataType]] = None,
-        burn_value: Union[int,float,str] = 1,
-        anchor: Tuple[float,float] = (0.0, 0.0)
+        filename: Path | str,
+        where_filter: str | None,
+        scale: PixelScale | None,
+        projection: str | None,
+        datatype: int | DataType | None = None,
+        burn_value: int | float | str = 1,
+        anchor: tuple[float, float] = (0.0, 0.0)
     ) -> VectorLayer:
         # In 2.0 we need to remove this and migrate to the MapProjection version
         if (projection is None) ^ (scale is None):
@@ -250,12 +249,12 @@ class VectorLayer(YirgacheffeLayer):
     @classmethod
     def _future_layer_from_file(
         cls,
-        filename: Union[Path,str],
-        where_filter: Optional[str],
-        projection: Optional[MapProjection],
-        datatype: Optional[Union[int, DataType]] = None,
-        burn_value: Union[int,float,str] = 1,
-        anchor: Tuple[float,float] = (0.0, 0.0)
+        filename: Path | str,
+        where_filter: str | None,
+        projection: MapProjection | None,
+        datatype: int | DataType | None = None,
+        burn_value: int | float | str = 1,
+        anchor: tuple[float, float] = (0.0, 0.0)
     ) -> VectorLayer:
         try:
             vectors = ogr.Open(filename)
@@ -295,11 +294,11 @@ class VectorLayer(YirgacheffeLayer):
     def __init__(
         self,
         layer: ogr.Layer,
-        projection: Optional[MapProjection],
-        name: Optional[str] = None,
-        datatype: Union[int,DataType] = DataType.Byte,
-        burn_value: Union[int,float,str] = 1,
-        anchor: Tuple[float,float] = (0.0, 0.0)
+        projection: MapProjection | None,
+        name: str | None = None,
+        datatype: int | DataType = DataType.Byte,
+        burn_value: int | float | str = 1,
+        anchor: tuple[float, float] = (0.0, 0.0)
     ):
         if layer is None:
             raise ValueError('No layer provided')
@@ -316,9 +315,9 @@ class VectorLayer(YirgacheffeLayer):
         self.burn_value = burn_value
 
         self._original = None
-        self._dataset_path: Optional[Path] = None
-        self._filter: Optional[str] = None
-        self._anchor: Tuple[float,float] = (0.0, 0.0)
+        self._dataset_path: Path | None = None
+        self._filter: str | None = None
+        self._anchor: tuple[float, float] = (0.0, 0.0)
 
         # work out region for mask
         envelopes = []
@@ -368,7 +367,7 @@ class VectorLayer(YirgacheffeLayer):
         super().__init__(area, projection)
 
 
-    def _get_operation_area(self, projection: Optional[MapProjection]=None) -> Area:
+    def _get_operation_area(self, projection: MapProjection | None = None) -> Area:
         if self._projection is not None and projection is not None and self._projection != projection:
             raise ValueError("Calculation projection does not match layer projection")
 
@@ -449,7 +448,7 @@ class VectorLayer(YirgacheffeLayer):
     def _read_array_for_area(
         self,
         target_area: Area,
-        target_projection: Optional[MapProjection],
+        target_projection: MapProjection | None,
         x: int,
         y: int,
         width: int,
@@ -496,7 +495,7 @@ class VectorLayer(YirgacheffeLayer):
         return res
 
     def _read_array_with_window(self, _x, _y, _width, _height, _window) -> Any:
-        assert NotRequired
+        raise NotImplementedError("VectorLayer does not support windowed reading")
 
     def _read_array(self, x: int, y: int, width: int, height: int) -> Any:
         return self._read_array_for_area(self.area, None, x, y, width, height)

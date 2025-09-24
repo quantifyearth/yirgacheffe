@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Set, Optional, Tuple, Union
 
 import numpy as np
 from osgeo import gdal, ogr
@@ -9,7 +8,7 @@ from yirgacheffe.layers import YirgacheffeLayer
 from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe import WGS_84_PROJECTION
 
-def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: Optional[Union[str,Path]]=None) -> gdal.Dataset:
+def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: str | Path | None = None) -> gdal.Dataset:
     if filename:
         driver = gdal.GetDriverByName('GTiff')
     else:
@@ -48,7 +47,7 @@ def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset
     dataset.SetProjection(WGS_84_PROJECTION)
     return dataset
 
-def gdal_dataset_of_layer(layer: YirgacheffeLayer, filename: Optional[str]=None) -> gdal.Dataset:
+def gdal_dataset_of_layer(layer: YirgacheffeLayer, filename: str | None = None) -> gdal.Dataset:
     if filename:
         driver = gdal.GetDriverByName('GTiff')
     else:
@@ -93,10 +92,10 @@ def numpy_to_gdal_type(val: np.array) -> int:
 
 
 def gdal_dataset_with_data(
-    origin: Tuple,
+    origin: tuple,
     pixel_pitch: float,
     data: np.array,
-    filename: Optional[Union[Path,str]]=None,
+    filename: Path | str | None = None,
 ) -> gdal.Dataset:
     assert data.ndim == 2
 
@@ -127,10 +126,10 @@ def gdal_dataset_with_data(
     return dataset
 
 def gdal_multiband_dataset_with_data(
-    origin: Tuple,
+    origin: tuple,
     pixel_pitch: float,
     datas: list[np.array],
-    filename: Optional[Union[Path,str]]=None,
+    filename: Path | str | None = None,
 ) -> gdal.Dataset:
     for data in datas:
         assert data.ndim == 2
@@ -161,7 +160,7 @@ def gdal_multiband_dataset_with_data(
             band.WriteArray(np.array([list(val)]), 0, index)
     return dataset
 
-def make_vectors_with_id(identifier: int, areas: Set[Area], filename: Union[str,Path]) -> None:
+def make_vectors_with_id(identifier: int, areas: set[Area], filename: str | Path) -> None:
     poly = ogr.Geometry(ogr.wkbPolygon)
 
     for area in areas:
@@ -189,7 +188,7 @@ def make_vectors_with_id(identifier: int, areas: Set[Area], filename: Union[str,
 
     package.Close()
 
-def make_vectors_with_mutlile_ids(areas: Set[Tuple[Area,int]], filename: Union[str,Path]) -> None:
+def make_vectors_with_mutlile_ids(areas: set[tuple[Area, int]], filename: str | Path) -> None:
     srs = ogr.osr.SpatialReference()
     srs.ImportFromEPSG(4326)
 
@@ -238,7 +237,7 @@ def generate_child_tile(
             data[y][x] = ((yoffset + y) * outer_width) + (x + xoffset)
     return data
 
-def make_vectors_with_empty_feature(areas: Set[Tuple[Area,int]], filename: str) -> None:
+def make_vectors_with_empty_feature(areas: set[tuple[Area, int]], filename: str) -> None:
     srs = ogr.osr.SpatialReference()
     srs.ImportFromEPSG(4326)
 

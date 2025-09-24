@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from math import ceil, floor
-from typing import Any, Tuple
+from typing import Any
 
 import h3
 import numpy as np
@@ -75,7 +77,7 @@ class H3CellLayer(YirgacheffeLayer):
         )
 
     @property
-    def _raster_dimensions(self) -> Tuple[int,int]:
+    def _raster_dimensions(self) -> tuple[int, int]:
         return (self._raster_xsize, self._raster_ysize)
 
     @property

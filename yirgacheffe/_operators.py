@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import math
 import multiprocessing
@@ -12,7 +14,7 @@ from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable
 
 import deprecation
 import numpy as np
@@ -265,10 +267,10 @@ class LayerMathMixin:
 
     def to_geotiff(
         self,
-        filename: Union[Path,str],
+        filename: Path | str,
         and_sum: bool = False,
-        parallelism:Optional[Union[int,bool]]=None
-    ) -> Optional[float]:
+        parallelism: int | bool | None = None
+    ) -> float | None:
         return LayerOperation(self).to_geotiff(filename, and_sum, parallelism)
 
     def sum(self):
@@ -398,7 +400,7 @@ class LayerOperation(LayerMathMixin):
     def area(self) -> Area:
         return self._get_operation_area(self.map_projection)
 
-    def _get_operation_area(self, projection: Optional[MapProjection]) -> Area:
+    def _get_operation_area(self, projection: MapProjection | None) -> Area:
         lhs_area = self.lhs._get_operation_area(projection)
         try:
             rhs_area = self.rhs._get_operation_area(projection)
@@ -482,7 +484,7 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def datatype(self) -> DataType:
-        internal_types: List[DataType] = [
+        internal_types: list[DataType] = [
             self.lhs.datatype
         ]
         if self.rhs is not None:
@@ -511,7 +513,7 @@ class LayerOperation(LayerMathMixin):
         return projection
 
     @property
-    def map_projection(self) -> Optional[MapProjection]:
+    def map_projection(self) -> MapProjection | None:
         try:
             projection = self.lhs.map_projection
         except AttributeError:
@@ -530,7 +532,7 @@ class LayerOperation(LayerMathMixin):
         projection: MapProjection,
         index: int,
         step: int,
-        target_window:Optional[Window]=None
+        target_window: Window | None = None
     ):
 
         if self.buffer_padding:
@@ -607,7 +609,7 @@ class LayerOperation(LayerMathMixin):
                 res = chunk_max
         return res
 
-    def save(self, destination_layer, and_sum=False, callback=None, band=1) -> Optional[float]:
+    def save(self, destination_layer, and_sum=False, callback=None, band=1) -> float | None:
         """
         Calling save will write the output of the operation to the provied layer.
         If you provide sum as true it will additionall compute the sum and return that.
@@ -723,7 +725,7 @@ class LayerOperation(LayerMathMixin):
         callback=None,
         parallelism=None,
         band=1
-    ) -> Optional[float]:
+    ) -> float | None:
         assert (destination_layer is not None) or and_sum
         try:
             computation_window = self.window
@@ -763,7 +765,7 @@ class LayerOperation(LayerMathMixin):
                     or (computation_window.ysize != destination_window.ysize):
                 raise ValueError("Destination raster window size does not match input raster window size.")
 
-            np_type_map : Dict[int, np.dtype] = {
+            np_type_map: dict[int, np.dtype] = {
                 gdal.GDT_Byte:    np.dtype('byte'),
                 gdal.GDT_Float32: np.dtype('float32'),
                 gdal.GDT_Float64: np.dtype('float64'),
@@ -882,7 +884,7 @@ class LayerOperation(LayerMathMixin):
         callback=None,
         parallelism=None,
         band=1
-    ) -> Optional[float]:
+    ) -> float | None:
         if destination_layer is None:
             raise ValueError("Layer is required")
         return self._parallel_save(destination_layer, and_sum, callback, parallelism, band)
@@ -892,25 +894,20 @@ class LayerOperation(LayerMathMixin):
 
     def to_geotiff(
         self,
-        filename: Union[Path,str],
+        filename: Path | str,
         and_sum: bool = False,
-        parallelism:Optional[Union[int,bool]] = None
-    ) -> Optional[float]:
+        parallelism: int | bool | None = None
+    ) -> float | None:
         """Saves a calculation to a raster file, optionally also returning the sum of pixels.
 
-        Parameters
-        ----------
-        filename : Path
-            Path of the raster to save the result to.
-        and_sum : bool, default=False
-            If true then the function will also calculate the sum of the raster as it goes and return that value.
-        parallelism : int or bool, optional, default=None
-            If passed, attempt to use multiple CPU cores up to the number provided, or if set to True, yirgacheffe
-            will pick a sensible value.
+        Args:
+            filename: Path of the raster to save the result to.
+            and_sum: If true then the function will also calculate the sum of the raster as it goes and return
+                that value.
+            parallelism: If passed, attempt to use multiple CPU cores up to the number provided, or if set to True,
+                yirgacheffe will pick a sensible value.
 
-        Returns
-        -------
-        float, optional
+        Returns:
             Either returns None, or the sum of the pixels in the resulting raster if `and_sum` was specified.
         """
 
