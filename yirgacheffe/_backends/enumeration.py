@@ -41,6 +41,26 @@ class operators(Enum):
     ISNAN = 36
 
 class dtype(Enum):
+    """Represents the type of data returned by a layer.
+
+    This enumeration defines the valid data types supported by Yirgacheffe, and is
+    what is returned by  calling `datatype` on a layer or expression, and can be
+    passed to `astype` to convert values between types.
+
+    Attributes:
+        Float32: 32 bit floating point value
+        Float64: 64 bit floating point value
+        Byte: Unsigned 8 bit integer value
+        Int8: Signed 8 bit integer value
+        Int16: Signed 16 bit integer value
+        Int32: Signed 32 bit integer value
+        Int64: Signed 64 bit integer value
+        UInt8: Unsigned 8 bit integer value
+        UInt16: Unsigned 16 bit integer value
+        UInt32: Unsigned 32 bit integer value
+        UInt64: Unsigned 64 bit integer value
+    """
+
     Float32 = gdal.GDT_Float32
     Float64 = gdal.GDT_Float64
     Byte = gdal.GDT_Byte
