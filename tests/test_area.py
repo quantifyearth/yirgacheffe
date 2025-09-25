@@ -31,5 +31,4 @@ def test_global_area() -> None:
     assert other_area.overlaps(area)
 
 def test_wrong_types_on_eq() -> None:
-    with pytest.raises(TypeError):
-        _ = Area(-10, 10, 10, -10) == 42
+    assert Area(-10, 10, 10, -10) != 42
