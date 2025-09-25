@@ -1,3 +1,13 @@
+## v1.8.1 (25/9/2025)
+
+### Fixed
+
+* Fixed issue whereby calling `set_window_for_intersection` would fail if the pixel alignment on a vector layer was rounded unfortunately.
+
+### Changed
+
+* More documentation updates.
+
 ## v1.8.0 (24/9/2025)
 
 ### Added
