@@ -32,4 +32,4 @@ def test_global_area() -> None:
 
 def test_wrong_types_on_eq() -> None:
     with pytest.raises(TypeError):
-        Area(-10, 10, 10, -10) == 42
+        _ = Area(-10, 10, 10, -10) == 42
