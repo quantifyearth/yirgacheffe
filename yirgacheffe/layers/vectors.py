@@ -333,36 +333,36 @@ class VectorLayer(YirgacheffeLayer):
         self._anchor = anchor
         self._envelopes = envelopes
 
-        # if projection is not None:
-        #     # Get the area, but scale it to the pixel resolution that we're using. Note that
-        #     # the pixel scale GDAL uses can have -ve values, but those will mess up the
-        #     # ceil/floor math, so we use absolute versions when trying to round.
-        #     abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
-#
-        #     # Lacking any other reference, we will make the raster align with
-        #     # (0.0, 0.0), if sometimes we want to align with an existing raster, so if
-        #     # an anchor is specified, ensure we use that as our pixel space alignment
-        #     x_anchor = anchor[0]
-        #     y_anchor = anchor[1]
-        #     left_shift = x_anchor - abs_xstep
-        #     right_shift = x_anchor
-        #     top_shift = y_anchor
-        #     bottom_shift = y_anchor - abs_ystep
-#
-        #     area = Area(
-        #         left=(floor((min(x[0] for x in envelopes) - left_shift) / abs_xstep) * abs_xstep) + left_shift,
-        #         top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
-        #         right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
-        #         bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
-        #     )
-        # else:
+        if projection is not None:
+            # Get the area, but scale it to the pixel resolution that we're using. Note that
+            # the pixel scale GDAL uses can have -ve values, but those will mess up the
+            # ceil/floor math, so we use absolute versions when trying to round.
+            abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
+
+            # Lacking any other reference, we will make the raster align with
+            # (0.0, 0.0), if sometimes we want to align with an existing raster, so if
+            # an anchor is specified, ensure we use that as our pixel space alignment
+            x_anchor = anchor[0]
+            y_anchor = anchor[1]
+            left_shift = x_anchor - abs_xstep
+            right_shift = x_anchor
+            top_shift = y_anchor
+            bottom_shift = y_anchor - abs_ystep
+
+            area = Area(
+                left=(floor((min(x[0] for x in envelopes) - left_shift) / abs_xstep) * abs_xstep) + left_shift,
+                top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
+                right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
+                bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
+            )
+        else:
             # If we don't have  a projection just go with the idealised area
-        area = Area(
-            left=floor(min(x[0] for x in envelopes)),
-            top=ceil(max(x[3] for x in envelopes)),
-            right=ceil(max(x[1] for x in envelopes)),
-            bottom=floor(min(x[2] for x in envelopes)),
-        )
+            area = Area(
+                left=floor(min(x[0] for x in envelopes)),
+                top=ceil(max(x[3] for x in envelopes)),
+                right=ceil(max(x[1] for x in envelopes)),
+                bottom=floor(min(x[2] for x in envelopes)),
+            )
 
         super().__init__(area, projection)
 
