@@ -15,5 +15,6 @@ except ModuleNotFoundError:
 from ._core import read_raster, read_rasters, read_shape, read_shape_like, constant, read_narrow_raster
 from .constants import WGS_84_PROJECTION
 from .window import Area, MapProjection, Window
+from ._backends.enumeration import dtype as DataType
 
 gdal.UseExceptions()
