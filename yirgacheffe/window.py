@@ -72,7 +72,9 @@ class Area:
     def __hash__(self):
         return (self.left, self.top, self.right, self.bottom).__hash__()
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: Area) -> bool:
+        if not isinstance(other, Area):
+            raise TypeError(f"expected comparison with other area, got {type(other).__name__}")
         return math.isclose(self.left, other.left, abs_tol=1e-09) and \
             math.isclose(self.right, other.right, abs_tol=1e-09) and \
             math.isclose(self.top, other.top, abs_tol=1e-09) and \

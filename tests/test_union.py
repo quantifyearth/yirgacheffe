@@ -49,6 +49,9 @@ def test_find_union_distinct() -> None:
     union = RasterLayer.find_union(layers)
     assert union == Area(-110, 10, 110, -10)
 
+    for layer in layers:
+        layer.set_window_for_union(union)
+
 def test_find_union_with_null() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
@@ -80,6 +83,11 @@ def test_find_union_with_vector_unbound() -> None:
         union = RasterLayer.find_union(layers)
         assert union == vector.area
 
+        raster.set_window_for_union(union)
+        with pytest.raises(ValueError):
+            vector.set_window_for_union(union)
+
+
 def test_find_union_with_vector_bound() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.gpkg"
@@ -94,6 +102,9 @@ def test_find_union_with_vector_bound() -> None:
         layers = [raster, vector]
         union = RasterLayer.find_union(layers)
         assert union == vector.area
+
+        for layer in layers:
+            layer.set_window_for_union(union)
 
 @pytest.mark.parametrize("scale", [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09])
 def test_set_union_self(scale) -> None:

@@ -59,6 +59,9 @@ def test_find_intersection_with_constant() -> None:
     intersection = RasterLayer.find_intersection(layers)
     assert intersection == layers[0].area
 
+    for layer in layers:
+        layer.set_window_for_intersection(intersection)
+
 def test_find_intersection_with_vector_unbound() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.gpkg"
@@ -74,6 +77,10 @@ def test_find_intersection_with_vector_unbound() -> None:
         intersection = RasterLayer.find_intersection(layers)
         assert intersection == vector.area
 
+        raster.set_window_for_intersection(intersection)
+        with pytest.raises(ValueError):
+            vector.set_window_for_intersection(intersection)
+
 def test_find_intersection_with_vector_bound() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.gpkg"
@@ -88,6 +95,29 @@ def test_find_intersection_with_vector_bound() -> None:
         layers = [raster, vector]
         intersection = RasterLayer.find_intersection(layers)
         assert intersection == vector.area
+
+        for layer in layers:
+            layer.set_window_for_intersection(intersection)
+
+def test_find_intersection_with_vector_awkward_rounding() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = Area(left=-90, top=45, right=90, bottom=-45)
+        make_vectors_with_id(42, {area}, path)
+        assert path.exists
+
+        raster = RasterLayer(gdal_dataset_of_region(Area(left=-180, top=90, right=180, bottom=-90), 18.0))
+        vector = VectorLayer.layer_from_file(path, None, raster.map_projection.scale, raster.map_projection.name)
+
+        rounded_area = Area(left=-90, top=54, right=90, bottom=-54)
+        assert vector.area == rounded_area
+
+        layers = [raster, vector]
+        intersection = RasterLayer.find_intersection(layers)
+        assert intersection == vector.area
+
+        for layer in layers:
+            layer.set_window_for_intersection(intersection)
 
 def test_find_intersection_different_pixel_pitch() -> None:
     layers = [
