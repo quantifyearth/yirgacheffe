@@ -1,8 +1,8 @@
+import pyproj
+
 YSTEP = 512
 MINIMUM_CHUNKS_PER_THREAD = 1
 
 # I don't really want this here, but it's just too useful having it exposed
-WGS_84_PROJECTION = 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,'\
-	'AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],'\
-	'UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AXIS["Latitude",NORTH],'\
-	'AXIS["Longitude",EAST],AUTHORITY["EPSG","4326"]]'
+# This used to be a fixed string, but now it is at least programmatically generated
+WGS_84_PROJECTION = pyproj.CRS.from_epsg(4326).to_wkt(version='WKT1_GDAL')

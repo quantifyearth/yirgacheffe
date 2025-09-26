@@ -1,3 +1,9 @@
+## v1.9.0 (26/9/2025)
+
+### Added
+
+* Added the ability to call `read_array` on expressions (before you could only call it on layers).
+
 ## v1.8.1 (25/9/2025)
 
 ### Fixed

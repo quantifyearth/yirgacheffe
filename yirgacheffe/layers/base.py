@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Any, Sequence
 
 import deprecation
+from pyproj import Transformer
 
 from .. import __version__
 from .._operators import LayerMathMixin
@@ -332,14 +333,26 @@ class YirgacheffeLayer(LayerMathMixin):
         res = self._read_array(x, y, width, height)
         return backend.demote_array(res)
 
-    def latlng_for_pixel(self, x_coord: int, y_coord: int) -> tuple[float, float]:
-        """Get geo coords for pixel. This is relative to the set view window."""
-        if self._projection is None or "WGS 84" not in self._projection.name:
-            raise NotImplementedError("Not yet supported for other projections")
-        return (
-            (y_coord * self._projection.ystep) + self.area.top,
-            (x_coord * self._projection.xstep) + self.area.left
+    def latlng_for_pixel(self, x: int, y: int) -> tuple[float, float]:
+        """Get geo coords for pixel. This is relative to the set view window.
+
+        Args:
+            x: X axis position within raster
+            y: Y axis position within raster
+
+        Returns:
+            A tuple containing the (latitude, longitude).
+        """
+        projection = self.map_projection
+        if projection is None:
+            raise ValueError("Map has not projection space")
+        pixel_scale = projection.scale
+        coord_in_raster_space = (
+            (y * pixel_scale.ystep) + self.area.top,
+            (x * pixel_scale.xstep) + self.area.left,
         )
+        transformer = Transformer.from_crs(projection.name, "EPSG:4326")
+        return transformer.transform(*coord_in_raster_space)
 
     def pixel_for_latlng(self, lat: float, lng: float) -> tuple[int, int]:
         """Get pixel for geo coords. This is relative to the set view window.
