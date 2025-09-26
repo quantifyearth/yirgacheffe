@@ -14,7 +14,7 @@ class MapProjection:
     This superceeeds the old PixelScale class, which will be removed in version 2.0.
 
     Args:
-        name: The map projection used in WKT format.
+        name: The map projection used in WKT format, or as "epsg:xxxx" or "esri:xxxx".
         xstep: The number of units horizontal distance a step of one pixel makes in the map projection.
         ystep: The number of units vertical distance a step of one pixel makes in the map projection.
 
@@ -24,11 +24,11 @@ class MapProjection:
         ystep: The number of units vertical distance a step of one pixel makes in the map projection.
     """
 
-    def __init__(self, wkt_string, xstep, ystep) -> None:
+    def __init__(self, projection_string: str, xstep: float, ystep: float) -> None:
         try:
-            self.crs = pyproj.CRS.from_wkt(wkt_string)
+            self.crs = pyproj.CRS.from_string(projection_string)
         except pyproj.exceptions.CRSError as exc:
-            raise ValueError(f"Invalid projection: {wkt_string}") from exc
+            raise ValueError(f"Invalid projection: {projection_string}") from exc
         self.xstep = xstep
         self.ystep = ystep
 

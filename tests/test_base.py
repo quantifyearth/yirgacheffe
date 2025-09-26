@@ -19,50 +19,51 @@ def test_pixel_to_latlng_no_projection() -> None:
             with pytest.raises(ValueError):
                 _ = layer.latlng_for_pixel(10, 10)
 
-# def test_pixel_from_latlng_unsupported_projection() -> None:
-    # layer = YirgacheffeLayer(
-    #     Area(-10, 10, 10, -10),
-    #     MapProjection("OTHER PROJECTION", 0.02, -0.02),
-    # )
-    # with pytest.raises(NotImplementedError):
-    #     _ = layer.pixel_for_latlng(10.0, 10.0)
+def test_latlng_to_pixel_no_projection() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        area = Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+        with yg.read_shape(path) as layer:
+            with pytest.raises(ValueError):
+                _ = layer.pixel_for_latlng(10.0, 10.0)
 
 @pytest.mark.parametrize(
     "area,projection,pixel,expected",
     [
         (
             Area(-10, 10, 10, -10),
-            MapProjection(yg.WGS_84_PROJECTION, 0.2, -0.2),
+            MapProjection("epsg:4326", 0.2, -0.2),
             (0, 0),
             (10.0, -10.0)
         ),
         (
             Area(-10, 10, 10, -10),
-            MapProjection(yg.WGS_84_PROJECTION, 0.2, -0.2),
+            MapProjection("epsg:4326", 0.2, -0.2),
             (1, 1),
             (9.8, -9.8)
         ),
         (
             Area(-10, 10, 10, -10),
-            MapProjection(yg.WGS_84_PROJECTION, 0.2, -0.2),
+            MapProjection("epsg:4326", 0.2, -0.2),
             (101, 101),
             (-10.2, 10.2)
         ),
         (
             Area(-10, 10, 10, -10),
-            MapProjection(yg.WGS_84_PROJECTION, 0.2, -0.2),
+            MapProjection("epsg:4326", 0.2, -0.2),
             (-1, -1),
             (10.2, -10.2)
         ),
         (
             Area(10, 10, 20, -10),
-            MapProjection(yg.WGS_84_PROJECTION, 0.2, -0.2),
+            MapProjection("epsg:4326", 0.2, -0.2),
             (1, 1),
             (9.8, 10.2)
         ),
         (
             Area(-10, -10, 10, -20),
-            MapProjection(yg.WGS_84_PROJECTION, 0.2, -0.2),
+            MapProjection("epsg:4326", 0.2, -0.2),
             (1, 1),
             (-10.2, -9.8)
         ),

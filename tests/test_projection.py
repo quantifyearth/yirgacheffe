@@ -4,20 +4,23 @@ import pytest
 from yirgacheffe.window import MapProjection
 from yirgacheffe.rounding import MINIMAL_DEGREE_OF_INTEREST
 
-@pytest.mark.parametrize("crs", ["epsg:4326", "esri:54009"])
-def test_scale_from_projection(crs) -> None:
-    name = pyproj.CRS.from_string(crs).to_wkt()
+@pytest.mark.parametrize("name", [
+    "epsg:4326",
+    "esri:54009",
+    pyproj.CRS.from_string("epsg:4326").to_wkt(),
+    pyproj.CRS.from_string("esri:54009").to_wkt(),
+])
+def test_scale_from_projection(name) -> None:
     projection = MapProjection(name, 0.1, -0.1)
-    assert projection.name == name
+    assert projection.name == pyproj.CRS.from_string(name).to_wkt()
     assert projection.xstep == 0.1
     assert projection.ystep == -0.1
-
     scale = projection.scale
     assert scale.xstep == 0.1
     assert scale.ystep == -0.1
 
-PROJ_A = pyproj.CRS.from_string("epsg:4326").to_wkt()
-PROJ_B = pyproj.CRS.from_string("esri:54009").to_wkt()
+PROJ_A = "epsg:4326"
+PROJ_B = "esri:54009"
 
 @pytest.mark.parametrize(
     "lhs,rhs,is_equal",

@@ -357,9 +357,15 @@ class YirgacheffeLayer(LayerMathMixin):
     def pixel_for_latlng(self, lat: float, lng: float) -> tuple[int, int]:
         """Get pixel for geo coords. This is relative to the set view window.
         Result is rounded down to nearest pixel."""
-        if self._projection is None or "WGS 84" not in self._projection.name:
-            raise NotImplementedError("Not yet supported for other projections")
+        projection = self.map_projection
+        if projection is None:
+            raise ValueError("Map has not projection space")
+
+        transformer = Transformer.from_crs("EPSG:4326", projection.name)
+        x, y = transformer.transform(lng,lat)
+
+        pixel_scale = projection.scale
         return (
-            round_down_pixels((lng - self.area.left) / self._projection.xstep, abs(self._projection.xstep)),
-            round_down_pixels((lat - self.area.top) / self._projection.ystep, abs(self._projection.ystep)),
+            round_down_pixels((x - self.area.left) / pixel_scale.xstep, abs(pixel_scale.xstep)),
+            round_down_pixels((y - self.area.top) / pixel_scale.ystep, abs(pixel_scale.ystep)),
         )
