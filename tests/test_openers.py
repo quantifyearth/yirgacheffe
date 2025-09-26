@@ -90,7 +90,6 @@ def test_open_gpkg() -> None:
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
-            assert layer.projection == WGS_84_PROJECTION
 
 def test_open_gpkg_with_mapprojection() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -103,7 +102,6 @@ def test_open_gpkg_with_mapprojection() -> None:
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
-            assert layer.projection == WGS_84_PROJECTION
 
 def test_open_gpkg_with_no_projection() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -129,7 +127,7 @@ def test_open_gpkg_direct_scale() -> None:
             assert layer.area == area
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
-            assert layer.projection == WGS_84_PROJECTION
+            assert layer.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
 
 def test_open_gpkg_with_filter() -> None:
     with tempfile.TemporaryDirectory() as tempdir:

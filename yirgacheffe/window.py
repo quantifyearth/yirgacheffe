@@ -4,36 +4,49 @@ import sys
 from collections import namedtuple
 from dataclasses import dataclass
 
+import pyproj
+
 PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
-@dataclass
 class MapProjection:
     """Records the map projection and the size of the pixels in a layer.
 
     This superceeeds the old PixelScale class, which will be removed in version 2.0.
 
     Args:
-        name: The map projection used.
+        name: The map projection used in WKT format.
         xstep: The number of units horizontal distance a step of one pixel makes in the map projection.
         ystep: The number of units vertical distance a step of one pixel makes in the map projection.
 
     Attributes:
-        name: The map projection used.
+        name: The map projection used in WKT format.
         xstep: The number of units horizontal distance a step of one pixel makes in the map projection.
         ystep: The number of units vertical distance a step of one pixel makes in the map projection.
     """
 
-    name : str
-    xstep : float
-    ystep : float
+    def __init__(self, wkt_string, xstep, ystep) -> None:
+        try:
+            self.crs = pyproj.CRS.from_wkt(wkt_string)
+        except pyproj.exceptions.CRSError as exc:
+            raise ValueError(f"Invalid projection: {wkt_string}") from exc
+        self.xstep = xstep
+        self.ystep = ystep
 
     def __eq__(self, other) -> bool:
         if other is None:
             return True
         # to avoid circular dependancies
         from .rounding import are_pixel_scales_equal_enough  # pylint: disable=C0415
-        return (self.name == other.name) and \
+        return (self.crs == other.crs) and \
             are_pixel_scales_equal_enough([self.scale, other.scale])
+
+    @property
+    def name(self) -> str:
+        return self.crs.to_wkt()
+
+    @property
+    def epsg(self) -> int | None:
+        return self.crs.to_epsg()
 
     @property
     def scale(self) -> PixelScale:

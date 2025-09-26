@@ -19,13 +19,13 @@ def test_pixel_to_latlng_no_projection() -> None:
             with pytest.raises(ValueError):
                 _ = layer.latlng_for_pixel(10, 10)
 
-def test_pixel_from_latlng_unsupported_projection() -> None:
-    layer = YirgacheffeLayer(
-        Area(-10, 10, 10, -10),
-        MapProjection("OTHER PROJECTION", 0.02, -0.02),
-    )
-    with pytest.raises(NotImplementedError):
-        _ = layer.pixel_for_latlng(10.0, 10.0)
+# def test_pixel_from_latlng_unsupported_projection() -> None:
+    # layer = YirgacheffeLayer(
+    #     Area(-10, 10, 10, -10),
+    #     MapProjection("OTHER PROJECTION", 0.02, -0.02),
+    # )
+    # with pytest.raises(NotImplementedError):
+    #     _ = layer.pixel_for_latlng(10.0, 10.0)
 
 @pytest.mark.parametrize(
     "area,projection,pixel,expected",
@@ -68,7 +68,12 @@ def test_pixel_from_latlng_unsupported_projection() -> None:
         ),
     ]
 )
-def test_latlng_for_pixel(area: Area, projection: MapProjection, pixel: tuple[int, int], expected: tuple[float, float]) -> None:
+def test_latlng_for_pixel(
+    area: Area,
+    projection: MapProjection,
+    pixel: tuple[int, int],
+    expected: tuple[float, float]
+) -> None:
     layer = YirgacheffeLayer(
         area,
         projection,

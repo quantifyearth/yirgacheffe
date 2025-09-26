@@ -48,7 +48,7 @@ def test_pickle_dyanamic_vector_layer() -> None:
         assert restore.area == area
         assert restore.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert restore.window == Window(0, 0, 20, 10)
-        assert restore.projection == WGS_84_PROJECTION
+        assert restore.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
 
         del layer
 
