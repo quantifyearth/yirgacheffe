@@ -1596,3 +1596,84 @@ def test_isnan() -> None:
             actual = result.read_array(0, 0, 4, 2)
             expected = data1 == 5.0
             assert (expected == actual).all()
+
+@pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
+def test_add_byte_layers_read_array_all(monkeypatch, blocksize) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+        data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+
+        with (
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1,
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2)) as layer2,
+        ):
+            comp = layer1 + layer2
+            expected = data1 + data2
+            actual = comp.read_array(0, 0, 4, 2)
+            assert (expected == actual).all()
+
+@pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
+def test_add_byte_layers_read_array_partial_horizontal(monkeypatch, blocksize) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+        data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+
+        with (
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1,
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2)) as layer2,
+        ):
+            comp = layer1 + layer2
+            expected = (data1 + data2)[0:3,1:3]
+            actual = comp.read_array(1, 0, 2, 2)
+            assert (expected == actual).all()
+
+@pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
+def test_add_byte_layers_read_array_partial_vertical(monkeypatch, blocksize) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        data1 = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
+        data2 = np.array([[10, 20], [30, 40], [50, 60], [70, 80]])
+
+        with (
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1,
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2)) as layer2,
+        ):
+            comp = layer1 + layer2
+            expected = (data1 + data2)[1:3,0:3]
+            actual = comp.read_array(0, 1, 2, 2)
+            assert (expected == actual).all()
+
+@pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
+def test_add_byte_layers_read_array_partial(monkeypatch, blocksize) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+        data2 = np.array([[10, 10, 10, 10], [20, 20, 20, 20], [30, 30, 30, 30], [40, 40, 40, 40]])
+
+        with (
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1,
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2)) as layer2,
+        ):
+            comp = layer1 + layer2
+            expected = (data1 + data2)[1:3,1:3]
+            actual = comp.read_array(1, 1, 2, 2)
+            assert (expected == actual).all()
+
+@pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
+def test_add_byte_layers_read_array_superset(monkeypatch, blocksize) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+        data2 = np.array([[10, 10, 10, 10], [20, 20, 20, 20], [30, 30, 30, 30], [40, 40, 40, 40]])
+
+        with (
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1,
+            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2)) as layer2,
+        ):
+            comp = layer1 + layer2
+            inner_expected = data1 + data2
+            expected = np.pad(inner_expected, (1, 1))
+            actual = comp.read_array(-1, -1, 6, 6)
+            assert (expected == actual).all()
