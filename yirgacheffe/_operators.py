@@ -654,8 +654,8 @@ class LayerOperation(LayerMathMixin):
         for yoffset in range(0, computation_window.ysize, self.ystep):
             if callback:
                 callback(yoffset / computation_window.ysize)
-            step=self.ystep
-            if yoffset+step > computation_window.ysize:
+            step = self.ystep
+            if yoffset + step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(computation_area, projection, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
@@ -934,6 +934,48 @@ class LayerOperation(LayerMathMixin):
             os.rename(src=tempory_file.name, dst=filename)
 
         return result
+
+    def read_array(self, x: int, y: int, width: int, height: int) -> np.ndarray:
+        """Read an area of pixles from the specified area of a calculated raster.
+
+        Args:
+            x: X axis offset for reading
+            y: Y axis offset for reading
+            width: Width of data to read
+            height: Height of data to read
+
+        Returns:
+            A numpy array containing the requested data. If the region of data read goes
+            beyond the bounds of the calculation that area will be filled with zeros.
+        """
+        projection = self.map_projection
+        if projection is None:
+            raise ValueError("No map projection specified for layers in expression")
+
+        computation_window = Window(0, 0, width, height)
+        expression_area = self.area
+        pixel_scale = projection.scale
+        left = expression_area.left + (x * pixel_scale.xstep)
+        top = expression_area.top + (y * pixel_scale.ystep)
+        computation_area = Area(
+            left=left,
+            top=top,
+            right=left + (width * pixel_scale.xstep),
+            bottom=top + (height * pixel_scale.ystep),
+        )
+
+        chunks = []
+        for yoffset in range(0, height, self.ystep):
+            step = self.ystep
+            if yoffset + step > height:
+                step = height - yoffset
+            chunk = self._eval(computation_area, projection, yoffset, step, computation_window)
+            if isinstance(chunk, (float, int)):
+                chunk = backend.full((step, computation_window.xsize), chunk)
+            chunks.append(chunk)
+        res = np.vstack(chunks)
+
+        return res
 
 class ShaderStyleOperation(LayerOperation):
 
