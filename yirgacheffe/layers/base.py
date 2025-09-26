@@ -356,7 +356,15 @@ class YirgacheffeLayer(LayerMathMixin):
 
     def pixel_for_latlng(self, lat: float, lng: float) -> tuple[int, int]:
         """Get pixel for geo coords. This is relative to the set view window.
-        Result is rounded down to nearest pixel."""
+        Result is rounded down to nearest pixel.
+
+        Args:
+            lat: Geospatial latitude in WGS84
+            lng: Geospatial longitude in WGS84
+
+        Returns:
+            A tuple containing the x, y coordinates in pixel space.
+        """
         projection = self.map_projection
         if projection is None:
             raise ValueError("Map has not projection space")
