@@ -165,9 +165,13 @@ Note:
 1. Using `numpy_apply` prevents GPU optimisations occuring, so should be used as a last resort.
 2. In general `numpy_apply` is considerably faster than `shader_apply`.
 
-## Getting an answer out
+## Storing the results of expressions
 
-There are two ways to store the result of a computation. In all the above examples we use the `save` call, to which you pass a gdal dataset band, into which the results will be written. You can optionally pass a callback to save which will be called for each chunk of data processed and give you the amount of progress made so far as a number between 0.0 and 1.0:
+There are three ways to store the result of a computation.
+
+### Saving to a GeoTIFF
+
+In all the above examples we use the `to_geotiff` call, to which you pass a filename for a GeoTIFF, into which the results will be written. You can optionally pass a callback to save which will be called for each chunk of data processed and give you the amount of progress made so far as a number between 0.0 and 1.0:
 
 ```python
 def print_progress(p)
@@ -178,8 +182,9 @@ def print_progress(p)
 calc.to_geotiff(result, callback=print_progress)
 ```
 
+### Aggregations
 
-The alternative is to call `sum` which will give you a total:
+The alternative is to call aggregation functions such as `sum`, `min`, or `max` which will give you a single value by aggregating the data within the layer or expression:
 
 ```python
 with (
@@ -195,4 +200,17 @@ with (
     total_area = calc.sum()
 ```
 
-Similar to sum, you can also call `min` and `max` on a layer or calculation.
+### As numpy arrays
+
+Finally, if you want to read the pixel values of either a layer or an expression, you can call `read_array`:
+
+```python
+import yirgacheffe as yg
+
+with (
+    yg.read_raster("test1.tif") as layer1,
+    yg.read_raster("test2.tif") as layer2
+):
+    result = layer1 + layer2
+    pixels = result.read_array(10, 10, 100, 100)
+```
