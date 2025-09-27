@@ -1,3 +1,14 @@
+## v1.9.0 (26/9/2025)
+
+### Added
+
+* Added the ability to call `read_array` on expressions (before you could only call it on layers).
+
+### Changed
+
+* The first argument of MapProjection, the string defining the projection used is now validated with the pyproj library, and can be in any from the pyproj `from_string` takes: Well Known Text (WKT) or "epsg:4326" or "esri:54009" etc. The name function still returns the WKT representation for backwards compatibility.
+* The functions `pixel_from_latlng` and `latlng_from_pixel` will work regardless of the underlying map projection.
+
 ## v1.8.1 (25/9/2025)
 
 ### Fixed

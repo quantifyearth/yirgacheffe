@@ -30,6 +30,7 @@ dependencies = [
     "deprecation",
     "tomli",
     "h3",
+    "pyproj",
 ]
 requires-python = ">=3.10"
 

@@ -1,5 +1,10 @@
 # Yirgacheffe: a declarative geospatial library for Python to make data-science with maps easier
 
+[![CI](https://github.com/quantifyearth/yirgacheffe/actions/workflows/pull-request.yml/badge.svg?branch=main)](https://github.com/quantifyearth/yirgacheffe/actions)
+[![Documentation](https://img.shields.io/badge/docs-yirgacheffe.org-blue)](https://yirgacheffe.org)
+[![PyPI version](https://img.shields.io/pypi/v/yirgacheffe)](https://pypi.org/project/yirgacheffe/)
+
+
 ## Overview
 
 Yirgacheffe is an attempt to wrap raster and polygon geospatial datasets such that you can do computational work on them as a whole or at the pixel level, but without having to do a lot of the grunt work of working out where you need to be in rasters, or managing how much you can load into memory safely.

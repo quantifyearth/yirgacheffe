@@ -23,7 +23,7 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
     if is_valid:
         with H3CellLayer(cell_id, MapProjection(WGS_84_PROJECTION, 0.001, -0.001)) as layer:
             assert layer.zoom == expected_zoom
-            assert layer.projection == WGS_84_PROJECTION
+            assert layer.map_projection.epsg == 4326
 
             # without getting too deep, we'd expect a mix of zeros and ones in the data
             window = layer.window
