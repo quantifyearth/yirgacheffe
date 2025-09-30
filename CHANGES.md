@@ -2,6 +2,7 @@
 
 ### Added
 
+* Added code of conduct to project.
 * Added the ability to call `read_array` on expressions (before you could only call it on layers).
 
 ### Changed
