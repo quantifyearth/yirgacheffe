@@ -1,4 +1,5 @@
 site_name: "Yirgacheffe"
+site_url: "https://yirgacheffe.org"
 
 theme:
   name: "material"
@@ -6,7 +7,7 @@ theme:
   primary: "#065f65"
   features:
     - header.autohide: false
-
+    - navigation.instant: true
 
 extra_css:
   - css/extra.css
@@ -29,3 +30,18 @@ markdown_extensions:
 extra:
   version:
     provider: mike
+
+nav:
+  - Home: index.md
+  - API reference:
+    - Core: api/core.md
+    - Expressions: api/expressions.md
+    - Operators: api/operators.md
+    - Classes:
+      - Area: api/classes/area.md
+      - MapProjection: api/classes/mapprojection.md
+      - Window: api/classes/window.md
+    - Enums:
+      - DataType: api/enums/datatype.md
+  - Code of conduct: CODE_OF_CONDUCT.md
+  - Changelog: changelog.md
