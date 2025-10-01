@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import logging
 import math
 import multiprocessing
@@ -21,6 +22,7 @@ import numpy as np
 import numpy.typing as npt
 from osgeo import gdal
 from dill import dumps, loads # type: ignore
+from pyproj import Transformer
 
 from . import constants, __version__
 from .rounding import round_up_pixels, round_down_pixels
@@ -288,6 +290,53 @@ class LayerMathMixin:
             op.ASTYPE,
             window_op=WindowOperation.NONE,
             datatype=datatype
+        )
+
+    def latlng_for_pixel(self, x: int, y: int) -> tuple[float, float]:
+        """Get geo coords for pixel. This is relative to the set view window.
+
+        Args:
+            x: X axis position within raster
+            y: Y axis position within raster
+
+        Returns:
+            A tuple containing the (latitude, longitude).
+        """
+        projection = self.map_projection # type: ignore[attr-defined]
+        area = self.area # type: ignore[attr-defined]
+        if projection is None:
+            raise ValueError("Map has not projection space")
+        pixel_scale = projection.scale
+        coord_in_raster_space = (
+            (y * pixel_scale.ystep) + area.top,
+            (x * pixel_scale.xstep) + area.left,
+        )
+        transformer = Transformer.from_crs(projection.name, "EPSG:4326")
+        return transformer.transform(*coord_in_raster_space)
+
+    def pixel_for_latlng(self, lat: float, lng: float) -> tuple[int, int]:
+        """Get pixel for geo coords. This is relative to the set view window.
+        Result is rounded down to nearest pixel.
+
+        Args:
+            lat: Geospatial latitude in WGS84
+            lng: Geospatial longitude in WGS84
+
+        Returns:
+            A tuple containing the x, y coordinates in pixel space.
+        """
+        projection = self.map_projection # type: ignore[attr-defined]
+        area = self.area # type: ignore[attr-defined]
+        if projection is None:
+            raise ValueError("Map has not projection space")
+
+        transformer = Transformer.from_crs("EPSG:4326", projection.name)
+        x, y = transformer.transform(lng,lat)
+
+        pixel_scale = projection.scale
+        return (
+            round_down_pixels((x - area.left) / pixel_scale.xstep, builtins.abs(pixel_scale.xstep)),
+            round_down_pixels((y - area.top) / pixel_scale.ystep, builtins.abs(pixel_scale.ystep)),
         )
 
 
