@@ -1,3 +1,9 @@
+## v1.9.1 (1/10/2025)
+
+### Changed
+
+* Moved `latlng_for_pixel` and `pixel_for_latlng` to `LayerMathMixin` so they can be called on expressions as well as concrete layers.
+
 ## v1.9.0 (26/9/2025)
 
 ### Added

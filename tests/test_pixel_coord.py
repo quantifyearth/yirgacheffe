@@ -83,6 +83,21 @@ def test_latlng_for_pixel(
     assert math.isclose(result[0], expected[0])
     assert math.isclose(result[1], expected[1])
 
+def test_latlng_for_pixel_on_operator() -> None:
+    layer1 = YirgacheffeLayer(
+        Area(-10, 10, 10, -10),
+        MapProjection("epsg:4326", 0.2, -0.2),
+    )
+    layer2 = YirgacheffeLayer(
+        Area(-10, 10, 10, -10),
+        MapProjection("epsg:4326", 0.2, -0.2),
+    )
+    calc = layer1 + layer2
+    result = calc.latlng_for_pixel(0, 0)
+    expected = (10.0, -10.0)
+    assert math.isclose(result[0], expected[0])
+    assert math.isclose(result[1], expected[1])
+
 @pytest.mark.parametrize(
     "area,projection,coord,expected",
     [
@@ -118,6 +133,21 @@ def test_pixel_for_latlng(
     )
     result = layer.pixel_for_latlng(*coord)
     assert result == expected
+
+def test_pixel_for_latlng_on_operator() -> None:
+    layer1 = YirgacheffeLayer(
+        Area(-10, 10, 10, -10),
+        MapProjection("epsg:4326", 0.2, -0.2),
+    )
+    layer2 = YirgacheffeLayer(
+        Area(-10, 10, 10, -10),
+        MapProjection("epsg:4326", 0.2, -0.2),
+    )
+    calc = layer1 + layer2
+    result = calc.pixel_for_latlng(10, -10)
+    expected = (0, 0)
+    assert math.isclose(result[0], expected[0])
+    assert math.isclose(result[1], expected[1])
 
 @pytest.mark.parametrize(
     "area,window,projection,pixel,expected",
