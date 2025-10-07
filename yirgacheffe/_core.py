@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
 from typing import Sequence
 
@@ -11,6 +13,7 @@ from .layers.rasters import RasterLayer
 from .layers.vectors import VectorLayer
 from .window import MapProjection
 from ._backends.enumeration import dtype as DataType
+from ._operators import LayerOperation
 
 def read_raster(
     filename: Path | str,
@@ -161,3 +164,63 @@ def constant(value: int | float) -> ConstantLayer:
         A constant layer of the provided value.
     """
     return ConstantLayer(value)
+
+def to_multiband_geotiff(
+    filename : Path | str,
+    bands : dict[str,YirgacheffeLayer | LayerOperation],
+    parallelism: int | bool | None = None
+) -> None:
+    """Saves a dictionary of layers to a multiband GeoTIFF.
+
+    Each layer will be stored as a new band in the GeoTIFF, with the dictionary key forming its name.
+    Bands will be saved in alphabetical order.
+
+    Args:
+        filename: Path of the resultant GeoTIFF.
+        bands: A dictionary of layers or lazy operations on layers.
+        parallelism: If specified, Yirgacheffe will evaluate lazy layers using parallelism. Defaults to off.
+    """
+    if len(bands) == 0:
+        raise ValueError("No bands to save")
+
+    keys = sorted(bands.keys())
+    band1 = bands[keys[0]]
+
+    projection = band1.map_projection
+    if not all(bands[x].map_projection == projection for x in keys[1:]):
+        raise ValueError("Bands have differing map projections or scales")
+    union_area = RasterLayer.find_union(bands.values())
+
+    # We want to write to a tempfile before we move the result into place, but we can't use
+    # the actual $TMPDIR as that might be on a different device, and so we use a file next to where
+    # the final file will be, so we just need to rename the file at the end, not move it.
+    if isinstance(filename, str):
+        filename = Path(filename)
+    target_dir = filename.parent
+
+    with tempfile.NamedTemporaryFile(dir=target_dir, delete=False) as tempory_file:
+        with RasterLayer.empty_raster_layer(
+            union_area,
+            projection.scale,
+            band1.datatype,
+            tempory_file.name,
+            projection.name,
+            bands=len(bands),
+        ) as layer:
+            for idx, key in enumerate(keys):
+                target_band = idx + 1
+                source_band = bands[key]
+
+                if parallelism is None:
+                    result = source_band.save(layer, band=target_band)
+                else:
+                    if isinstance(parallelism, bool):
+                        # Parallel save treats None as "work it out"
+                        parallelism = None
+                    result = source_band.parallel_save(layer, band=target_band, parallelism=parallelism)
+                layer._dataset.GetRasterBand(target_band).SetDescription(key)
+
+        os.makedirs(target_dir, exist_ok=True)
+        os.rename(src=tempory_file.name, dst=filename)
+
+    return result
