@@ -3,9 +3,11 @@ import copy
 from pathlib import Path
 from typing import Any, Sequence
 
+import deprecation
 import numpy as np
 from numpy import ma
 
+from .. import __version__
 from ..rounding import round_down_pixels
 from ..window import Area, Window
 from .base import YirgacheffeLayer
@@ -83,19 +85,46 @@ class GroupLayer(YirgacheffeLayer):
     def datatype(self) -> DataType:
         return DataType.of_gdal(self.layers[0].datatype)
 
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `set_area` instead."
+    )
     def set_window_for_intersection(self, new_area: Area) -> None:
         super().set_window_for_intersection(new_area)
 
         # filter out layers we don't care about
         self.layers = [layer for layer in self._underlying_layers if layer.area.overlaps(new_area)]
 
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `set_area` instead."
+    )
     def set_window_for_union(self, new_area: Area) -> None:
         super().set_window_for_union(new_area)
 
         # filter out layers we don't care about
         self.layers = [layer for layer in self._underlying_layers if layer.area.overlaps(new_area)]
 
+    def set_area(self, new_area: Area) -> None:
+        super().set_area(new_area)
+
+        # filter out layers we don't care about
+        self.layers = [layer for layer in self._underlying_layers if layer.area.overlaps(new_area)]
+
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `reset_area` instead."
+    )
     def reset_window(self) -> None:
+        self.reset_area()
+
+    def reset_area(self) -> None:
         super().reset_window()
         try:
             self.layers = self._underlying_layers

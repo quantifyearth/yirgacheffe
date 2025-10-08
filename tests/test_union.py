@@ -51,6 +51,7 @@ def test_find_union_distinct() -> None:
 
     for layer in layers:
         layer.set_window_for_union(union)
+        assert layer.area == union
 
 def test_find_union_with_null() -> None:
     layers = [

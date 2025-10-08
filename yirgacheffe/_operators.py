@@ -339,6 +339,9 @@ class LayerMathMixin:
             round_down_pixels((y - area.top) / pixel_scale.ystep, builtins.abs(pixel_scale.ystep)),
         )
 
+    def size(self) -> tuple(int,int):
+        return (self.window.xsize, self.window.ysize)
+
 
 class LayerOperation(LayerMathMixin):
 
@@ -511,6 +514,12 @@ class LayerOperation(LayerMathMixin):
         return pixel_scale
 
     @property
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `size` instead."
+    )
     def window(self) -> Window:
         projection = self.map_projection
         if projection is None:

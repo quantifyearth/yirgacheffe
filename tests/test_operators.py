@@ -1627,18 +1627,9 @@ def test_add_byte_layers_read_array_all_vary_offset(origin) -> None:
         RasterLayer(gdal_dataset_with_data(origin, 0.02, data2)) as layer2,
     ):
         comp = layer1 + layer2
-        print(layer1.area)
-        print(layer2.area)
-        print(comp.area)
-        print(layer1.window)
-        print(layer2.window)
-        print(comp.window)
         expected = data1 + data2
         actual = comp.read_array(0, 0, 4, 2)
-        print(expected)
-        print(actual)
         assert (expected == actual).all()
-        assert False
 
 @pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
 def test_add_byte_layers_read_array_partial_horizontal(monkeypatch, blocksize) -> None:

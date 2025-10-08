@@ -98,6 +98,12 @@ class YirgacheffeLayer(LayerMathMixin):
         return self.area
 
     @property
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `size` instead."
+    )
     def window(self) -> Window:
         if self._window is None:
             raise AttributeError("Layer has no window")
@@ -168,6 +174,12 @@ class YirgacheffeLayer(LayerMathMixin):
         return almost_equal(our_scale.xstep, scale.xstep) and \
             almost_equal(our_scale.ystep, scale.ystep)
 
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `set_area` instead."
+    )
     def set_window_for_intersection(self, new_area: Area) -> None:
         if self._projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
@@ -200,6 +212,12 @@ class YirgacheffeLayer(LayerMathMixin):
         self._window = new_window
         self._active_area = new_area
 
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `set_area` instead."
+    )
     def set_window_for_union(self, new_area: Area) -> None:
         if self._projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
@@ -232,7 +250,51 @@ class YirgacheffeLayer(LayerMathMixin):
         self._window = new_window
         self._active_area = new_area
 
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `reset_area` instead."
+    )
     def reset_window(self) -> None:
+        self.reset_area()
+
+    def set_area(self, new_area: Area) -> None:
+        """Override the bounds of the layer to be something other than it's default.
+
+        This method overrides the notional geospatial area of the underlying data. Yirgacheffe
+        will either pad the item with zero values or clip the data appropriately then
+        accessing pixel data directly using `read_array`.
+
+        Args:
+            new_area: The new area.
+        """
+        if self._projection is None:
+            raise ValueError("Can not set Window without explicit pixel scale")
+
+        new_window = Window(
+            xoff=round_down_pixels((new_area.left - self._underlying_area.left) / self._projection.xstep,
+                self._projection.xstep),
+            yoff=round_down_pixels((self._underlying_area.top - new_area.top) / (self._projection.ystep * -1.0),
+                self._projection.ystep * -1.0),
+            xsize=round_up_pixels(
+                (new_area.right - new_area.left) / self._projection.xstep,
+                self._projection.xstep
+            ),
+            ysize=round_up_pixels(
+                (new_area.top - new_area.bottom) / (self._projection.ystep * -1.0),
+                (self._projection.ystep * -1.0)
+            ),
+        )
+        self._window = new_window
+        self._active_area = new_area
+
+    def reset_area(self):
+        """Set geospatial area represetned by layer back to that from the source data.
+
+        If the area represented by the layer has been mofified by `set_area` or `offset_area_by_pixels` calling
+        this will reset the area back to what it was when the data was first loaded from source.
+        """
         self._active_area = None
         if self._projection:
             abs_xstep, abs_ystep = abs(self._projection.xstep), abs(self._projection.ystep)
@@ -243,7 +305,16 @@ class YirgacheffeLayer(LayerMathMixin):
                 ysize=round_up_pixels((self.area.bottom - self.area.top) / self._projection.ystep, abs_ystep),
             )
 
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use `offset_area_by_pixels` instead."
+    )
     def offset_window_by_pixels(self, offset: int) -> None:
+        self.offset_area_by_pixels(offset)
+
+    def offset_area_by_pixels(self, offset: int) -> None:
         """Grows (if pixels is positive) or shrinks (if pixels is negative) the window for the layer."""
         if offset == 0:
             return
