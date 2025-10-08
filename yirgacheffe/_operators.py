@@ -339,6 +339,28 @@ class LayerMathMixin:
             round_down_pixels((y - area.top) / pixel_scale.ystep, builtins.abs(pixel_scale.ystep)),
         )
 
+    def show(self, ax=None, cmap='viridis', **kwargs):
+        import matplotlib.pyplot as plt
+
+        if ax is None:
+            ax = plt.gca()
+
+        downsample = self.window.xsize // 1000
+
+        data = self.read_array(
+            0,
+            0,
+            self.window.xsize,
+            self.window.ysize
+        )[::downsample,::downsample]
+        extent = [
+            self.area.left,
+            self.area.right,
+            self.area.bottom,
+            self.area.top,
+        ]
+        return ax.imshow(data, extent=extent, cmap=cmap, **kwargs)
+
 
 class LayerOperation(LayerMathMixin):
 
@@ -383,6 +405,7 @@ class LayerOperation(LayerMathMixin):
         self.kwargs = kwargs
         self.window_op = window_op
         self.buffer_padding = buffer_padding
+        self._forced_area = None
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -450,6 +473,9 @@ class LayerOperation(LayerMathMixin):
         return self._get_operation_area(self.map_projection)
 
     def _get_operation_area(self, projection: MapProjection | None) -> Area:
+        if self._forced_area is not None:
+            return self._forced_area
+
         lhs_area = self.lhs._get_operation_area(projection)
         try:
             rhs_area = self.rhs._get_operation_area(projection)
