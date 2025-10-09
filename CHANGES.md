@@ -1,3 +1,9 @@
+## v1.9.2 (9/10/2025)
+
+### Added
+
+* Added a `show` method to layers/expressions to render them using matplotlib.
+
 ## v1.9.1 (1/10/2025)
 
 ### Changed
