@@ -339,13 +339,13 @@ class LayerMathMixin:
             round_down_pixels((y - area.top) / pixel_scale.ystep, builtins.abs(pixel_scale.ystep)),
         )
 
-    def show(self, ax=None, cmap='viridis', **kwargs):
+    def show(self, ax=None, pixels=1000 cmap='terrain', **kwargs):
         import matplotlib.pyplot as plt
 
         if ax is None:
             ax = plt.gca()
 
-        downsample = self.window.xsize // 1000
+        downsample = self.window.xsize // pixels
 
         data = self.read_array(
             0,
