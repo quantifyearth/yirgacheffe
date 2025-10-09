@@ -339,27 +339,54 @@ class LayerMathMixin:
             round_down_pixels((y - area.top) / pixel_scale.ystep, builtins.abs(pixel_scale.ystep)),
         )
 
-    def show(self, ax=None, pixels=1000 cmap='terrain', **kwargs):
-        import matplotlib.pyplot as plt
+    @property
+    def window(self) -> Window:
+        raise NotImplementedError("Must be overridden by subclass")
+
+    @property
+    def area(self) -> Area:
+        raise NotImplementedError("Must be overridden by subclass")
+
+    def read_array(self, _x, _y, _w, _h):
+        raise NotImplementedError("Must be overridden by subclass")
+
+    def show(self, ax=None, max_pixels: int | None =1000, **kwargs):
+        """Display data using matplotlib.
+
+        Args:
+            ax: Matplotlib axes object. If not provided, the default matplotlib context will be used.
+            max_pixels: How many pixels to downsample to. If None, raw pixels will be used.
+            **kwargs: Passed to matplotlib imshow.
+
+        Returns:
+            A matplotlib image.
+        """
+        import matplotlib.pyplot as plt # pylint: disable=C0415
 
         if ax is None:
             ax = plt.gca()
 
-        downsample = self.window.xsize // pixels
+        window = self.window
 
-        data = self.read_array(
+        raw_data = self.read_array(
             0,
             0,
-            self.window.xsize,
-            self.window.ysize
-        )[::downsample,::downsample]
+            window.xsize,
+            window.ysize
+        )
+        if max_pixels:
+            downsample = max(window.xsize, window.ysize) // max_pixels
+            data = raw_data[::downsample,::downsample]
+        else:
+            data = raw_data
+        area = self.area
         extent = [
-            self.area.left,
-            self.area.right,
-            self.area.bottom,
-            self.area.top,
+            area.left,
+            area.right,
+            area.bottom,
+            area.top,
         ]
-        return ax.imshow(data, extent=extent, cmap=cmap, **kwargs)
+        return ax.imshow(data, extent=extent, **kwargs)
 
 
 class LayerOperation(LayerMathMixin):
