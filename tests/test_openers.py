@@ -38,7 +38,7 @@ def test_open_raster_file_as_path() -> None:
         area = Area(-10, 10, 10, -10)
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
         dataset.Close()
-        assert path.exists
+        assert path.exists()
 
         with yg.read_raster(path) as layer:
             assert layer.area == area
@@ -156,7 +156,7 @@ def test_open_shape_like() -> None:
         assert os.path.exists(path)
 
         with yg.read_raster(path) as raster_layer:
-            path = os.path.join(tempdir, "test.gpkg")
+            path = Path(tempdir) / "test.gpkg"
             area = Area(-10.0, 10.0, 10.0, 0.0)
             make_vectors_with_id(42, {area}, path)
 

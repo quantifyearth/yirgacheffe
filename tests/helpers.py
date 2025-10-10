@@ -65,7 +65,7 @@ def gdal_dataset_of_layer(layer: YirgacheffeLayer, filename: str | None = None) 
     dataset.SetProjection(layer.projection)
     return dataset
 
-def numpy_to_gdal_type(val: np.array) -> int:
+def numpy_to_gdal_type(val: np.ndarray) -> int:
     match val.dtype:
         case np.float32:
             return gdal.GDT_Float32
@@ -94,7 +94,7 @@ def numpy_to_gdal_type(val: np.array) -> int:
 def gdal_dataset_with_data(
     origin: tuple,
     pixel_pitch: float,
-    data: np.array,
+    data: np.ndarray,
     filename: Path | str | None = None,
 ) -> gdal.Dataset:
     assert data.ndim == 2
@@ -128,7 +128,7 @@ def gdal_dataset_with_data(
 def gdal_multiband_dataset_with_data(
     origin: tuple,
     pixel_pitch: float,
-    datas: list[np.array],
+    datas: list[np.ndarray],
     filename: Path | str | None = None,
 ) -> gdal.Dataset:
     for data in datas:

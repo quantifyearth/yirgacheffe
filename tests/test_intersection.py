@@ -67,7 +67,7 @@ def test_find_intersection_with_vector_unbound() -> None:
         path = Path(tempdir) / "test.gpkg"
         area = Area(left=58, top=74, right=180, bottom=42)
         make_vectors_with_id(42, {area}, path)
-        assert path.exists
+        assert path.exists()
 
         raster = RasterLayer(gdal_dataset_of_region(Area(left=-180.05, top=90.09, right=180.05, bottom=-90.09), 0.13))
         vector = VectorLayer.layer_from_file(path, None, None, None)
@@ -86,10 +86,10 @@ def test_find_intersection_with_vector_bound() -> None:
         path = Path(tempdir) / "test.gpkg"
         area = Area(left=58, top=74, right=180, bottom=42)
         make_vectors_with_id(42, {area}, path)
-        assert path.exists
+        assert path.exists()
 
         raster = RasterLayer(gdal_dataset_of_region(Area(left=-180.05, top=90.09, right=180.05, bottom=-90.09), 0.13))
-        vector = VectorLayer.layer_from_file(path, None, raster.map_projection.scale, raster.map_projection.name)
+        vector = VectorLayer.layer_from_file_like(path, raster)
         assert vector.area != area
 
         layers = [raster, vector]
@@ -104,10 +104,10 @@ def test_find_intersection_with_vector_awkward_rounding() -> None:
         path = Path(tempdir) / "test.gpkg"
         area = Area(left=-90, top=45, right=90, bottom=-45)
         make_vectors_with_id(42, {area}, path)
-        assert path.exists
+        assert path.exists()
 
         raster = RasterLayer(gdal_dataset_of_region(Area(left=-180, top=90, right=180, bottom=-90), 18.0))
-        vector = VectorLayer.layer_from_file(path, None, raster.map_projection.scale, raster.map_projection.name)
+        vector = VectorLayer.layer_from_file_like(path, raster)
 
         rounded_area = Area(left=-90, top=54, right=90, bottom=-54)
         assert vector.area == rounded_area
