@@ -1,3 +1,10 @@
+## v1.9.3
+
+### Changed
+
+* Unit tests now covered by mypy checks
+* Exposed operator functions on top level, so you can do `yg.where` rather  than `yg.operators.where`, ready for 2.0.
+
 ## v1.9.2 (9/10/2025)
 
 ### Added
