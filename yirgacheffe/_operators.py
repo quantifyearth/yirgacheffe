@@ -376,6 +376,7 @@ class LayerMathMixin:
         )
         if max_pixels:
             downsample = max(window.xsize, window.ysize) // max_pixels
+            downsample = max(downsample, 1)
             data = raw_data[::downsample,::downsample]
         else:
             data = raw_data
