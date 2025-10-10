@@ -182,18 +182,18 @@ def test_parallel_with_different_skip(monkeypatch, skip, expected_steps) -> None
             layer2 = RasterLayer.layer_from_file(path2)
             result = RasterLayer.empty_raster_layer_like(layer1)
 
-            callback_possitions = []
+            callback_positions: list[float] = []
 
             comp = layer1 + layer2
             comp.ystep = skip
-            comp.parallel_save(result, callback=callback_possitions.append)
+            comp.parallel_save(result, callback=callback_positions.append)
 
             expected = data1 + data2
             actual = result.read_array(0, 0, 4, 4)
 
             assert (expected == actual).all()
 
-            assert callback_possitions == expected_steps
+            assert callback_positions == expected_steps
 
 @pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_equality(monkeypatch) -> None:

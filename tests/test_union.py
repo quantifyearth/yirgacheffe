@@ -73,7 +73,7 @@ def test_find_union_with_vector_unbound() -> None:
         path = Path(tempdir) / "test.gpkg"
         area = Area(left=58, top=74, right=180, bottom=42)
         make_vectors_with_id(42, {area}, path)
-        assert path.exists
+        assert path.exists()
 
         raster = RasterLayer(gdal_dataset_of_region(Area(left=59.93, top=70.07, right=170.04, bottom=44.98), 0.13))
         vector = VectorLayer.layer_from_file(path, None, None, None)
@@ -93,10 +93,10 @@ def test_find_union_with_vector_bound() -> None:
         path = Path(tempdir) / "test.gpkg"
         area = Area(left=58, top=74, right=180, bottom=42)
         make_vectors_with_id(42, {area}, path)
-        assert path.exists
+        assert path.exists()
 
         raster = RasterLayer(gdal_dataset_of_region(Area(left=59.93, top=70.07, right=170.04, bottom=44.98), 0.13))
-        vector = VectorLayer.layer_from_file(path, None, raster.map_projection.scale, raster.map_projection.name)
+        vector = VectorLayer.layer_from_file_like(path, raster)
         assert vector.area != area
 
         layers = [raster, vector]
@@ -158,10 +158,10 @@ def test_set_union_superset(left_padding: int, right_padding: int, top_padding: 
     superset = Area(-1 - left_padding, 1 + top_padding, 1 + right_padding, -1 - bottom_padding)
     layer.set_window_for_union(superset)
     assert layer.window == Window(
-        (0 - left_padding) / pixel_density,
-        (0 - top_padding) / pixel_density,
-        (2 + left_padding + right_padding) / pixel_density,
-        (2 + top_padding + bottom_padding) / pixel_density,
+        round((0 - left_padding) / pixel_density),
+        round((0 - top_padding) / pixel_density),
+        round((2 + left_padding + right_padding) / pixel_density),
+        round((2 + top_padding + bottom_padding) / pixel_density),
     )
 
     origin_after_pixel = layer.read_array(

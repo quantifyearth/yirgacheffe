@@ -170,6 +170,7 @@ def test_rescaled_up_in_operation() -> None:
     data1[4:8,0:4] = 1
     dataset1 = gdal_dataset_with_data((0, 0), 1.0, data1)
     raster1 = RasterLayer(dataset1)
+    assert raster1.map_projection
 
     data2 = np.zeros((4, 4))
     data2[0:2,0:2] = 1
@@ -198,6 +199,7 @@ def test_rescaled_down_in_operation() -> None:
     data2[2:4,2:4] = 1
     dataset2 = gdal_dataset_with_data((0, 0), 2.0, data2)
     raster2 = RasterLayer(dataset2)
+    assert raster2.map_projection
 
     rescaled = RescaledRasterLayer(raster1, raster2.map_projection)
 

@@ -62,5 +62,5 @@ def test_float_to_int() -> None:
     comp.save(result)
 
     expected = backend.promote(np.array([[1, 2, 3, 4], [5, 6, 7, 8]]))
-    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
+    actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()

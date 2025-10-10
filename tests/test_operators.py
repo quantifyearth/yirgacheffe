@@ -78,18 +78,18 @@ def test_add_byte_layers_with_callback(skip, expected_steps) -> None:
     assert layer1.datatype == DataType.Byte
     assert layer2.datatype == DataType.Byte
 
-    callback_possitions = []
+    callback_positions: list[float] = []
 
     comp = layer1 + layer2
     comp.ystep = skip
-    comp.save(result, callback=callback_possitions.append)
+    comp.save(result, callback=callback_positions.append)
 
     expected = data1 + data2
     actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
 
-    assert callback_possitions == expected_steps
+    assert callback_positions == expected_steps
 
 def test_sub_byte_layers() -> None:
     data1 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
@@ -150,7 +150,7 @@ def test_mult_float_layers() -> None:
     comp = layer1 * layer2
     comp.save(result)
 
-    expected = backend.promote(data1) * backend.promote(data2)
+    expected = backend.demote_array(backend.promote(data1) * backend.promote(data2))
     backend.eval_op(expected)
 
     actual = backend.demote_array(result.read_array(0, 0, 4, 2))
@@ -168,7 +168,7 @@ def test_div_float_layers() -> None:
     comp = layer1 / layer2
     comp.save(result)
 
-    expected = backend.promote(data1) / backend.promote(data2)
+    expected = backend.demote_array(backend.promote(data1) / backend.promote(data2))
     backend.eval_op(expected)
 
     actual = backend.demote_array(result.read_array(0, 0, 4, 2))
@@ -186,7 +186,7 @@ def test_floor_div_float_layers() -> None:
     comp = layer1 // layer2
     comp.save(result)
 
-    expected = backend.promote(data1) // backend.promote(data2)
+    expected = backend.demote_array(backend.promote(data1) // backend.promote(data2))
     backend.eval_op(expected)
 
     actual = backend.demote_array(result.read_array(0, 0, 4, 2))
@@ -204,7 +204,7 @@ def test_remainder_float_layers() -> None:
     comp = layer1 % layer2
     comp.save(result)
 
-    expected = backend.promote(data1) % backend.promote(data2)
+    expected = backend.demote_array(backend.promote(data1) % backend.promote(data2))
     backend.eval_op(expected)
 
     actual = backend.demote_array(result.read_array(0, 0, 4, 2))
@@ -264,7 +264,7 @@ def test_div_float_layer_by_const() -> None:
     comp = layer1 / 2.5
     comp.save(result)
 
-    expected = backend.promote(data1) / 2.5
+    expected = backend.demote_array(backend.promote(data1) / 2.5)
     backend.eval_op(expected)
 
     actual = backend.demote_array(result.read_array(0, 0, 4, 2))
@@ -279,7 +279,7 @@ def test_floordiv_float_layer_by_const() -> None:
     comp = layer1 // 2.5
     comp.save(result)
 
-    expected = backend.promote(data1) // 2.5
+    expected = backend.demote_array(backend.promote(data1) // 2.5)
     backend.eval_op(expected)
 
     actual = backend.demote_array(result.read_array(0, 0, 4, 2))
@@ -294,7 +294,7 @@ def test_remainder_float_layer_by_const() -> None:
     comp = layer1 % 2.5
     comp.save(result)
 
-    expected = backend.promote(data1) % 2.5
+    expected = backend.demote_array(backend.promote(data1) % 2.5)
     backend.eval_op(expected)
 
     actual = backend.demote_array(result.read_array(0, 0, 4, 2))
@@ -1546,7 +1546,7 @@ def test_raster_and_vector() -> None:
         path = Path(tempdir) / "test.gpkg"
         area = Area(-5.0, 5.0, 5.0, -5.0)
         make_vectors_with_id(42, {area}, path)
-        assert path.exists
+        assert path.exists()
 
         vector = VectorLayer.layer_from_file(path, None, PixelScale(1.0, -1.0), yirgacheffe.WGS_84_PROJECTION)
 
@@ -1562,7 +1562,7 @@ def test_raster_and_vector_mixed_projection() -> None:
         path = Path(tempdir) / "test.gpkg"
         area = Area(-5.0, 5.0, 5.0, -5.0)
         make_vectors_with_id(42, {area}, path)
-        assert path.exists
+        assert path.exists()
 
         vector = VectorLayer.layer_from_file(path, None, PixelScale(1.0, -1.0), yirgacheffe.WGS_84_PROJECTION)
 
@@ -1577,7 +1577,7 @@ def test_raster_and_vector_no_scale_on_vector() -> None:
         path = Path(tempdir) / "test.gpkg"
         area = Area(-5.0, 5.0, 5.0, -5.0)
         make_vectors_with_id(42, {area}, path)
-        assert path.exists
+        assert path.exists()
 
         vector = VectorLayer.layer_from_file(path, None, None, None)
 
