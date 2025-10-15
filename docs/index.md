@@ -67,6 +67,37 @@ Yirgacheffe has multiple backends, with more planned. Currently you can set the 
 
 Note that GPU isn't always faster than CPU - it very much depends on the workload, so testing your particular use-case is important.
 
+## Citation
+
+If you use Yirgacheffe in your research, please cite our paper:
+
+> Michael Winston Dales, Alison Eyres, Patrick Ferris, Francesca A. Ridley, Simon Tarr, and Anil Madhavapeddy. 2025. Yirgacheffe: A Declarative Approach to Geospatial Data. In *Proceedings of the 2nd ACM SIGPLAN International Workshop on Programming for the Planet* (PROPL '25). Association for Computing Machinery, New York, NY, USA, 47–54. https://doi.org/10.1145/3759536.3763806
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@inproceedings{10.1145/3759536.3763806,
+  author = {Dales, Michael Winston and Eyres, Alison and Ferris, Patrick and Ridley, Francesca A. and Tarr, Simon and Madhavapeddy, Anil},
+  title = {Yirgacheffe: A Declarative Approach to Geospatial Data},
+  year = {2025},
+  isbn = {9798400721618},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/3759536.3763806},
+  doi = {10.1145/3759536.3763806},
+  abstract = {We present Yirgacheffe, a declarative geospatial library that allows spatial algorithms to be implemented concisely, supports parallel execution, and avoids common errors by automatically handling data (large geospatial rasters) and resources (cores, memory, GPUs). Our primary user domain comprises ecologists, where a typical problem involves cleaning messy occurrence data, overlaying it over tiled rasters, combining layers, and deriving actionable insights from the results. We describe the successes of this approach towards driving key pipelines related to global biodiversity and describe the capability gaps that remain, hoping to motivate more research into geospatial domain-specific languages.},
+  booktitle = {Proceedings of the 2nd ACM SIGPLAN International Workshop on Programming for the Planet},
+  pages = {47–54},
+  numpages = {8},
+  keywords = {Biodiversity, Declarative, Geospatial, Python},
+  location = {Singapore, Singapore},
+  series = {PROPL '25}
+}
+```
+
+</details>
+
 ## About
 
 Yirgacheffe was created by [Michael Dales](https://digitalflapjack.com/) whilst working on multiple geospatial projects as a way to hide the boilerplate associated with working with large raster and polygon geospatial datasets.
