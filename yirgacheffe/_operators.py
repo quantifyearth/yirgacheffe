@@ -393,31 +393,34 @@ class LayerMathMixin:
 class LayerOperation(LayerMathMixin):
 
     @staticmethod
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use from top level module instead."
+    )
     def where(cond, a, b):
-        return LayerOperation(
-            cond,
-            op.WHERE,
-            rhs=a,
-            other=b
-        )
+        return where(cond, a, b)
 
     @staticmethod
-    def maximum(a, b):
-        return LayerOperation(
-            a,
-            op.MAXIMUM,
-            b,
-            window_op=WindowOperation.UNION,
-        )
-
-    @staticmethod
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use from top level module instead."
+    )
     def minimum(a, b):
-        return LayerOperation(
-            a,
-            op.MINIMUM,
-            rhs=b,
-            window_op=WindowOperation.UNION,
-        )
+        return minimum(a, b)
+
+    @staticmethod
+    @deprecation.deprecated(
+        deprecated_in="1.10",
+        removed_in="2.0",
+        current_version=__version__,
+        details="Use from top level module instead."
+    )
+    def maximum(a, b):
+        return maximum(a, b)
 
     def __init__(
         self,
@@ -1121,10 +1124,70 @@ class ShaderStyleOperation(LayerOperation):
 
         return result
 
+def where(cond, a, b):
+    """Return elements chosen from `a` or `b` depending on `cond`.
+
+    Behaves like numpy.where(condition, x, y), returning a layer operation
+    where elements from `a` are selected where `cond` is True, and elements
+    from `b` are selected where `cond` is False.
+
+    Args:
+        cond: Layer or constant used as condition. Where True, yield `a`, otherwise yield `b`.
+        a: Layer or constant with values from which to choose where `cond` is True.
+        b: Layer or constant with values from which to choose where `cond` is False.
+
+    Returns:
+        LayerOperation representing the conditional selection.
+    """
+    return LayerOperation(
+        cond,
+        op.WHERE,
+        rhs=a,
+        other=b
+    )
+
+def maximum(a, b):
+    """Element-wise maximum of layer elements.
+
+    Behaves like numpy.maximum(x1, x2), comparing two layers element-by-element
+    and returning a new layer with the maximum values.
+
+    Args:
+        a: First layer or constant to compare.
+        b: Second layer or constant to compare.
+
+    Returns:
+        LayerOperation representing the element-wise maximum of the inputs.
+    """
+    return LayerOperation(
+        a,
+        op.MAXIMUM,
+        b,
+        window_op=WindowOperation.UNION,
+    )
+
+def minimum(a, b):
+    """Element-wise minimum of layer elements.
+
+    Behaves like numpy.minimum(x1, x2), comparing two layers element-by-element
+    and returning a new layer with the minimum values.
+
+    Args:
+        a: First layer or constant to compare.
+        b: Second layer or constant to compare.
+
+    Returns:
+        LayerOperation representing the element-wise minimum of the inputs.
+    """
+    return LayerOperation(
+        a,
+        op.MINIMUM,
+        rhs=b,
+        window_op=WindowOperation.UNION,
+    )
+
+
 # We provide these module level accessors as it's often nicer to write `log(x/y)` rather than `(x/y).log()`
-where = LayerOperation.where
-minumum = LayerOperation.minimum
-maximum = LayerOperation.maximum
 clip = LayerOperation.clip
 log = LayerOperation.log
 log2 = LayerOperation.log2
