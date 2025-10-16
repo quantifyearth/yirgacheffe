@@ -16,7 +16,7 @@ def read_raster(
     filename: Path | str,
     band: int = 1,
     ignore_nodata: bool = False,
-) -> RasterLayer:
+) -> YirgacheffeLayer:
     """Open a raster file (e.g., GeoTIFF).
 
     Args:
@@ -38,7 +38,7 @@ def read_narrow_raster(
     filename: Path | str,
     band: int = 1,
     ignore_nodata: bool = False,
-) -> RasterLayer:
+) -> YirgacheffeLayer:
     """Open a 1 pixel wide raster file as a global raster.
 
     This exists for the special use case where an area per pixel raster would have the same value per horizontal row
@@ -58,7 +58,7 @@ def read_narrow_raster(
 def read_rasters(
     filenames : Sequence[Path | str],
     tiled: bool=False
-) -> GroupLayer:
+) -> YirgacheffeLayer:
     """Open a set of raster files (e.g., GeoTIFFs) as a single layer.
 
     Args:
@@ -86,7 +86,7 @@ def read_shape(
     where_filter: str | None = None,
     datatype: DataType | None = None,
     burn_value: int | float | str = 1,
-) -> VectorLayer:
+) -> YirgacheffeLayer:
     """Open a polygon file (e.g., GeoJSON, GPKG, or ESRI Shape File).
 
     Args:
@@ -124,7 +124,7 @@ def read_shape_like(
     where_filter: str | None = None,
     datatype: DataType | None = None,
     burn_value: int | float | str = 1,
-) -> VectorLayer:
+) -> YirgacheffeLayer:
     """Open a polygon file (e.g., GeoJSON, GPKG, or ESRI Shape File).
 
     Args:
@@ -146,7 +146,7 @@ def read_shape_like(
         burn_value,
     )
 
-def constant(value: int | float) -> ConstantLayer:
+def constant(value: int | float) -> YirgacheffeLayer:
     """Generate a layer that has the same value in all pixels regardless of scale, projection, and area.
 
     Generally this should not be necessary unless you must have the constant as the first term in an

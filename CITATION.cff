@@ -1,0 +1,58 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Yirgacheffe: A Declarative Approach to Geospatial Data"
+authors:
+  - family-names: "Dales"
+    given-names: "Michael Winston"
+  - family-names: "Eyres"
+    given-names: "Alison"
+  - family-names: "Ferris"
+    given-names: "Patrick"
+  - family-names: "Ridley"
+    given-names: "Francesca A."
+  - family-names: "Tarr"
+    given-names: "Simon"
+  - family-names: "Madhavapeddy"
+    given-names: "Anil"
+url: "https://github.com/quantifyearth/yirgacheffe"
+repository-code: "https://github.com/quantifyearth/yirgacheffe"
+license: MIT
+preferred-citation:
+  type: conference-paper
+  title: "Yirgacheffe: A Declarative Approach to Geospatial Data"
+  authors:
+    - family-names: "Dales"
+      given-names: "Michael Winston"
+    - family-names: "Eyres"
+      given-names: "Alison"
+    - family-names: "Ferris"
+      given-names: "Patrick"
+    - family-names: "Ridley"
+      given-names: "Francesca A."
+    - family-names: "Tarr"
+      given-names: "Simon"
+    - family-names: "Madhavapeddy"
+      given-names: "Anil"
+  collection-title: "Proceedings of the 2nd ACM SIGPLAN International Workshop on Programming for the Planet"
+  conference:
+    name: "PROPL '25"
+    city: "Singapore"
+    country: "SG"
+  year: 2025
+  isbn: "9798400721618"
+  publisher:
+    name: "Association for Computing Machinery"
+    city: "New York"
+    region: "NY"
+    country: "US"
+  start: 47
+  end: 54
+  doi: "10.1145/3759536.3763806"
+  url: "https://doi.org/10.1145/3759536.3763806"
+  abstract: "We present Yirgacheffe, a declarative geospatial library that allows spatial algorithms to be implemented concisely, supports parallel execution, and avoids common errors by automatically handling data (large geospatial rasters) and resources (cores, memory, GPUs). Our primary user domain comprises ecologists, where a typical problem involves cleaning messy occurrence data, overlaying it over tiled rasters, combining layers, and deriving actionable insights from the results. We describe the successes of this approach towards driving key pipelines related to global biodiversity and describe the capability gaps that remain, hoping to motivate more research into geospatial domain-specific languages."
+  keywords:
+    - Biodiversity
+    - Declarative
+    - Geospatial
+    - Python

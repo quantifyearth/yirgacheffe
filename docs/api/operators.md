@@ -38,9 +38,9 @@ On a layer you can also invoke the following operations using `layer.operator(..
 | log2 |
 | nan_to_num |
 
-You can also call the following methods on `yirgacheffe.operators`:
+You can also call the following methods from `yirgacheffe`:
 
-::: yirgacheffe.operators
+::: yirgacheffe
     handler: python
     options:
         members:
