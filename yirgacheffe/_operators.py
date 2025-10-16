@@ -1137,7 +1137,7 @@ def where(cond, a, b):
         b: Layer or constant with values from which to choose where `cond` is False.
 
     Returns:
-        LayerOperation representing the conditional selection.
+        New layer representing the conditional selection.
     """
     return LayerOperation(
         cond,
@@ -1157,7 +1157,7 @@ def maximum(a, b):
         b: Second layer or constant to compare.
 
     Returns:
-        LayerOperation representing the element-wise maximum of the inputs.
+        New layer representing the element-wise maximum of the inputs.
     """
     return LayerOperation(
         a,
@@ -1177,7 +1177,7 @@ def minimum(a, b):
         b: Second layer or constant to compare.
 
     Returns:
-        LayerOperation representing the element-wise minimum of the inputs.
+        New layer representing the element-wise minimum of the inputs.
     """
     return LayerOperation(
         a,
