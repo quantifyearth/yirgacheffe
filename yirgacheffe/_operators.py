@@ -10,12 +10,12 @@ import sys
 import tempfile
 import time
 import types
+from collections.abc import Callable
 from contextlib import ExitStack
 from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
-from typing import Callable
 
 import deprecation
 import numpy as np
@@ -1002,7 +1002,8 @@ class LayerOperation(LayerMathMixin):
         self,
         filename: Path | str,
         and_sum: bool = False,
-        parallelism: int | bool | None = None
+        parallelism: int | bool | None = None,
+        callback: Callable[[float], None] | None = None,
     ) -> float | None:
         """Saves a calculation to a raster file, optionally also returning the sum of pixels.
 
@@ -1012,6 +1013,8 @@ class LayerOperation(LayerMathMixin):
                 that value.
             parallelism: If passed, attempt to use multiple CPU cores up to the number provided, or if set to True,
                 yirgacheffe will pick a sensible value.
+            callback: If passed, this callback will be called periodically with a progress update for the saving,
+                with a value between 0.0 and 1.0.
 
         Returns:
             Either returns None, or the sum of the pixels in the resulting raster if `and_sum` was specified.
@@ -1029,12 +1032,12 @@ class LayerOperation(LayerMathMixin):
             from yirgacheffe.layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
             with RasterLayer.empty_raster_layer_like(self, filename=tempory_file.name) as layer:
                 if parallelism is None:
-                    result = self.save(layer, and_sum=and_sum)
+                    result = self.save(layer, and_sum=and_sum, callback=callback)
                 else:
                     if isinstance(parallelism, bool):
                         # Parallel save treats None as "work it out"
                         parallelism = None
-                    result = self.parallel_save(layer, and_sum=and_sum, parallelism=parallelism)
+                    result = self.parallel_save(layer, and_sum=and_sum, callback=callback, parallelism=parallelism)
 
             os.makedirs(target_dir, exist_ok=True)
             os.rename(src=tempory_file.name, dst=filename)

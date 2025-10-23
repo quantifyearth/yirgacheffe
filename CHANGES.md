@@ -1,3 +1,9 @@
+## v1.9.4 (23/10/2025)
+
+### Added
+
+* Exposed the callback parameter to `to_geotiff`.
+
 ## v1.9.3 (10/10/2025)
 
 ### Changed
