@@ -91,6 +91,29 @@ def test_add_byte_layers_with_callback(skip, expected_steps) -> None:
 
     assert callback_positions == expected_steps
 
+@pytest.mark.parametrize("skip,expected_steps", [
+    (1, [0.0, 0.5, 1.0]),
+    (2, [0.0, 1.0]),
+])
+def test_add_byte_layers_to_geotiff_with_callback(skip, expected_steps) -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]]).astype(np.uint8)
+    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]]).astype(np.uint8)
+
+    with (
+        RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1,
+        RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2)) as layer2,
+    ):
+        callback_positions: list[float] = []
+
+        comp = layer1 + layer2
+        comp.ystep = skip
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, "test.tif")
+            comp.to_geotiff(filename, callback=callback_positions.append)
+
+        assert callback_positions == expected_steps
+
 def test_sub_byte_layers() -> None:
     data1 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
     data2 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
@@ -1529,9 +1552,12 @@ def test_to_geotiff_parallel_thread_and_sum(monkeypatch, parallelism) -> None:
             with yirgacheffe.read_raster(src_filename) as layer1:
                 filename = os.path.join(tempdir, "test.tif")
                 calc = layer1 * 2
-                actual_sum = calc.to_geotiff(filename, and_sum=True, parallelism=parallelism)
+                steps: list[float] = []
+                actual_sum = calc.to_geotiff(filename, and_sum=True, parallelism=parallelism, callback=steps.append)
 
                 assert (data1.sum() * 2) == actual_sum
+
+                assert steps == [0.0, 0.5, 1.0]
 
                 with RasterLayer.layer_from_file(filename) as result:
                     expected = data1 * 2

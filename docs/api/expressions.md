@@ -11,7 +11,7 @@ with (
     yg.read_shape('species123.geojson') as range_polygon
 ):
     refined_habitat = habitat_map.isin([...species habitat codes...])
-    refined_elevation = (elevation_map >= species_min) && (elevation_map <= species_max)
+    refined_elevation = (elevation_map >= species_min) & (elevation_map <= species_max)
     aoh = refined_habitat * refined_elevation * range_polygon
     print(f'area for species 123: {aoh.sum()}')
     aoh.to_geotiff("result.tif")
