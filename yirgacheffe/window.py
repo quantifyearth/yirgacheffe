@@ -22,6 +22,15 @@ class MapProjection:
         name: The map projection used in WKT format.
         xstep: The number of units horizontal distance a step of one pixel makes in the map projection.
         ystep: The number of units vertical distance a step of one pixel makes in the map projection.
+
+    Examples:
+        Create a map projection using an EPSG code:
+
+        >>> proj_wgs84 = MapProjection("epsg:4326", 0.001, -0.001)
+
+        Create a projection using an ESRI code:
+
+        >>> proj_esri = MapProjection("esri:54030", 1000, -1000)
     """
 
     def __init__(self, projection_string: str, xstep: float, ystep: float) -> None:
