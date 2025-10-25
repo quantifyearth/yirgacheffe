@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from enum import Enum
 
+import numpy as np
 from osgeo import gdal
 
 class operators(Enum):
@@ -77,5 +80,31 @@ class dtype(Enum):
         return self.value
 
     @classmethod
-    def of_gdal(cls, val):
+    def of_gdal(cls, val: int) -> dtype:
         return cls(val)
+
+    @classmethod
+    def of_array(cls, val: np.ndarray) -> dtype:
+        match val.dtype:
+            case np.float32:
+                return dtype.Float32
+            case np.float64:
+                return dtype.Float64
+            case np.int8:
+                return dtype.Int8
+            case np.int16:
+                return dtype.Int16
+            case np.int32:
+                return dtype.Int32
+            case np.int64:
+                return dtype.Int64
+            case np.uint8:
+                return dtype.UInt8
+            case np.uint16:
+                return dtype.UInt16
+            case np.uint32:
+                return dtype.UInt32
+            case np.uint64:
+                return dtype.UInt64
+            case _:
+                raise ValueError

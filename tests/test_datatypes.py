@@ -64,3 +64,49 @@ def test_float_to_int() -> None:
     expected = backend.promote(np.array([[1, 2, 3, 4], [5, 6, 7, 8]]))
     actual = result.read_array(0, 0, 4, 2)
     assert (expected == actual).all()
+
+@pytest.mark.parametrize("array,expected_type", [
+    (
+        np.ones((2, 2)).astype(np.int8),
+        DataType.Int8,
+    ),
+    (
+        np.ones((2, 2)).astype(np.int16),
+        DataType.Int16,
+    ),
+    (
+        np.ones((2, 2)).astype(np.int32),
+        DataType.Int32,
+    ),
+    (
+        np.ones((2, 2)).astype(np.int64),
+        DataType.Int64,
+    ),
+    (
+        np.ones((2, 2)).astype(np.uint8),
+        DataType.UInt8,
+    ),
+    (
+        np.ones((2, 2)).astype(np.uint16),
+        DataType.UInt16,
+    ),
+    (
+        np.ones((2, 2)).astype(np.uint32),
+        DataType.UInt32,
+    ),
+    (
+        np.ones((2, 2)).astype(np.uint64),
+        DataType.UInt64,
+    ),
+    (
+        np.ones((2, 2)).astype(np.float32),
+        DataType.Float32,
+    ),
+    (
+        np.ones((2, 2)).astype(np.float64),
+        DataType.Float64,
+    ),
+])
+def test_of_Array(array: np.ndarray, expected_type: DataType) -> None:
+    ytype = DataType.of_array(array)
+    assert ytype == expected_type
