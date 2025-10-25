@@ -4,7 +4,7 @@ import tempfile
 import numpy as np
 from osgeo import gdal
 
-from tests.helpers import gdal_dataset_with_data
+import yirgacheffe as yg
 from yirgacheffe.layers import RasterLayer
 from yirgacheffe.window import Area, PixelScale
 
@@ -23,9 +23,10 @@ def test_simple_two_band_image() -> None:
         )
 
         # Create a set of rasters in turn to fill each band
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         for i in range(bands):
             data1 = np.full((2, 2), i+1)
-            layer1 = RasterLayer(gdal_dataset_with_data((-1.0, 1.0), 1.0, data1))
+            layer1 = yg.from_array(data1, (-1.0, 1.0), projection)
             layer1.save(target, band=i+1)
 
         # force things to disk
@@ -33,7 +34,7 @@ def test_simple_two_band_image() -> None:
 
         #check they do what we expect
         for i in range(bands):
-            o = RasterLayer.layer_from_file(target_path, band=i+1)
+            o = yg.read_raster(target_path, band=i+1)
             assert o.sum() == (4 * (i + 1))
 
 def test_stack_tifs_with_area_match() -> None:
@@ -43,9 +44,10 @@ def test_stack_tifs_with_area_match() -> None:
         # slight alignment offset when we create them)
         bands = 4
         source_layers = []
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         for i in range(bands):
             data1 = np.full((100, 100), i+1)
-            layer1 = RasterLayer(gdal_dataset_with_data((-100+i, 100+i), 1, data1))
+            layer1 = yg.from_array(data1, (-100+i, 100+i), projection)
             source_layers.append(layer1)
 
         intersection = RasterLayer.find_intersection(source_layers)
@@ -66,5 +68,5 @@ def test_stack_tifs_with_area_match() -> None:
 
         #check they do what we expect
         for i in range(bands):
-            o = RasterLayer.layer_from_file(target_path, band=i+1)
+            o = yg.read_raster(target_path, band=i+1)
             assert o.sum() == ((100 - (bands - 1)) * (100 - (bands - 1)) * (i + 1))
