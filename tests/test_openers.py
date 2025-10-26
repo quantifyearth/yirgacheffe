@@ -278,13 +278,13 @@ def test_create_simple_float() -> None:
         actual = layer.read_array(0, 0, 4, 2)
         assert (data == actual).all()
 
-def test_create_simple_int() -> None:
-    projection = MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+def test_create_simple_direct_projection() -> None:
+    expected_projection = MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
     data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-    with yg.from_array(data, (-2.0, 1.0), projection) as layer:
+    with yg.from_array(data, (-2.0, 1.0), (WGS_84_PROJECTION, (1.0, -1.0))) as layer:
         expected_area = Area(left=-2.0, right=2.0, top=1.0, bottom=-1.0)
 
-        assert layer.map_projection == projection
+        assert layer.map_projection == expected_projection
         assert layer.area == expected_area
         assert layer.datatype == DataType.Int64
 
