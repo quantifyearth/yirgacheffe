@@ -13,7 +13,7 @@ except ModuleNotFoundError:
     __version__ = pyproject_data["project"]["version"]
 
 from .layers import YirgacheffeLayer
-from ._core import read_raster, read_rasters, read_shape, read_shape_like, constant, read_narrow_raster
+from ._core import read_raster, read_rasters, read_shape, read_shape_like, constant, read_narrow_raster, from_array
 from .constants import WGS_84_PROJECTION
 from .window import Area, MapProjection, Window
 from ._backends.enumeration import dtype as DataType

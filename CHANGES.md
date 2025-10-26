@@ -1,3 +1,9 @@
+## v1.9.5 (25/10/2025)
+
+### Added
+
+* Added `from_array` method to generate layer from numpy array directly.
+
 ## v1.9.4 (23/10/2025)
 
 ### Added

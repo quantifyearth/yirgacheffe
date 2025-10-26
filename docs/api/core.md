@@ -11,5 +11,6 @@ To get started with yirgacheffe you can import data using the following core met
             - read_shape_like
             - read_rasters
             - constant
+            - from_array
         show_root_heading: false
         show_source: false

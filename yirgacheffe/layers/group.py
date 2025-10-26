@@ -81,7 +81,7 @@ class GroupLayer(YirgacheffeLayer):
 
     @property
     def datatype(self) -> DataType:
-        return DataType.of_gdal(self.layers[0].datatype)
+        return self.layers[0].datatype
 
     def set_window_for_intersection(self, new_area: Area) -> None:
         super().set_window_for_intersection(new_area)

@@ -3,13 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Sequence
 
+import numpy as np
+
 from .layers.area import UniformAreaLayer
 from .layers.base import YirgacheffeLayer
 from .layers.constant import ConstantLayer
 from .layers.group import GroupLayer, TiledGroupLayer
 from .layers.rasters import RasterLayer
 from .layers.vectors import VectorLayer
-from .window import MapProjection
+from .window import Area, MapProjection
 from ._backends.enumeration import dtype as DataType
 
 def read_raster(
@@ -161,3 +163,50 @@ def constant(value: int | float) -> YirgacheffeLayer:
         A constant layer of the provided value.
     """
     return ConstantLayer(value)
+
+def from_array(
+    values: np.ndarray,
+    origin: tuple[float, float],
+    projection: MapProjection | tuple[str, tuple[float, float]],
+) -> YirgacheffeLayer:
+    """Creates an in-memory layer from a numerical array.
+
+    Args:
+        values: a 2D array of data values, with Y on the first dimension, X on
+            the second dimension.
+        origin: the position of the top left pixel in the geospatial space
+        projection: the map projection and pixel scale to use.
+
+    Returns:
+        A geospatial layer that uses the provided data for its values.
+    """
+
+    if projection is None:
+        raise ValueError("Projection must not be none")
+
+    if not isinstance(projection, MapProjection):
+        projection_name, scale_tuple = projection
+        projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
+
+    dims = values.shape
+
+    area = Area(
+        left=origin[0],
+        top=origin[1],
+        right=origin[0] + (projection.xstep * dims[1]),
+        bottom=origin[1] + (projection.ystep * dims[0])
+    )
+
+    layer = RasterLayer.empty_raster_layer(
+        area,
+        scale=projection.scale,
+        datatype=DataType.of_array(values),
+        filename=None,
+        projection=projection.name,
+    )
+    assert layer._dataset
+    assert layer._dataset.RasterXSize == dims[1]
+    assert layer._dataset.RasterYSize == dims[0]
+    layer._dataset.GetRasterBand(1).WriteArray(values, 0, 0)
+
+    return layer

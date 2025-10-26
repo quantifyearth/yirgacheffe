@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import torch
 
-import yirgacheffe
+import yirgacheffe as yg
 from yirgacheffe.window import Area, PixelScale
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
 from yirgacheffe.operators import DataType
@@ -619,7 +619,7 @@ def test_direct_layer_save_and_sum() -> None:
     assert (data1 == actual_data).all()
     assert expected_sum == actual_sum
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_add_to_float_layer_by_np_array() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
@@ -654,7 +654,7 @@ def test_write_mulitband_raster() -> None:
 
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_save_and_sum_float32(monkeypatch) -> None:
     random.seed(42)
     data = []
@@ -673,12 +673,12 @@ def test_save_and_sum_float32(monkeypatch) -> None:
 
     with monkeypatch.context() as m:
         for blocksize in range(1,11):
-            m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+            m.setattr(yg.constants, "YSTEP", blocksize)
             with RasterLayer.empty_raster_layer_like(layer1) as store:
                 actual = layer1.save(store, and_sum=True)
             assert expected == actual
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_parallel_save_and_sum_float32(monkeypatch) -> None:
     random.seed(42)
     data = []
@@ -701,12 +701,12 @@ def test_parallel_save_and_sum_float32(monkeypatch) -> None:
 
         with monkeypatch.context() as m:
             for blocksize in range(1,11):
-                m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+                m.setattr(yg.constants, "YSTEP", blocksize)
                 with RasterLayer.empty_raster_layer_like(layer1) as store:
                     actual = layer1.parallel_save(store, and_sum=True)
                 assert expected == actual
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 def test_sum_float32(monkeypatch) -> None:
     random.seed(42)
     data = []
@@ -725,7 +725,7 @@ def test_sum_float32(monkeypatch) -> None:
 
     with monkeypatch.context() as m:
         for blocksize in range(1,11):
-            m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+            m.setattr(yg.constants, "YSTEP", blocksize)
             actual = layer1.sum()
             assert expected == actual
 
@@ -1511,21 +1511,21 @@ def test_to_geotiff_single_thread_and_sum() -> None:
             actual = result.read_array(0, 0, 4, 2)
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 @pytest.mark.parametrize("parallelism", [
     2,
     True,
 ])
 def test_to_geotiff_parallel_thread(monkeypatch, parallelism) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
             src_filename = os.path.join("src.tif")
             dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=src_filename)
             dataset.Close()
-            with yirgacheffe.read_raster(src_filename) as layer1:
+            with yg.read_raster(src_filename) as layer1:
                 calc = layer1 * 2
                 filename = os.path.join(tempdir, "test.tif")
                 calc.to_geotiff(filename, parallelism=parallelism)
@@ -1535,21 +1535,21 @@ def test_to_geotiff_parallel_thread(monkeypatch, parallelism) -> None:
                     actual = result.read_array(0, 0, 4, 2)
                     assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+@pytest.mark.skipif(yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
 @pytest.mark.parametrize("parallelism", [
     2,
     True,
 ])
 def test_to_geotiff_parallel_thread_and_sum(monkeypatch, parallelism) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
             src_filename = os.path.join("src.tif")
             dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=src_filename)
             dataset.Close()
-            with yirgacheffe.read_raster(src_filename) as layer1:
+            with yg.read_raster(src_filename) as layer1:
                 filename = os.path.join(tempdir, "test.tif")
                 calc = layer1 * 2
                 steps: list[float] = []
@@ -1574,7 +1574,7 @@ def test_raster_and_vector() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        vector = VectorLayer.layer_from_file(path, None, PixelScale(1.0, -1.0), yirgacheffe.WGS_84_PROJECTION)
+        vector = VectorLayer.layer_from_file(path, None, PixelScale(1.0, -1.0), yg.WGS_84_PROJECTION)
 
         calc = raster * vector
         assert calc.sum() > 0.0
@@ -1590,7 +1590,7 @@ def test_raster_and_vector_mixed_projection() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        vector = VectorLayer.layer_from_file(path, None, PixelScale(1.0, -1.0), yirgacheffe.WGS_84_PROJECTION)
+        vector = VectorLayer.layer_from_file(path, None, PixelScale(1.0, -1.0), yg.WGS_84_PROJECTION)
 
         with pytest.raises(ValueError):
             _ = raster * vector
@@ -1626,7 +1626,7 @@ def test_isnan() -> None:
 @pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
 def test_add_byte_layers_read_array_all(monkeypatch, blocksize) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        m.setattr(yg.constants, "YSTEP", blocksize)
         data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
         data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
 
@@ -1642,7 +1642,7 @@ def test_add_byte_layers_read_array_all(monkeypatch, blocksize) -> None:
 @pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
 def test_add_byte_layers_read_array_partial_horizontal(monkeypatch, blocksize) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        m.setattr(yg.constants, "YSTEP", blocksize)
         data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
         data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
 
@@ -1658,7 +1658,7 @@ def test_add_byte_layers_read_array_partial_horizontal(monkeypatch, blocksize) -
 @pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
 def test_add_byte_layers_read_array_partial_vertical(monkeypatch, blocksize) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        m.setattr(yg.constants, "YSTEP", blocksize)
         data1 = np.array([[1, 2], [3, 4], [5, 6], [7, 8]])
         data2 = np.array([[10, 20], [30, 40], [50, 60], [70, 80]])
 
@@ -1674,7 +1674,7 @@ def test_add_byte_layers_read_array_partial_vertical(monkeypatch, blocksize) -> 
 @pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
 def test_add_byte_layers_read_array_partial(monkeypatch, blocksize) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        m.setattr(yg.constants, "YSTEP", blocksize)
         data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
         data2 = np.array([[10, 10, 10, 10], [20, 20, 20, 20], [30, 30, 30, 30], [40, 40, 40, 40]])
 
@@ -1690,13 +1690,14 @@ def test_add_byte_layers_read_array_partial(monkeypatch, blocksize) -> None:
 @pytest.mark.parametrize("blocksize", [1, 2, 4, 8])
 def test_add_byte_layers_read_array_superset(monkeypatch, blocksize) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", blocksize)
+        m.setattr(yg.constants, "YSTEP", blocksize)
         data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
         data2 = np.array([[10, 10, 10, 10], [20, 20, 20, 20], [30, 30, 30, 30], [40, 40, 40, 40]])
 
+        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
         with (
-            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1)) as layer1,
-            RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2)) as layer2,
+            yg.from_array(data1, (0.0, 0.0), projection) as layer1,
+            yg.from_array(data2, (0.0, 0.0), projection) as layer2,
         ):
             comp = layer1 + layer2
             inner_expected = data1 + data2
