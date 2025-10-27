@@ -61,7 +61,7 @@ class MapProjection:
     def scale(self) -> PixelScale:
         return PixelScale(self.xstep, self.ystep)
 
-@dataclass
+@dataclass(frozen=True)
 class Area:
     """Class to hold a geospatial area of data in the given projection.
 
@@ -154,7 +154,7 @@ class Area:
             (other.top >= self.bottom >= other.bottom)
         )
 
-@dataclass
+@dataclass(frozen=True)
 class Window:
     """Class to hold the pixel dimensions of data in the given projection.
 

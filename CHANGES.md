@@ -1,3 +1,9 @@
+## v1.9.6 (27/10/2025)
+
+### Changed
+
+* Area and Window @dataclass types are marked as frozen (i.e., are immutable).
+
 ## v1.9.5 (25/10/2025)
 
 ### Added
