@@ -483,9 +483,6 @@ class LayerOperation(LayerMathMixin):
             except AttributeError:
                 return str(self.lhs)
 
-    def __len__(self) -> int:
-        return len(self.lhs)
-
     def __getstate__(self) -> object:
         odict = self.__dict__.copy()
         if isinstance(self.operator, types.LambdaType):
@@ -498,6 +495,39 @@ class LayerOperation(LayerMathMixin):
             state['operator'] = loads(state['operator_dill'])
             del state['operator_dill']
         self.__dict__.update(state)
+
+    def __hash__(self):
+        frozen_kwargs = tuple(sorted(self.kwargs.items()))
+        children = [self.operator, self.window_op, frozen_kwargs, self.buffer_padding, self.lhs]
+        try:
+            children.append(self.rhs)
+        except AttributeError:
+            pass
+        try:
+            children.append(self.other)
+        except AttributeError:
+            pass
+        return hash(tuple(children))
+
+    def __eq__(self, other) -> bool:
+        main_set = (self.operator == other.operator) and \
+            (self.window_op == other.window_op) and \
+            (self.kwargs == other.kwargs) and \
+            (self.buffer_padding == other.buffer_padding) and \
+            (self.lhs == other.lhs)
+
+        try:
+            main_set = main_set and (self.rhs == other.rhs)
+        except AttributeError:
+            # this is wrong, as we need to ensure both sides have a value or both sides have an exception
+            pass
+        try:
+            main_set = main_set and (self.other == other.other)
+        except AttributeError:
+            # this is wrong, as we need to ensure both sides have a value or both sides have an exception
+            pass
+
+        return main_set
 
     @property
     def area(self) -> Area:
