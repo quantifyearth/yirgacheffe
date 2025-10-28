@@ -496,38 +496,18 @@ class LayerOperation(LayerMathMixin):
             del state['operator_dill']
         self.__dict__.update(state)
 
-    def __hash__(self):
+    def _cse_hash(self):
         frozen_kwargs = tuple(sorted(self.kwargs.items()))
-        children = [self.operator, self.window_op, frozen_kwargs, self.buffer_padding, self.lhs]
+        children = [self.operator, self.window_op, frozen_kwargs, self.buffer_padding, self.lhs._cse_hash()]
         try:
-            children.append(self.rhs)
+            children.append(self.rhs._cse_hash())
         except AttributeError:
             pass
         try:
-            children.append(self.other)
+            children.append(self.other._cse_hash())
         except AttributeError:
             pass
         return hash(tuple(children))
-
-    def __eq__(self, other) -> bool:
-        main_set = (self.operator == other.operator) and \
-            (self.window_op == other.window_op) and \
-            (self.kwargs == other.kwargs) and \
-            (self.buffer_padding == other.buffer_padding) and \
-            (self.lhs == other.lhs)
-
-        try:
-            main_set = main_set and (self.rhs == other.rhs)
-        except AttributeError:
-            # this is wrong, as we need to ensure both sides have a value or both sides have an exception
-            pass
-        try:
-            main_set = main_set and (self.other == other.other)
-        except AttributeError:
-            # this is wrong, as we need to ensure both sides have a value or both sides have an exception
-            pass
-
-        return main_set
 
     @property
     def area(self) -> Area:

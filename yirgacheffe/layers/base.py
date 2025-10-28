@@ -1,4 +1,5 @@
 from __future__ import annotations
+import uuid
 from typing import Any, Sequence
 
 import deprecation
@@ -28,7 +29,7 @@ class YirgacheffeLayer(LayerMathMixin):
         self._active_area: Area | None = None
         self._projection = projection
         self._window: Window | None = None
-        self.name = name
+        self.name = name if name is not None else str(uuid.uuid4())
 
         self.reset_window()
 
@@ -40,6 +41,9 @@ class YirgacheffeLayer(LayerMathMixin):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def _cse_hash(self):
+        return hash((self.name, self._underlying_area, self.map_projection))
 
     def _park(self) -> None:
         pass

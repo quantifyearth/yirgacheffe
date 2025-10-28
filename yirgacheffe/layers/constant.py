@@ -15,14 +15,8 @@ class ConstantLayer(YirgacheffeLayer):
         super().__init__(area, None)
         self.value = float(value)
 
-    def __hash__(self):
+    def _cse_hash(self):
         return hash(self.value)
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, ConstantLayer):
-            return False
-        else:
-            return self.value == other.value
 
     @property
     def datatype(self) -> DataType:

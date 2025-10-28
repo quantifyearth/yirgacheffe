@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from osgeo import gdal
 
+import yirgacheffe as yg
 from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data, gdal_dataset_with_data
 from yirgacheffe.window import Area, PixelScale, Window
 from yirgacheffe.layers import RasterLayer, InvalidRasterBand
@@ -274,3 +275,35 @@ def test_read_array_is_numpy():
         actual = layer1.read_array(0, 0, 4, 2).astype(int)
         expected = data.astype(int)
         assert (actual == expected).all
+
+def test_cse_hash_of_geotiff() -> None:
+    # We assume that on disk rasters are immutable
+    with tempfile.TemporaryDirectory() as tempdir:
+        area = Area(-10, 10, 10, -10)
+
+        path1 = os.path.join(tempdir, "test1.tif")
+        _ = gdal_dataset_of_region(area, 0.02, filename=path1)
+        path2 = os.path.join(tempdir, "test2.tif")
+        _ = gdal_dataset_of_region(area, 0.02, filename=path2)
+
+        with (
+            yg.read_raster(path1) as layer0,
+            yg.read_raster(path1) as layer1,
+            yg.read_raster(path2) as layer2,
+        ):
+            assert layer0._cse_hash() == layer1._cse_hash()
+            assert layer1._cse_hash() != layer2._cse_hash()
+
+def test_cse_hash_in_memory() -> None:
+    # We can't consider in memory rasters the same without hashing the entire dataset, so they
+    # should not match
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+
+    with(
+        yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer0,
+        yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer1,
+        yg.from_array(data2, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer2,
+    ):
+        assert layer0._cse_hash() != layer1._cse_hash()
+        assert layer1._cse_hash() != layer2._cse_hash()

@@ -38,14 +38,14 @@ def test_constant_parallel_save(monkeypatch) -> None:
     (1, 1, True),
     (1.0, 2.0, False),
     (1.0, 1.0, True),
-    (1, 1.0, True),
+    (1, 1.0, True), # This is Python standard behaviour
 ])
-def test_equality_and_hash(lhs,rhs,expected_equal) -> None:
+def test_cse_hash(lhs,rhs,expected_equal) -> None:
     a = yg.constant(lhs)
     b = yg.constant(rhs)
 
-    are_equal = a == b
-    are_hashed_same = hash(a) == hash(b)
+    assert a is not b
+    assert a.name != b.name
 
-    assert expected_equal == are_equal
+    are_hashed_same = a._cse_hash() == b._cse_hash()
     assert expected_equal == are_hashed_same

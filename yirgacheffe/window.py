@@ -41,6 +41,9 @@ class MapProjection:
         self.xstep = xstep
         self.ystep = ystep
 
+    def __hash__(self):
+        return hash((self.name, self.xstep, self.ystep))
+
     def __eq__(self, other) -> bool:
         if other is None:
             return True
