@@ -228,7 +228,7 @@ class Window:
         """
         return Window(
             xoff=self.xoff - pixels,
-            yoff=self.xoff - pixels,
+            yoff=self.yoff - pixels,
             xsize=self.xsize + (2 * pixels),
             ysize=self.ysize + (2 * pixels),
         )
