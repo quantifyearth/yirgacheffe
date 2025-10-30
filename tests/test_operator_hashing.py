@@ -133,12 +133,10 @@ def test_caching_versus_boundary_expansion(mocker, monkeypatch) -> None:
             # this is an API violation, but let's check the table used for CSE
             hash_table = {}
             calc._populate_hash_table(hash_table, calc.window)
+            assert len(hash_table) == 4
+            for val in hash_table.values():
+                assert val == (1, None) # i.e., the two lhs values did not get put in the same hash table row
 
-            # In current CSE implementation, we can't hash np arrays, so the only
-            # thing we can actually cache in theory is the raster array
-            assert len(hash_table) == 2
-            assert hash_table[(lhs._cse_hash, calc.window)] == (1, None)
-            assert hash_table[(lhs._cse_hash, calc.window.grow(1))] == (1, None)
 
 @pytest.mark.parametrize("sequence", [
     [1, 2, 3],

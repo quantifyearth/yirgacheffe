@@ -523,7 +523,16 @@ class LayerOperation(LayerMathMixin):
         if any([x is None for x in child_hashes]):
             return None
 
-        frozen_kwargs = tuple(sorted(self.kwargs.items()))
+        # This really should be recursive
+        def _make_hashable(value):
+            if isinstance(value, (list, tuple, set)):
+                return tuple(value)
+            if isinstance(value, np.ndarray):
+                return id(value)
+            else:
+                return value
+        frozen_kwargs = tuple(sorted((k, _make_hashable(v)) for (k, v) in self.kwargs.items()))
+
         terms = [self.operator, self.window_op, frozen_kwargs, self.buffer_padding] + child_hashes
 
         try:
