@@ -94,9 +94,7 @@ def test_simple_aoh_style_range_check(mocker, monkeypatch) -> None:
         m.setattr(yg.constants, "YSTEP", 1)
 
         data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-        with (
-            yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as lhs,
-        ):
+        with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as lhs:
             calc = (lhs > 2) & (lhs < 7)
 
             # this is an API violation, but let's check the table used for CSE
@@ -128,9 +126,7 @@ def test_caching_versus_boundary_expansion(mocker, monkeypatch) -> None:
 
         matrix = np.array([[0.0, 1.0, 0.0], [1.0, 1.0, 1.0], [0.0, 1.0, 0.0]])
         data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [12, 13, 14, 15]]).astype(np.float32)
-        with (
-            yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as lhs,
-        ):
+        with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as lhs:
             calc = lhs.conv2d(matrix) * lhs
             calc.pretty_print()
 
