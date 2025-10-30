@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import yirgacheffe as yg
 
@@ -126,7 +127,6 @@ def test_caching_versus_boundary_expansion(mocker, monkeypatch) -> None:
         m.setattr(yg.constants, "YSTEP", 1)
 
         matrix = np.array([[0.0, 1.0, 0.0], [1.0, 1.0, 1.0], [0.0, 1.0, 0.0]])
-
         data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [12, 13, 14, 15]]).astype(np.float32)
         with (
             yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as lhs,
@@ -144,5 +144,18 @@ def test_caching_versus_boundary_expansion(mocker, monkeypatch) -> None:
             assert hash_table[(lhs._cse_hash, calc.window)] == (1, None)
             assert hash_table[(lhs._cse_hash, calc.window.grow(1))] == (1, None)
 
+@pytest.mark.parametrize("sequence", [
+    [1, 2, 3],
+    (1, 2, 3),
+    {1, 2, 3},
+])
+def test_isin_hashable(sequence) -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer:
+        calc = layer.isin(sequence)
 
+        assert calc._cse_hash is not None
 
+        expected = np.isin(data1, list(sequence))
+        actual = calc.read_array(0, 0, 4, 2)
+        assert (expected == actual).all()

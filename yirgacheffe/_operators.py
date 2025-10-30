@@ -163,7 +163,7 @@ class LayerMathMixin:
             self,
             op.ISIN,
             window_op=WindowOperation.NONE,
-            test_elements=test_elements,
+            test_elements=tuple(test_elements),
         )
 
     def isnan(self):

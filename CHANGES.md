@@ -4,6 +4,7 @@
 
 * Implemented [common subexpression elimination](https://en.wikipedia.org/wiki/Common_subexpression_elimination) to improve performance.
 * Area and Window @dataclass types are marked as frozen (i.e., are immutable).
+* Test elements for `isin` can now include sets, not just lists and tuples.
 
 ### Fixed
 
