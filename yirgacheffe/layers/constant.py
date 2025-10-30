@@ -15,7 +15,8 @@ class ConstantLayer(YirgacheffeLayer):
         super().__init__(area, None)
         self.value = float(value)
 
-    def _cse_hash(self):
+    @property
+    def _cse_hash(self) -> int:
         return hash(self.value)
 
     @property

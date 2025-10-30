@@ -291,8 +291,8 @@ def test_cse_hash_of_geotiff() -> None:
             yg.read_raster(path1) as layer1,
             yg.read_raster(path2) as layer2,
         ):
-            assert layer0._cse_hash() == layer1._cse_hash()
-            assert layer1._cse_hash() != layer2._cse_hash()
+            assert layer0._cse_hash == layer1._cse_hash
+            assert layer1._cse_hash != layer2._cse_hash
 
 def test_cse_hash_in_memory() -> None:
     # We can't consider in memory rasters the same without hashing the entire dataset, so they
@@ -305,5 +305,5 @@ def test_cse_hash_in_memory() -> None:
         yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer1,
         yg.from_array(data2, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer2,
     ):
-        assert layer0._cse_hash() != layer1._cse_hash()
-        assert layer1._cse_hash() != layer2._cse_hash()
+        assert layer0._cse_hash != layer1._cse_hash
+        assert layer1._cse_hash != layer2._cse_hash

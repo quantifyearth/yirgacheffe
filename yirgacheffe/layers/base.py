@@ -42,8 +42,9 @@ class YirgacheffeLayer(LayerMathMixin):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def _cse_hash(self):
-        return hash((self.name, self._underlying_area, self.map_projection))
+    @property
+    def _cse_hash(self) -> int:
+        return hash((self.name, self._underlying_area, self.map_projection, self._active_area))
 
     def _park(self) -> None:
         pass

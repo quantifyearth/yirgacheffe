@@ -47,5 +47,5 @@ def test_cse_hash(lhs,rhs,expected_equal) -> None:
     assert a is not b
     assert a.name != b.name
 
-    are_hashed_same = a._cse_hash() == b._cse_hash()
+    are_hashed_same = a._cse_hash == b._cse_hash
     assert expected_equal == are_hashed_same
