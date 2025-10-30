@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
+from yirgacheffe.window import Window
 
 def test_simple_constant_expression() -> None:
     with (
@@ -23,7 +24,7 @@ def test_simple_raster_expression() -> None:
 
     with(
         yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer1,
-        yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer2,
+        yg.from_array(data2, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer2,
     ):
         calc0 = layer1 + layer2
         calc1 = layer1 + layer2
@@ -64,7 +65,7 @@ def test_cse_simple(mocker, monkeypatch) -> None:
             calc = (lhs + rhs) * (lhs + rhs)
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table = {}
+            hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
             calc._populate_hash_table(hash_table, calc.window)
 
             assert len(hash_table) == 4
@@ -98,15 +99,15 @@ def test_simple_aoh_style_range_check(mocker, monkeypatch) -> None:
             calc = (lhs > 2) & (lhs < 7)
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table = {}
+            hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
             calc._populate_hash_table(hash_table, calc.window)
 
             assert len(hash_table) == 6
             assert hash_table[(lhs._cse_hash, calc.window)] == (2, None)
-            for k in hash_table.keys():
+            for k, v in hash_table.items():
                 if k == (lhs._cse_hash, calc.window):
                     continue
-                assert hash_table[k] == (1, None)
+                assert v == (1, None)
 
             lhs_spy = mocker.spy(lhs, '_read_array_with_window')
 
@@ -117,7 +118,7 @@ def test_simple_aoh_style_range_check(mocker, monkeypatch) -> None:
 
             assert lhs_spy.call_count == 2
 
-def test_caching_versus_boundary_expansion(mocker, monkeypatch) -> None:
+def test_caching_versus_boundary_expansion(monkeypatch) -> None:
     # If you have a layer that is the source for a convolution, then the window read from it is
     # expanded, so if we have the same layer in and out a convolution, it'll be read at different
     # window sizes, and cause a mess with caching
@@ -131,12 +132,11 @@ def test_caching_versus_boundary_expansion(mocker, monkeypatch) -> None:
             calc.pretty_print()
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table = {}
+            hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
             calc._populate_hash_table(hash_table, calc.window)
             assert len(hash_table) == 4
             for val in hash_table.values():
                 assert val == (1, None) # i.e., the two lhs values did not get put in the same hash table row
-
 
 @pytest.mark.parametrize("sequence", [
     [1, 2, 3],

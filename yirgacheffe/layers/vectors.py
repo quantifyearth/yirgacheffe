@@ -303,7 +303,6 @@ class VectorLayer(YirgacheffeLayer):
         if layer is None:
             raise ValueError('No layer provided')
         self.layer = layer
-        self.name = name
 
         if isinstance(datatype, int):
             self._datatype = DataType.of_gdal(datatype)
@@ -364,7 +363,7 @@ class VectorLayer(YirgacheffeLayer):
                 bottom=floor(min(x[2] for x in envelopes)),
             )
 
-        super().__init__(area, projection)
+        super().__init__(area, projection, name=name)
 
 
     def _get_operation_area(self, projection: MapProjection | None = None) -> Area:

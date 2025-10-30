@@ -16,6 +16,7 @@ from enum import Enum
 from multiprocessing import Semaphore, Process
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
+from typing import Any
 
 import deprecation
 import numpy as np
@@ -54,7 +55,7 @@ class LayerConstant:
         return self.val
 
     @property
-    def _cse_hash(self) -> int:
+    def _cse_hash(self) -> int | None:
         return hash(self.val)
 
     @property
@@ -118,17 +119,19 @@ class LayerMathMixin:
 
     def _eval(
         self,
-        cse_cache,
+        cse_cache:dict[tuple[int, Window], tuple[int, np.ndarray | None]],
         area,
         projection,
         index,
         step,
-        target_window=None,
+        target_window,
     ):
         if self._cse_hash is not None:
             hash_count, hash_data = cse_cache.get((self._cse_hash, target_window), (0, None))
             if hash_data is not None:
                 return hash_data
+        else:
+            hash_count = 0
 
         try:
             window = self.window if target_window is None else target_window
@@ -266,10 +269,10 @@ class LayerMathMixin:
             weights=weights.astype(np.float32),
         )
 
-    def numpy_apply(self, func, other=None):
+    def numpy_apply(self, func: Callable, other=None):
         return LayerOperation(self, func, other)
 
-    def shader_apply(self, func, other=None):
+    def shader_apply(self, func: Callable, other=None):
         return ShaderStyleOperation(self, func, other)
 
     def save(self, destination_layer, and_sum=False, callback=None, band=1):
@@ -361,7 +364,14 @@ class LayerMathMixin:
     def area(self) -> Area:
         raise NotImplementedError("Must be overridden by subclass")
 
+    @property
+    def _cse_hash(self) -> int | None:
+        raise NotImplementedError("Must be overridden by subclass")
+
     def read_array(self, _x, _y, _w, _h):
+        raise NotImplementedError("Must be overridden by subclass")
+
+    def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
         raise NotImplementedError("Must be overridden by subclass")
 
     def show(self, ax=None, max_pixels: int | None =1000, **kwargs):
@@ -438,12 +448,12 @@ class LayerOperation(LayerMathMixin):
 
     def __init__(
         self,
-        lhs,
-        operator=None,
-        rhs=None,
-        other=None,
-        window_op=WindowOperation.NONE,
-        buffer_padding=0,
+        lhs: Any,
+        operator: op | Callable | None = None,
+        rhs: Any = None,
+        other: Any = None,
+        window_op: WindowOperation = WindowOperation.NONE,
+        buffer_padding: int = 0,
         **kwargs
     ):
         self.ystep = constants.YSTEP
@@ -460,7 +470,7 @@ class LayerOperation(LayerMathMixin):
 
         if rhs is not None:
             if backend.isscalar(rhs):
-                self.rhs = LayerConstant(rhs)
+                self.rhs: Any = LayerConstant(rhs)
             elif isinstance(rhs, (backend.array_t)):
                 if rhs.shape == ():
                     self.rhs = LayerConstant(rhs.item())
@@ -475,7 +485,7 @@ class LayerOperation(LayerMathMixin):
 
         if other is not None:
             if backend.isscalar(other):
-                self.other = LayerConstant(other)
+                self.other: Any = LayerConstant(other)
             elif isinstance(other, (backend.array_t)):
                 if other.shape == ():
                     self.rhs = LayerConstant(other.item())
@@ -488,7 +498,12 @@ class LayerOperation(LayerMathMixin):
         else:
             self.other = None
 
-        self._cse_hash = self._calc_cse_hash()
+        # this is expensive, so don't do it all the time
+        self._cse_hash_cache = self._calc_cse_hash()
+
+    @property
+    def _cse_hash(self) -> int | None:
+        return self._cse_hash_cache
 
     def __str__(self) -> str:
         try:
@@ -513,14 +528,14 @@ class LayerOperation(LayerMathMixin):
         self.__dict__.update(state)
 
     @property
-    def _children(self) -> list[Any]:
+    def _children(self) -> list:
         return [x for x in [self.lhs, self.rhs, self.other] if x is not None]
 
     def _calc_cse_hash(self) -> int | None:
         # If we can't hash any of the child nodes then we can't hash this node, as if we can't store
         # their results in the cache, we can't know this result is stable
         child_hashes = [x._cse_hash for x in self._children]
-        if any([x is None for x in child_hashes]):
+        if any(x is None for x in child_hashes):
             return None
 
         # This really should be recursive
@@ -675,33 +690,30 @@ class LayerOperation(LayerMathMixin):
         return projection
 
     def pretty_print(self, prefix="", is_last=True):
-        """Print tree structure."""
-        # Format current node
         kwargs_str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
         label = f"{self.operator}({kwargs_str})" if kwargs_str else self.operator
         label = f"{label} - {self._cse_hash}"
 
-        # Print current node
         connector = "└── " if is_last else "├── "
         print(f"{prefix}{connector}{label}")
 
-        # Prepare prefix for children
         extension = "    " if is_last else "│   "
         new_prefix = prefix + extension
 
-        # Print children
         children = self._children
         for i, child in enumerate(children):
-            child_is_last = (i == len(children) - 1)
+            child_is_last = i == len(children) - 1
             if hasattr(child, 'pretty_print'):
                 child.pretty_print(new_prefix, child_is_last)
             else:
-                # Leaf node
                 child_connector = "└── " if child_is_last else "├── "
                 print(f"{new_prefix}{child_connector}{repr(child)}")
 
-    def _populate_hash_table(self, table: dict[int, tuple(int, np.ndarray | None)], computation_window: Window) -> None:
-
+    def _populate_hash_table(
+        self,
+        table: dict[tuple[int, Window], tuple[int, np.ndarray | None]],
+        computation_window: Window
+    ) -> None:
         if self.buffer_padding:
             computation_window = computation_window.grow(self.buffer_padding)
 
@@ -729,12 +741,12 @@ class LayerOperation(LayerMathMixin):
 
     def _eval(
         self,
-        cse_cache: dict[int, tuple(int, np.ndarray | None)],
+        cse_cache: dict[tuple[int, Window], tuple[int, np.ndarray | None]],
         area: Area,
         projection: MapProjection,
         index: int,
         step: int,
-        target_window: Window | None = None,
+        target_window: Window,
     ):
         if self.buffer_padding:
             if target_window:
@@ -747,15 +759,17 @@ class LayerOperation(LayerMathMixin):
             hash_count, hash_data = cse_cache.get((self._cse_hash, target_window), (0, None))
             if hash_data is not None:
                 return hash_data
+        else:
+            hash_count = 0
 
         lhs_data = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
 
         if self.operator is None:
             result = lhs_data
         else:
-            try:
-                operator: Callable = backend.operator_map[self.operator]
-            except KeyError:
+            if isinstance(self.operator, op):
+                operator = backend.operator_map[self.operator]
+            else:
                 # Handles things like `numpy_apply` where a custom operator is provided
                 operator = self.operator
 
@@ -766,10 +780,7 @@ class LayerOperation(LayerMathMixin):
                 result = operator(lhs_data, rhs_data, other_data, **self.kwargs)
             elif self.rhs is not None:
                 rhs_data = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
-                try:
-                    result = operator(lhs_data, rhs_data, **self.kwargs)
-                except ValueError as exc:
-                    raise
+                result = operator(lhs_data, rhs_data, **self.kwargs)
             else:
                 result = operator(lhs_data, **self.kwargs)
 
@@ -777,7 +788,7 @@ class LayerOperation(LayerMathMixin):
             cse_cache[(self._cse_hash, target_window)] = (hash_count, result)
         return result
 
-    def sum(self):
+    def sum(self) -> float:
         # The result accumulator is float64, and for precision reasons
         # we force the sum to be done in float64 also. Otherwise we
         # see variable results depending on chunk size, as different parts
@@ -785,49 +796,74 @@ class LayerOperation(LayerMathMixin):
         res = 0.0
         computation_window = self.window
         projection = self.map_projection
-        hash_table = {}
+        if projection is None:
+            raise ValueError("No map projection")
+        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
         self._populate_hash_table(hash_table, computation_window)
         for yoffset in range(0, computation_window.ysize, self.ystep):
             hash_table = {k: (count, None) for k, (count, _data) in hash_table.items()}
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(hash_table, self._get_operation_area(projection), projection, yoffset, step, computation_window)
+            chunk = self._eval(
+                hash_table,
+                self._get_operation_area(projection),
+                projection,
+                yoffset,
+                step,
+                computation_window
+            )
             res += backend.sum_op(chunk)
         return res
 
-    def min(self):
-        res = None
+    def min(self) -> float:
+        res = float('inf')
         computation_window = self.window
         projection = self.map_projection
-        hash_table = {}
+        if projection is None:
+            raise ValueError("No map projection")
+        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
         self._populate_hash_table(hash_table, computation_window)
         for yoffset in range(0, computation_window.ysize, self.ystep):
             hash_table = {k: (count, None) for k, (count, _data) in hash_table.items()}
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(hash_table, self._get_operation_area(projection), projection, yoffset, step, computation_window)
-            chunk_min = backend.min_op(chunk)
-            if (res is None) or (res > chunk_min):
-                res = chunk_min
+            chunk = self._eval(
+                hash_table,
+                self._get_operation_area(projection),
+                projection,
+                yoffset,
+                step,
+                computation_window
+            )
+            chunk_min = float(backend.min_op(chunk))
+            res = min(res, chunk_min)
         return res
 
-    def max(self):
-        res = None
+    def max(self) -> float:
+        res = float('-inf')
         computation_window = self.window
         projection = self.map_projection
-        hash_table = {}
+        if projection is None:
+            raise ValueError("No map projection")
+        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
         self._populate_hash_table(hash_table, computation_window)
         for yoffset in range(0, computation_window.ysize, self.ystep):
             hash_table = {k: (count, None) for k, (count, _data) in hash_table.items()}
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(hash_table, self._get_operation_area(projection), projection, yoffset, step, computation_window)
-            chunk_max = backend.max_op(chunk)
-            if (res is None) or (chunk_max > res):
-                res = chunk_max
+            chunk = self._eval(
+                hash_table,
+                self._get_operation_area(projection),
+                projection,
+                yoffset,
+                step,
+                computation_window
+            )
+            chunk_max = float(backend.max_op(chunk))
+            res = max(res, chunk_max)
         return res
 
     def save(self, destination_layer, and_sum=False, callback=None, band=1) -> float | None:
@@ -872,7 +908,7 @@ class LayerOperation(LayerMathMixin):
 
         total = 0.0
 
-        hash_table = {}
+        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
         self._populate_hash_table(hash_table, computation_window)
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
@@ -919,7 +955,14 @@ class LayerOperation(LayerMathMixin):
                     break
                 yoffset, step = task
 
-                result = self._eval({}, self._get_operation_area(projection), projection, yoffset, step, computation_window)
+                result = self._eval(
+                    {},
+                    self._get_operation_area(projection),
+                    projection,
+                    yoffset,
+                    step,
+                    computation_window,
+                )
                 backend.eval_op(result)
 
                 arr[:step] = backend.demote_array(result)
@@ -965,7 +1008,7 @@ class LayerOperation(LayerMathMixin):
             elif and_sum:
                 return self.sum()
             else:
-                raise RuntimeError("Should not be reached")
+                raise RuntimeError("Should not be reached") # pylint: disable=W0707
 
         worker_count = parallelism or multiprocessing.cpu_count()
         work_blocks = len(range(0, computation_window.ysize, self.ystep))
@@ -1196,7 +1239,7 @@ class LayerOperation(LayerMathMixin):
 
         chunks = []
 
-        hash_table = {}
+        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
         self._populate_hash_table(hash_table, computation_window)
 
         for yoffset in range(0, height, self.ystep):
@@ -1211,6 +1254,9 @@ class LayerOperation(LayerMathMixin):
         res = np.vstack(chunks)
 
         return res
+
+    def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
+        raise RuntimeError("Should not be called")
 
 class ShaderStyleOperation(LayerOperation):
 
@@ -1252,6 +1298,9 @@ class ShaderStyleOperation(LayerOperation):
                     result[yoffset][xoffset] = self.operator(lhs_val, **self.kwargs)
 
         return result
+
+    def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
+        raise RuntimeError("Should not be called")
 
 def where(cond, a, b):
     """Return elements chosen from `a` or `b` depending on `cond`.
