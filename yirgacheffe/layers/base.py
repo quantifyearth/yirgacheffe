@@ -44,13 +44,7 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def _cse_hash(self) -> int | None:
-        return hash((
-            self.name,
-            self._underlying_area,
-            self.map_projection,
-            self.datatype,
-            self._active_area
-        ))
+        raise NotImplementedError("Must be overridden by subclass")
 
     def _park(self) -> None:
         pass

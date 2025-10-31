@@ -4,8 +4,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.helpers import make_vectors_with_id, make_vectors_with_multiple_ids, gdal_dataset_of_region
+from tests.helpers import make_vectors_with_id, make_vectors_with_multiple_ids, gdal_dataset_of_region, \
+    gdal_multiband_dataset_with_data
 import yirgacheffe as yg
+from yirgacheffe.layers import H3CellLayer
 from yirgacheffe._operators.cse import CSECacheTable
 from yirgacheffe._backends import backend
 
@@ -62,6 +64,23 @@ def test_raster_ignore_nodata() -> None:
         with (
             yg.read_raster(path, ignore_nodata=True) as layer1,
             yg.read_raster(path, ignore_nodata=False) as layer2,
+        ):
+            assert layer1._cse_hash is not None
+            assert layer2._cse_hash is not None
+            assert layer1._cse_hash != layer2._cse_hash
+
+def test_raster_different_bands() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.tif"
+        data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+        data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+
+        datas = [data1, data2]
+        _ = gdal_multiband_dataset_with_data((0.0, 0.0), 0.02, datas, filename=path)
+
+        with (
+            yg.read_raster(path, band=1) as layer1,
+            yg.read_raster(path, band=2) as layer2,
         ):
             assert layer1._cse_hash is not None
             assert layer2._cse_hash is not None
@@ -147,8 +166,23 @@ def test_simple_group_layer() -> None:
             assert group0._cse_hash is not None
             assert group1._cse_hash is not None
             assert group2._cse_hash is not None
-            # assert group0._cse_hash == group1._cse_hash # TODO: they have unique names, so have diff hashes
-            assert group1._cse_hash != group2._cse_hash   # but this fails safe at least!
+            assert group0._cse_hash == group1._cse_hash
+            assert group1._cse_hash != group2._cse_hash
+
+def test_simple_h3_layers() -> None:
+    with (
+        H3CellLayer("88972eac11fffff", yg.MapProjection("epsg:4326", 0.001, -0.001)) as layer0,
+        H3CellLayer("88972eac11fffff", yg.MapProjection("epsg:4326", 0.001, -0.001)) as layer1,
+        H3CellLayer("88972eac19fffff", yg.MapProjection("epsg:4326", 0.001, -0.001)) as layer2,
+        H3CellLayer("88972eac11fffff", yg.MapProjection("epsg:4326", 0.002, -0.002)) as layer3,
+    ):
+        assert layer0._cse_hash is not None
+        assert layer1._cse_hash is not None
+        assert layer2._cse_hash is not None
+        assert layer3._cse_hash is not None
+        assert layer0._cse_hash == layer1._cse_hash
+        assert layer1._cse_hash != layer2._cse_hash
+        assert layer1._cse_hash != layer3._cse_hash
 
 def test_mixed_raster_constant() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])

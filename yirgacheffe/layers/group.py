@@ -72,6 +72,10 @@ class GroupLayer(YirgacheffeLayer):
         self._underlying_layers.reverse()
         self.layers = self._underlying_layers
 
+    @property
+    def _cse_hash(self) -> int | None:
+        return hash(tuple(x._cse_hash for x in self._underlying_layers))
+
     def _park(self) -> None:
         for layer in self.layers:
             try:
