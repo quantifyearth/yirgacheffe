@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe.window import Window
 from yirgacheffe._operators.cse import CSECacheTable
 
 def test_simple_constant_expression() -> None:
@@ -66,8 +65,7 @@ def test_cse_simple(mocker, monkeypatch) -> None:
             calc = (lhs + rhs) * (lhs + rhs)
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table = CSECacheTable()
-            calc._populate_hash_table(hash_table, calc.window)
+            hash_table = CSECacheTable(calc, calc.window)
 
             assert len(hash_table) == 4
 
@@ -100,8 +98,7 @@ def test_simple_aoh_style_range_check(mocker, monkeypatch) -> None:
             calc = (lhs > 2) & (lhs < 7)
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table = CSECacheTable()
-            calc._populate_hash_table(hash_table, calc.window)
+            hash_table = CSECacheTable(calc, calc.window)
 
             assert len(hash_table) == 6
             assert hash_table._table[(lhs._cse_hash, calc.window)] == (2, None)
@@ -133,8 +130,7 @@ def test_caching_versus_boundary_expansion(monkeypatch) -> None:
             calc.pretty_print()
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table = CSECacheTable()
-            calc._populate_hash_table(hash_table, calc.window)
+            hash_table = CSECacheTable(calc, calc.window)
             assert len(hash_table) == 4
             for val in hash_table._table.values():
                 assert val == (1, None) # i.e., the two lhs values did not get put in the same hash table row

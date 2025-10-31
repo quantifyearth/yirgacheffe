@@ -707,28 +707,6 @@ class LayerOperation(LayerMathMixin):
                 child_connector = "└── " if child_is_last else "├── "
                 print(f"{new_prefix}{child_connector}{repr(child)}")
 
-    def _populate_hash_table(
-        self,
-        table: CSECacheTable,
-        computation_window: Window
-    ) -> None:
-        if self.buffer_padding:
-            computation_window = computation_window.grow(self.buffer_padding)
-
-        count = table.add(self._cse_hash, computation_window)
-        if count > 1:
-            # Don't add a term's children more than once
-            return
-
-        for child in self._children:
-            try:
-                child._populate_hash_table(table, computation_window)
-            except AttributeError:
-                try:
-                    table.add(child._cse_hash, computation_window)
-                except TypeError:
-                    pass
-
     def _eval(
         self,
         cse_cache: CSECacheTable,
@@ -785,16 +763,15 @@ class LayerOperation(LayerMathMixin):
         if projection is None:
             raise ValueError("No map projection")
 
-        hash_table = CSECacheTable()
-        self._populate_hash_table(hash_table, computation_window)
+        cse_cache = CSECacheTable(self, computation_window)
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
-            hash_table.reset_cache()
+            cse_cache.reset_cache()
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(
-                hash_table,
+                cse_cache,
                 self._get_operation_area(projection),
                 projection,
                 yoffset,
@@ -811,16 +788,15 @@ class LayerOperation(LayerMathMixin):
         if projection is None:
             raise ValueError("No map projection")
 
-        hash_table = CSECacheTable()
-        self._populate_hash_table(hash_table, computation_window)
+        cse_cache = CSECacheTable(self, computation_window)
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
-            hash_table.reset_cache()
+            cse_cache.reset_cache()
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(
-                hash_table,
+                cse_cache,
                 self._get_operation_area(projection),
                 projection,
                 yoffset,
@@ -838,16 +814,15 @@ class LayerOperation(LayerMathMixin):
         if projection is None:
             raise ValueError("No map projection")
 
-        hash_table = CSECacheTable()
-        self._populate_hash_table(hash_table, computation_window)
+        cse_cache = CSECacheTable(self, computation_window)
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
-            hash_table.reset_cache()
+            cse_cache.reset_cache()
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(
-                hash_table,
+                cse_cache,
                 self._get_operation_area(projection),
                 projection,
                 yoffset,
@@ -900,19 +875,18 @@ class LayerOperation(LayerMathMixin):
 
         total = 0.0
 
-        hash_table = CSECacheTable()
-        self._populate_hash_table(hash_table, computation_window)
+        cse_cache = CSECacheTable(self, computation_window)
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
 
-            hash_table.reset_cache()
+            cse_cache.reset_cache()
 
             if callback:
                 callback(yoffset / computation_window.ysize)
             step = self.ystep
             if yoffset + step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(hash_table, computation_area, projection, yoffset, step, computation_window)
+            chunk = self._eval(cse_cache, computation_area, projection, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
                 chunk = backend.full((step, destination_window.xsize), chunk)
             band.WriteArray(
@@ -940,8 +914,7 @@ class LayerOperation(LayerMathMixin):
     ):
         # The hashing of python objects isn't stable across processes in general, so we have to do
         # the cache build once per worker
-        cse_cache = CSECacheTable()
-        self._populate_hash_table(cse_cache, computation_window)
+        cse_cache = CSECacheTable(self, computation_window)
 
         arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
         projection = self.map_projection
@@ -1250,15 +1223,14 @@ class LayerOperation(LayerMathMixin):
 
         chunks = []
 
-        hash_table = CSECacheTable()
-        self._populate_hash_table(hash_table, computation_window)
+        cse_cache = CSECacheTable(self, computation_window)
 
         for yoffset in range(0, height, self.ystep):
-            hash_table.reset_cache()
+            cse_cache.reset_cache()
             step = self.ystep
             if yoffset + step > height:
                 step = height - yoffset
-            chunk = self._eval(hash_table, computation_area, projection, yoffset, step, computation_window)
+            chunk = self._eval(cse_cache, computation_area, projection, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
                 chunk = backend.full((step, computation_window.xsize), chunk)
             chunks.append(chunk)

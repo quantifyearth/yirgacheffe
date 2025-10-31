@@ -4,16 +4,14 @@ from ..window import Window
 
 class CSECacheTable:
 
-    def __init__(self) -> None:
+    def __init__(self, expression, window: Window) -> None:
         self._table: dict[tuple[int, Window], tuple[int, backend.array_t | None]] = {}
+        self._populate(expression, window)
 
     def __len__(self) -> int:
         return len(self._table)
 
-    def add(self, cse_hash: int | None, window: Window) -> int:
-        # TODO: Ideally we'd have a constructor or factory that does this and _populate_hash_table
-        # in one so we know that once that phase is done, the table only changes with data
-        # being cached, not the hash/window/count values.
+    def _add(self, cse_hash: int | None, window: Window) -> int:
         if cse_hash is None:
             return 0
 
@@ -25,6 +23,21 @@ class CSECacheTable:
         self._table[(cse_hash, window)] = cache_line
         count, _ = cache_line
         return count
+
+    def _populate(self, expression, window: Window) -> None:
+        used_window = window.grow(expression.buffer_padding)
+        count = self._add(expression._cse_hash, used_window)
+        if count == 1:
+            # We only add children the first time we see an expression, otherwise
+            # we will cache data covered by this node's cache line potentially
+            for child in expression._children:
+                try:
+                    self._populate(child, used_window)
+                except AttributeError:
+                    try:
+                        self._add(child._cse_hash, used_window)
+                    except TypeError:
+                        pass
 
     def set_data(self, cse_hash: int | None, window: Window, data: backend.array_t):
         if cse_hash is not None:
