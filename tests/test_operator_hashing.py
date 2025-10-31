@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.helpers import make_vectors_with_id, gdal_dataset_of_region
+from tests.helpers import make_vectors_with_id, make_vectors_with_multiple_ids, gdal_dataset_of_region
 import yirgacheffe as yg
 from yirgacheffe._operators.cse import CSECacheTable
 from yirgacheffe._backends import backend
@@ -91,6 +91,27 @@ def test_vector_different_burn() -> None:
             assert shape1._cse_hash is not None
             assert shape2._cse_hash is not None
             assert shape1._cse_hash != shape2._cse_hash
+
+def test_vector_different_where() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        areas = {
+            (yg.Area(0.0, 0.0, 10, -10), 42),
+            (yg.Area(0.0, 0.0, 10, -10), 43)
+        }
+        make_vectors_with_multiple_ids(areas, path)
+
+        with (
+            yg.read_shape(path) as shape0,
+            yg.read_shape(path, where_filter="id_no=42") as shape1,
+            yg.read_shape(path, where_filter="id_no=43") as shape2,
+        ):
+            assert shape0._cse_hash is not None
+            assert shape1._cse_hash is not None
+            assert shape2._cse_hash is not None
+            assert shape0._cse_hash != shape1._cse_hash
+            assert shape1._cse_hash != shape2._cse_hash
+            assert shape0._cse_hash != shape2._cse_hash
 
 def test_vector_different_datatype() -> None:
     with tempfile.TemporaryDirectory() as tempdir:

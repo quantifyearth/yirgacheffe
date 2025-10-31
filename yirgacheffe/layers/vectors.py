@@ -448,7 +448,8 @@ class VectorLayer(YirgacheffeLayer):
             self.map_projection,
             self._active_area,
             self._datatype,
-            self.burn_value
+            self.burn_value,
+            self._filter,
         ))
 
     @property

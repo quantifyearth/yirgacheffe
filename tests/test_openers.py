@@ -12,7 +12,7 @@ from yirgacheffe.layers import InvalidRasterBand, RasterLayer
 from yirgacheffe.window import Area, MapProjection, Window
 from yirgacheffe.operators import DataType
 from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data, \
-    make_vectors_with_id, make_vectors_with_mutlile_ids
+    make_vectors_with_id, make_vectors_with_multiple_ids
 
 def test_raster_from_nonexistent_file() -> None:
     with pytest.raises(FileNotFoundError):
@@ -136,7 +136,7 @@ def test_open_gpkg_with_filter() -> None:
             (Area(-10.0, 10.0, 0.0, 0.0), 42),
             (Area(0.0, 0.0, 10, -10), 43)
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         with yg.read_shape(path, (WGS_84_PROJECTION, (1.0, -1.0)), "id_no=42") as layer:
             assert layer.area == Area(-10.0, 10.0, 0.0, 0.0)

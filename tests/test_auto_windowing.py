@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from tests.helpers import gdal_dataset_with_data, make_vectors_with_mutlile_ids
+from tests.helpers import gdal_dataset_with_data, make_vectors_with_multiple_ids
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
 from yirgacheffe.window import Area
 
@@ -208,7 +208,7 @@ def test_vector_layers_add() -> None:
                 (Area(-10.0, 10.0, 0.0, 0.0), 42),
                 (Area(0.0, 0.0, 10, -10), 43)
             }
-            make_vectors_with_mutlile_ids(areas, path)
+            make_vectors_with_multiple_ids(areas, path)
 
             burn_value = 2
             with VectorLayer.layer_from_file(
@@ -242,7 +242,7 @@ def test_vector_layers_add_unbound_rhs() -> None:
                 (Area(-10.0, 10.0, 0.0, 0.0), 42),
                 (Area(0.0, 0.0, 10, -10), 43)
             }
-            make_vectors_with_mutlile_ids(areas, path)
+            make_vectors_with_multiple_ids(areas, path)
 
             burn_value = 2
             with VectorLayer.layer_from_file(path, None, None, None, burn_value=burn_value) as vector_layer:
@@ -269,7 +269,7 @@ def test_vector_layers_add_unbound_lhs() -> None:
                 (Area(-10.0, 10.0, 0.0, 0.0), 42),
                 (Area(0.0, 0.0, 10, -10), 43)
             }
-            make_vectors_with_mutlile_ids(areas, path)
+            make_vectors_with_multiple_ids(areas, path)
 
             burn_value = 2
             with VectorLayer.layer_from_file(path, None, None, None, burn_value=burn_value) as vector_layer:
@@ -297,7 +297,7 @@ def test_vector_layers_multiply() -> None:
             (Area(-10.0, 10.0, 0.0, 0.0), 42),
             (Area(0.0, 0.0, 10, -10), 43)
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         burn_value = 2
         layer2 = VectorLayer.layer_from_file(path, None, layer1.pixel_scale, layer1.projection, burn_value=burn_value)
