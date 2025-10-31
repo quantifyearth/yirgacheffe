@@ -44,7 +44,13 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def _cse_hash(self) -> int | None:
-        return hash((self.name, self._underlying_area, self.map_projection, self._active_area))
+        return hash((
+            self.name,
+            self._underlying_area,
+            self.map_projection,
+            self.datatype,
+            self._active_area
+        ))
 
     def _park(self) -> None:
         pass

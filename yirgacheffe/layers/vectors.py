@@ -441,6 +441,17 @@ class VectorLayer(YirgacheffeLayer):
                 self.layer.SetAttributeFilter(self._filter)
 
     @property
+    def _cse_hash(self) -> int | None:
+        return hash((
+            self.name,
+            self._underlying_area,
+            self.map_projection,
+            self._active_area,
+            self._datatype,
+            self.burn_value
+        ))
+
+    @property
     def datatype(self) -> DataType:
         return self._datatype
 

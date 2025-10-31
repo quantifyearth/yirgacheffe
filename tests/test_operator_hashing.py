@@ -1,6 +1,10 @@
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import pytest
 
+from tests.helpers import make_vectors_with_id, gdal_dataset_of_region
 import yirgacheffe as yg
 from yirgacheffe._operators.cse import CSECacheTable
 from yirgacheffe._backends import backend
@@ -34,6 +38,96 @@ def test_simple_raster_expression() -> None:
         assert calc0 is not calc1
         assert calc0._cse_hash == calc1._cse_hash
         assert calc1._cse_hash != calc2._cse_hash
+
+def test_raster_different_datatype() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+
+    with(
+        yg.from_array(data1.astype(np.int16), (0, 0), ("epsg:4326", (1.0, -1.0))) as layer1,
+        yg.from_array(data1.astype(np.float32), (0, 0), ("epsg:4326", (1.0, -1.0))) as layer2,
+    ):
+        assert layer1.datatype == yg.DataType.Int16
+        assert layer2.datatype == yg.DataType.Float32
+
+        assert layer1._cse_hash is not None
+        assert layer2._cse_hash is not None
+        assert layer1._cse_hash != layer2._cse_hash
+
+def test_raster_ignore_nodata() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.tif"
+        area = yg.Area(-10, 10, 10, -10)
+        _ = gdal_dataset_of_region(area, 0.02, filename=path)
+
+        with (
+            yg.read_raster(path, ignore_nodata=True) as layer1,
+            yg.read_raster(path, ignore_nodata=False) as layer2,
+        ):
+            assert layer1._cse_hash is not None
+            assert layer2._cse_hash is not None
+            assert layer1._cse_hash != layer2._cse_hash
+
+def test_simple_vector_expression() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = yg.Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        with yg.read_shape(path) as shape:
+            assert shape._cse_hash is not None
+            calc = shape * 2
+            assert calc._cse_hash is not None
+
+def test_vector_different_burn() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = yg.Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        with (
+            yg.read_shape(path, burn_value=1) as shape1,
+            yg.read_shape(path, burn_value=2) as shape2,
+        ):
+            assert shape1._cse_hash is not None
+            assert shape2._cse_hash is not None
+            assert shape1._cse_hash != shape2._cse_hash
+
+def test_vector_different_datatype() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = yg.Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        with (
+            yg.read_shape(path, datatype=yg.DataType.Int16) as shape1,
+            yg.read_shape(path, datatype=yg.DataType.Float32) as shape2,
+        ):
+            assert shape1._cse_hash is not None
+            assert shape2._cse_hash is not None
+            assert shape1._cse_hash != shape2._cse_hash
+
+def test_simple_group_layer() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path1 = Path(tempdir) / "1.tif"
+        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+        with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer:
+            layer.to_geotiff(path1)
+
+        path2 = Path(tempdir) / "2.tif"
+        data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
+        with yg.from_array(data2, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer:
+            layer.to_geotiff(path2)
+
+        with (
+            yg.read_rasters([path1, path2]) as group0,
+            yg.read_rasters([path1, path2]) as group1,
+            yg.read_rasters([path1]) as group2,
+        ):
+            assert group0._cse_hash is not None
+            assert group1._cse_hash is not None
+            assert group2._cse_hash is not None
+            # assert group0._cse_hash == group1._cse_hash # TODO: they have unique names, so have diff hashes
+            assert group1._cse_hash != group2._cse_hash   # but this fails safe at least!
 
 def test_mixed_raster_constant() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
