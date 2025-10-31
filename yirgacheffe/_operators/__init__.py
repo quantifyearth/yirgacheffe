@@ -13,7 +13,8 @@ import types
 from collections.abc import Callable
 from contextlib import ExitStack
 from enum import Enum
-from multiprocessing import Semaphore, Process
+from multiprocessing import Process, Semaphore
+from multiprocessing.synchronize import Semaphore as SemaphoreType
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,7 @@ from .._backends.enumeration import operators as op
 from .._backends.enumeration import dtype as DataType
 from .._backends.numpy import dtype_to_backend as dtype_to_numpy
 from .._backends.numpy import backend_to_dtype as numpy_to_dtype
+from .cse import CSECacheTable
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -119,19 +121,16 @@ class LayerMathMixin:
 
     def _eval(
         self,
-        cse_cache:dict[tuple[int, Window], tuple[int, np.ndarray | None]],
-        area,
-        projection,
-        index,
-        step,
-        target_window,
+        cse_cache: CSECacheTable,
+        area: Area,
+        projection: MapProjection,
+        index: int,
+        step: int,
+        target_window: Window,
     ):
-        if self._cse_hash is not None:
-            hash_count, hash_data = cse_cache.get((self._cse_hash, target_window), (0, None))
-            if hash_data is not None:
-                return hash_data
-        else:
-            hash_count = 0
+        cache_data = cse_cache.get_data(self._cse_hash, target_window)
+        if cache_data is not None:
+            return cache_data
 
         try:
             window = self.window if target_window is None else target_window
@@ -146,8 +145,7 @@ class LayerMathMixin:
                 step
             )
 
-        if self._cse_hash is not None and hash_count > 1:
-            cse_cache[(self._cse_hash, target_window)] = (hash_count, result)
+        cse_cache.set_data(self._cse_hash, target_window, result)
         return result
 
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
@@ -711,37 +709,29 @@ class LayerOperation(LayerMathMixin):
 
     def _populate_hash_table(
         self,
-        table: dict[tuple[int, Window], tuple[int, np.ndarray | None]],
+        table: CSECacheTable,
         computation_window: Window
     ) -> None:
         if self.buffer_padding:
             computation_window = computation_window.grow(self.buffer_padding)
 
-        if self._cse_hash is not None:
-            try:
-                count, data = table[(self._cse_hash, computation_window)]
-                table[(self._cse_hash, computation_window)] = (count + 1, data)
-                return
-            except KeyError:
-                table[(self._cse_hash, computation_window)] = (1, None)
+        count = table.add(self._cse_hash, computation_window)
+        if count > 1:
+            # Don't add a term's children more than once
+            return
 
         for child in self._children:
             try:
                 child._populate_hash_table(table, computation_window)
             except AttributeError:
                 try:
-                    that = child._cse_hash
-                    try:
-                        count, data = table[(that, computation_window)]
-                        table[(that, computation_window)] = (count + 1, data)
-                    except KeyError:
-                        table[(that, computation_window)] = (1, None)
+                    table.add(child._cse_hash, computation_window)
                 except TypeError:
                     pass
 
     def _eval(
         self,
-        cse_cache: dict[tuple[int, Window], tuple[int, np.ndarray | None]],
+        cse_cache: CSECacheTable,
         area: Area,
         projection: MapProjection,
         index: int,
@@ -755,12 +745,9 @@ class LayerOperation(LayerMathMixin):
             # The index doesn't need updating because we updated area/window
             step += (2 * self.buffer_padding)
 
-        if self._cse_hash is not None:
-            hash_count, hash_data = cse_cache.get((self._cse_hash, target_window), (0, None))
-            if hash_data is not None:
-                return hash_data
-        else:
-            hash_count = 0
+        cache_data = cse_cache.get_data(self._cse_hash, target_window)
+        if cache_data is not None:
+            return cache_data
 
         lhs_data = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
 
@@ -784,8 +771,7 @@ class LayerOperation(LayerMathMixin):
             else:
                 result = operator(lhs_data, **self.kwargs)
 
-        if self._cse_hash is not None and hash_count > 1:
-            cse_cache[(self._cse_hash, target_window)] = (hash_count, result)
+        cse_cache.set_data(self._cse_hash, target_window, result)
         return result
 
     def sum(self) -> float:
@@ -798,10 +784,12 @@ class LayerOperation(LayerMathMixin):
         projection = self.map_projection
         if projection is None:
             raise ValueError("No map projection")
-        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
+
+        hash_table = CSECacheTable()
         self._populate_hash_table(hash_table, computation_window)
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
-            hash_table = {k: (count, None) for k, (count, _data) in hash_table.items()}
+            hash_table.reset_cache()
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
@@ -822,10 +810,12 @@ class LayerOperation(LayerMathMixin):
         projection = self.map_projection
         if projection is None:
             raise ValueError("No map projection")
-        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
+
+        hash_table = CSECacheTable()
         self._populate_hash_table(hash_table, computation_window)
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
-            hash_table = {k: (count, None) for k, (count, _data) in hash_table.items()}
+            hash_table.reset_cache()
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
@@ -847,10 +837,12 @@ class LayerOperation(LayerMathMixin):
         projection = self.map_projection
         if projection is None:
             raise ValueError("No map projection")
-        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
+
+        hash_table = CSECacheTable()
         self._populate_hash_table(hash_table, computation_window)
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
-            hash_table = {k: (count, None) for k, (count, _data) in hash_table.items()}
+            hash_table.reset_cache()
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
@@ -908,12 +900,12 @@ class LayerOperation(LayerMathMixin):
 
         total = 0.0
 
-        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
+        hash_table = CSECacheTable()
         self._populate_hash_table(hash_table, computation_window)
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
 
-            hash_table = {k: (count, None) for k, (count, _data) in hash_table.items()}
+            hash_table.reset_cache()
 
             if callback:
                 callback(yoffset / computation_window.ysize)
@@ -935,11 +927,30 @@ class LayerOperation(LayerMathMixin):
 
         return total if and_sum else None
 
-    def _parallel_worker(self, index, shared_mem, sem, np_dtype, width, input_queue, output_queue, computation_window):
+    def _parallel_worker(
+        self,
+        index : int,
+        shared_mem,
+        sem : SemaphoreType,
+        np_dtype : type,
+        width : int,
+        input_queue : multiprocessing.Queue,
+        output_queue : multiprocessing.Queue,
+        computation_window : Window,
+    ):
+        # The hashing of python objects isn't stable across processes in general, so we have to do
+        # the cache build once per worker
+        cse_cache = CSECacheTable()
+        self._populate_hash_table(cse_cache, computation_window)
+
         arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
         projection = self.map_projection
+        # TODO: the `save` method does more sanity checking that parallel save!
+        assert projection is not None
         try:
             while True:
+                cse_cache.reset_cache()
+
                 # We acquire the lock so we know we have somewhere to put the
                 # result before we take work. This is because in practice
                 # it seems the writing to GeoTIFF is the bottleneck, and
@@ -956,7 +967,7 @@ class LayerOperation(LayerMathMixin):
                 yoffset, step = task
 
                 result = self._eval(
-                    {},
+                    cse_cache,
                     self._get_operation_area(projection),
                     projection,
                     yoffset,
@@ -1106,7 +1117,7 @@ class LayerOperation(LayerMathMixin):
                         computation_window.xsize,
                         source_queue,
                         result_queue,
-                        computation_window
+                        computation_window,
                     )) for i in range(worker_count)]
                     for worker in workers:
                         worker.start()
@@ -1239,11 +1250,11 @@ class LayerOperation(LayerMathMixin):
 
         chunks = []
 
-        hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
+        hash_table = CSECacheTable()
         self._populate_hash_table(hash_table, computation_window)
 
         for yoffset in range(0, height, self.ystep):
-            hash_table = {k: (count, None) for k, (count, _data) in hash_table.items()}
+            hash_table.reset_cache()
             step = self.ystep
             if yoffset + step > height:
                 step = height - yoffset

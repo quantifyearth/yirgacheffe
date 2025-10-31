@@ -3,6 +3,7 @@ import pytest
 
 import yirgacheffe as yg
 from yirgacheffe.window import Window
+from yirgacheffe._operators.cse import CSECacheTable
 
 def test_simple_constant_expression() -> None:
     with (
@@ -65,7 +66,7 @@ def test_cse_simple(mocker, monkeypatch) -> None:
             calc = (lhs + rhs) * (lhs + rhs)
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
+            hash_table = CSECacheTable()
             calc._populate_hash_table(hash_table, calc.window)
 
             assert len(hash_table) == 4
@@ -75,10 +76,10 @@ def test_cse_simple(mocker, monkeypatch) -> None:
             lhs_hash = lhs._cse_hash
             rhs_hash = rhs._cse_hash
 
-            assert hash_table[(top_level_hash, calc.window)] == (1, None)
-            assert hash_table[(common_term_hash, calc.window)] == (2, None)
-            assert hash_table[(lhs_hash, calc.window)] == (1, None)
-            assert hash_table[(rhs_hash, calc.window)] == (1, None)
+            assert hash_table._table[(top_level_hash, calc.window)] == (1, None)
+            assert hash_table._table[(common_term_hash, calc.window)] == (2, None)
+            assert hash_table._table[(lhs_hash, calc.window)] == (1, None)
+            assert hash_table._table[(rhs_hash, calc.window)] == (1, None)
 
             lhs_spy = mocker.spy(lhs, '_read_array_with_window')
             rhs_spy = mocker.spy(rhs, '_read_array_for_area')
@@ -99,12 +100,12 @@ def test_simple_aoh_style_range_check(mocker, monkeypatch) -> None:
             calc = (lhs > 2) & (lhs < 7)
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
+            hash_table = CSECacheTable()
             calc._populate_hash_table(hash_table, calc.window)
 
             assert len(hash_table) == 6
-            assert hash_table[(lhs._cse_hash, calc.window)] == (2, None)
-            for k, v in hash_table.items():
+            assert hash_table._table[(lhs._cse_hash, calc.window)] == (2, None)
+            for k, v in hash_table._table.items():
                 if k == (lhs._cse_hash, calc.window):
                     continue
                 assert v == (1, None)
@@ -132,10 +133,10 @@ def test_caching_versus_boundary_expansion(monkeypatch) -> None:
             calc.pretty_print()
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table: dict[tuple[int, Window], tuple[int, np.ndarray | None]] = {}
+            hash_table = CSECacheTable()
             calc._populate_hash_table(hash_table, calc.window)
             assert len(hash_table) == 4
-            for val in hash_table.values():
+            for val in hash_table._table.values():
                 assert val == (1, None) # i.e., the two lhs values did not get put in the same hash table row
 
 @pytest.mark.parametrize("sequence", [
