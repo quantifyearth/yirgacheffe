@@ -916,7 +916,7 @@ class LayerOperation(LayerMathMixin):
         # the cache build once per worker
         cse_cache = CSECacheTable(self, computation_window)
 
-        arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
+        arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf) # type: ignore[var-annotated]
         projection = self.map_projection
         # TODO: the `save` method does more sanity checking that parallel save!
         assert projection is not None
