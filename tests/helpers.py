@@ -188,7 +188,7 @@ def make_vectors_with_id(identifier: int, areas: set[Area], filename: str | Path
 
     package.Close()
 
-def make_vectors_with_mutlile_ids(areas: set[tuple[Area, int]], filename: str | Path) -> None:
+def make_vectors_with_multiple_ids(areas: set[tuple[Area, int]], filename: str | Path) -> None:
     srs = ogr.osr.SpatialReference()
     srs.ImportFromEPSG(4326)
 

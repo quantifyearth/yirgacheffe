@@ -13,9 +13,11 @@ import types
 from collections.abc import Callable
 from contextlib import ExitStack
 from enum import Enum
-from multiprocessing import Semaphore, Process
+from multiprocessing import Process, Semaphore
+from multiprocessing.synchronize import Semaphore as SemaphoreType
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
+from typing import Any
 
 import deprecation
 import numpy as np
@@ -24,14 +26,15 @@ from osgeo import gdal
 from dill import dumps, loads # type: ignore
 from pyproj import Transformer
 
-from . import constants, __version__
-from .rounding import round_up_pixels, round_down_pixels
-from .window import Area, PixelScale, MapProjection, Window
-from ._backends import backend
-from ._backends.enumeration import operators as op
-from ._backends.enumeration import dtype as DataType
-from ._backends.numpy import dtype_to_backend as dtype_to_numpy
-from ._backends.numpy import backend_to_dtype as numpy_to_dtype
+from .. import constants, __version__
+from ..rounding import round_up_pixels, round_down_pixels
+from ..window import Area, PixelScale, MapProjection, Window
+from .._backends import backend
+from .._backends.enumeration import operators as op
+from .._backends.enumeration import dtype as DataType
+from .._backends.numpy import dtype_to_backend as dtype_to_numpy
+from .._backends.numpy import backend_to_dtype as numpy_to_dtype
+from .cse import CSECacheTable
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -50,8 +53,12 @@ class LayerConstant:
     def __str__(self) -> str:
         return str(self.val)
 
-    def _eval(self, _area, _projection, _index, _step, _target_window):
+    def _eval(self, _cse_cache, _area, _projection, _index, _step, _target_window):
         return self.val
+
+    @property
+    def _cse_hash(self) -> int | None:
+        return hash(self.val)
 
     @property
     def datatype(self) -> DataType:
@@ -114,17 +121,22 @@ class LayerMathMixin:
 
     def _eval(
         self,
-        area,
-        projection,
-        index,
-        step,
-        target_window=None
+        cse_cache: CSECacheTable,
+        area: Area,
+        projection: MapProjection,
+        index: int,
+        step: int,
+        target_window: Window,
     ):
+        cache_data = cse_cache.get_data(self._cse_hash, target_window)
+        if cache_data is not None:
+            return cache_data
+
         try:
             window = self.window if target_window is None else target_window
-            return self._read_array_for_area(area, projection, 0, index, window.xsize, step)
+            result = self._read_array_for_area(area, projection, 0, index, window.xsize, step)
         except AttributeError:
-            return self._read_array_for_area(
+            result = self._read_array_for_area(
                 area,
                 projection,
                 0,
@@ -132,6 +144,9 @@ class LayerMathMixin:
                 target_window.xsize if target_window else 1,
                 step
             )
+
+        cse_cache.set_data(self._cse_hash, target_window, result)
+        return result
 
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(
@@ -149,7 +164,7 @@ class LayerMathMixin:
             self,
             op.ISIN,
             window_op=WindowOperation.NONE,
-            test_elements=test_elements,
+            test_elements=tuple(test_elements),
         )
 
     def isnan(self):
@@ -252,10 +267,10 @@ class LayerMathMixin:
             weights=weights.astype(np.float32),
         )
 
-    def numpy_apply(self, func, other=None):
+    def numpy_apply(self, func: Callable, other=None):
         return LayerOperation(self, func, other)
 
-    def shader_apply(self, func, other=None):
+    def shader_apply(self, func: Callable, other=None):
         return ShaderStyleOperation(self, func, other)
 
     def save(self, destination_layer, and_sum=False, callback=None, band=1):
@@ -347,7 +362,14 @@ class LayerMathMixin:
     def area(self) -> Area:
         raise NotImplementedError("Must be overridden by subclass")
 
+    @property
+    def _cse_hash(self) -> int | None:
+        raise NotImplementedError("Must be overridden by subclass")
+
     def read_array(self, _x, _y, _w, _h):
+        raise NotImplementedError("Must be overridden by subclass")
+
+    def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
         raise NotImplementedError("Must be overridden by subclass")
 
     def show(self, ax=None, max_pixels: int | None =1000, **kwargs):
@@ -424,12 +446,12 @@ class LayerOperation(LayerMathMixin):
 
     def __init__(
         self,
-        lhs,
-        operator=None,
-        rhs=None,
-        other=None,
-        window_op=WindowOperation.NONE,
-        buffer_padding=0,
+        lhs: Any,
+        operator: op | Callable | None = None,
+        rhs: Any = None,
+        other: Any = None,
+        window_op: WindowOperation = WindowOperation.NONE,
+        buffer_padding: int = 0,
         **kwargs
     ):
         self.ystep = constants.YSTEP
@@ -446,7 +468,7 @@ class LayerOperation(LayerMathMixin):
 
         if rhs is not None:
             if backend.isscalar(rhs):
-                self.rhs = LayerConstant(rhs)
+                self.rhs: Any = LayerConstant(rhs)
             elif isinstance(rhs, (backend.array_t)):
                 if rhs.shape == ():
                     self.rhs = LayerConstant(rhs.item())
@@ -461,7 +483,7 @@ class LayerOperation(LayerMathMixin):
 
         if other is not None:
             if backend.isscalar(other):
-                self.other = LayerConstant(other)
+                self.other: Any = LayerConstant(other)
             elif isinstance(other, (backend.array_t)):
                 if other.shape == ():
                     self.rhs = LayerConstant(other.item())
@@ -474,6 +496,13 @@ class LayerOperation(LayerMathMixin):
         else:
             self.other = None
 
+        # this is expensive, so don't do it all the time
+        self._cse_hash_cache = self._calc_cse_hash()
+
+    @property
+    def _cse_hash(self) -> int | None:
+        return self._cse_hash_cache
+
     def __str__(self) -> str:
         try:
             return f"({self.lhs} {self.operator} {self.rhs})"
@@ -482,9 +511,6 @@ class LayerOperation(LayerMathMixin):
                 return f"({self.operator} {self.lhs})"
             except AttributeError:
                 return str(self.lhs)
-
-    def __len__(self) -> int:
-        return len(self.lhs)
 
     def __getstate__(self) -> object:
         odict = self.__dict__.copy()
@@ -498,6 +524,35 @@ class LayerOperation(LayerMathMixin):
             state['operator'] = loads(state['operator_dill'])
             del state['operator_dill']
         self.__dict__.update(state)
+
+    @property
+    def _children(self) -> list:
+        return [x for x in [self.lhs, self.rhs, self.other] if x is not None]
+
+    def _calc_cse_hash(self) -> int | None:
+        # If we can't hash any of the child nodes then we can't hash this node, as if we can't store
+        # their results in the cache, we can't know this result is stable
+        child_hashes = [x._cse_hash for x in self._children]
+        if any(x is None for x in child_hashes):
+            return None
+
+        # This really should be recursive
+        def _make_hashable(value):
+            if isinstance(value, (list, tuple, set)):
+                return tuple(value)
+            if isinstance(value, np.ndarray):
+                return id(value)
+            else:
+                return value
+        frozen_kwargs = tuple(sorted((k, _make_hashable(v)) for (k, v) in self.kwargs.items()))
+
+        terms = [self.operator, self.window_op, frozen_kwargs, self.buffer_padding] + child_hashes
+
+        try:
+            return hash(tuple(terms))
+        except TypeError:
+            # This is assumed to be because kwargs contains something unhashable
+            return None
 
     @property
     def area(self) -> Area:
@@ -546,7 +601,7 @@ class LayerOperation(LayerMathMixin):
                 )
                 return union
             case _:
-                assert False, "Should not be reached"
+                raise RuntimeError("Should not be reached")
 
     @property
     @deprecation.deprecated(
@@ -632,15 +687,35 @@ class LayerOperation(LayerMathMixin):
                 pass
         return projection
 
+    def pretty_print(self, prefix="", is_last=True):
+        kwargs_str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+        label = f"{self.operator}({kwargs_str})" if kwargs_str else self.operator
+        label = f"{label} - {self._cse_hash}"
+
+        connector = "└── " if is_last else "├── "
+        print(f"{prefix}{connector}{label}")
+
+        extension = "    " if is_last else "│   "
+        new_prefix = prefix + extension
+
+        children = self._children
+        for i, child in enumerate(children):
+            child_is_last = i == len(children) - 1
+            if hasattr(child, 'pretty_print'):
+                child.pretty_print(new_prefix, child_is_last)
+            else:
+                child_connector = "└── " if child_is_last else "├── "
+                print(f"{new_prefix}{child_connector}{repr(child)}")
+
     def _eval(
         self,
+        cse_cache: CSECacheTable,
         area: Area,
         projection: MapProjection,
         index: int,
         step: int,
-        target_window: Window | None = None
+        target_window: Window,
     ):
-
         if self.buffer_padding:
             if target_window:
                 target_window = target_window.grow(self.buffer_padding)
@@ -648,30 +723,36 @@ class LayerOperation(LayerMathMixin):
             # The index doesn't need updating because we updated area/window
             step += (2 * self.buffer_padding)
 
-        lhs_data = self.lhs._eval(area, projection, index, step, target_window)
+        cache_data = cse_cache.get_data(self._cse_hash, target_window)
+        if cache_data is not None:
+            return cache_data
+
+        lhs_data = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
 
         if self.operator is None:
-            return lhs_data
+            result = lhs_data
+        else:
+            if isinstance(self.operator, op):
+                operator = backend.operator_map[self.operator]
+            else:
+                # Handles things like `numpy_apply` where a custom operator is provided
+                operator = self.operator
 
-        try:
-            operator: Callable = backend.operator_map[self.operator]
-        except KeyError:
-            # Handles things like `numpy_apply` where a custom operator is provided
-            operator = self.operator
+            if self.other is not None:
+                assert self.rhs is not None
+                rhs_data = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
+                other_data = self.other._eval(cse_cache, area, projection, index, step, target_window)
+                result = operator(lhs_data, rhs_data, other_data, **self.kwargs)
+            elif self.rhs is not None:
+                rhs_data = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
+                result = operator(lhs_data, rhs_data, **self.kwargs)
+            else:
+                result = operator(lhs_data, **self.kwargs)
 
-        if self.other is not None:
-            assert self.rhs is not None
-            rhs_data = self.rhs._eval(area, projection, index, step, target_window)
-            other_data = self.other._eval(area, projection, index, step, target_window)
-            return operator(lhs_data, rhs_data, other_data, **self.kwargs)
+        cse_cache.set_data(self._cse_hash, target_window, result)
+        return result
 
-        if self.rhs is not None:
-            rhs_data = self.rhs._eval(area, projection, index, step, target_window)
-            return operator(lhs_data, rhs_data, **self.kwargs)
-
-        return operator(lhs_data, **self.kwargs)
-
-    def sum(self):
+    def sum(self) -> float:
         # The result accumulator is float64, and for precision reasons
         # we force the sum to be done in float64 also. Otherwise we
         # see variable results depending on chunk size, as different parts
@@ -679,40 +760,77 @@ class LayerOperation(LayerMathMixin):
         res = 0.0
         computation_window = self.window
         projection = self.map_projection
+        if projection is None:
+            raise ValueError("No map projection")
+
+        cse_cache = CSECacheTable(self, computation_window)
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
+            cse_cache.reset_cache()
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(self._get_operation_area(projection), projection, yoffset, step, computation_window)
+            chunk = self._eval(
+                cse_cache,
+                self._get_operation_area(projection),
+                projection,
+                yoffset,
+                step,
+                computation_window
+            )
             res += backend.sum_op(chunk)
         return res
 
-    def min(self):
-        res = None
+    def min(self) -> float:
+        res = float('inf')
         computation_window = self.window
         projection = self.map_projection
+        if projection is None:
+            raise ValueError("No map projection")
+
+        cse_cache = CSECacheTable(self, computation_window)
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
+            cse_cache.reset_cache()
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(self._get_operation_area(projection), projection, yoffset, step, computation_window)
-            chunk_min = backend.min_op(chunk)
-            if (res is None) or (res > chunk_min):
-                res = chunk_min
+            chunk = self._eval(
+                cse_cache,
+                self._get_operation_area(projection),
+                projection,
+                yoffset,
+                step,
+                computation_window
+            )
+            chunk_min = float(backend.min_op(chunk))
+            res = min(res, chunk_min)
         return res
 
-    def max(self):
-        res = None
+    def max(self) -> float:
+        res = float('-inf')
         computation_window = self.window
         projection = self.map_projection
+        if projection is None:
+            raise ValueError("No map projection")
+
+        cse_cache = CSECacheTable(self, computation_window)
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
+            cse_cache.reset_cache()
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(self._get_operation_area(projection), projection, yoffset, step, computation_window)
-            chunk_max = backend.max_op(chunk)
-            if (res is None) or (chunk_max > res):
-                res = chunk_max
+            chunk = self._eval(
+                cse_cache,
+                self._get_operation_area(projection),
+                projection,
+                yoffset,
+                step,
+                computation_window
+            )
+            chunk_max = float(backend.max_op(chunk))
+            res = max(res, chunk_max)
         return res
 
     def save(self, destination_layer, and_sum=False, callback=None, band=1) -> float | None:
@@ -757,13 +875,18 @@ class LayerOperation(LayerMathMixin):
 
         total = 0.0
 
+        cse_cache = CSECacheTable(self, computation_window)
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
+
+            cse_cache.reset_cache()
+
             if callback:
                 callback(yoffset / computation_window.ysize)
             step = self.ystep
             if yoffset + step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(computation_area, projection, yoffset, step, computation_window)
+            chunk = self._eval(cse_cache, computation_area, projection, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
                 chunk = backend.full((step, destination_window.xsize), chunk)
             band.WriteArray(
@@ -778,11 +901,29 @@ class LayerOperation(LayerMathMixin):
 
         return total if and_sum else None
 
-    def _parallel_worker(self, index, shared_mem, sem, np_dtype, width, input_queue, output_queue, computation_window):
-        arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf)
+    def _parallel_worker(
+        self,
+        index : int,
+        shared_mem,
+        sem : SemaphoreType,
+        np_dtype : type,
+        width : int,
+        input_queue : multiprocessing.Queue,
+        output_queue : multiprocessing.Queue,
+        computation_window : Window,
+    ):
+        # The hashing of python objects isn't stable across processes in general, so we have to do
+        # the cache build once per worker
+        cse_cache = CSECacheTable(self, computation_window)
+
+        arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf) # type: ignore[var-annotated]
         projection = self.map_projection
+        # TODO: the `save` method does more sanity checking that parallel save!
+        assert projection is not None
         try:
             while True:
+                cse_cache.reset_cache()
+
                 # We acquire the lock so we know we have somewhere to put the
                 # result before we take work. This is because in practice
                 # it seems the writing to GeoTIFF is the bottleneck, and
@@ -798,7 +939,14 @@ class LayerOperation(LayerMathMixin):
                     break
                 yoffset, step = task
 
-                result = self._eval(self._get_operation_area(projection), projection, yoffset, step, computation_window)
+                result = self._eval(
+                    cse_cache,
+                    self._get_operation_area(projection),
+                    projection,
+                    yoffset,
+                    step,
+                    computation_window,
+                )
                 backend.eval_op(result)
 
                 arr[:step] = backend.demote_array(result)
@@ -844,7 +992,7 @@ class LayerOperation(LayerMathMixin):
             elif and_sum:
                 return self.sum()
             else:
-                assert False
+                raise RuntimeError("Should not be reached") # pylint: disable=W0707
 
         worker_count = parallelism or multiprocessing.cpu_count()
         work_blocks = len(range(0, computation_window.ysize, self.ystep))
@@ -857,7 +1005,7 @@ class LayerOperation(LayerMathMixin):
             elif and_sum:
                 return self.sum()
             else:
-                assert False
+                raise RuntimeError("Should not be reached")
 
         if destination_layer is not None:
             try:
@@ -942,7 +1090,7 @@ class LayerOperation(LayerMathMixin):
                         computation_window.xsize,
                         source_queue,
                         result_queue,
-                        computation_window
+                        computation_window,
                     )) for i in range(worker_count)]
                     for worker in workers:
                         worker.start()
@@ -1074,11 +1222,15 @@ class LayerOperation(LayerMathMixin):
         )
 
         chunks = []
+
+        cse_cache = CSECacheTable(self, computation_window)
+
         for yoffset in range(0, height, self.ystep):
+            cse_cache.reset_cache()
             step = self.ystep
             if yoffset + step > height:
                 step = height - yoffset
-            chunk = self._eval(computation_area, projection, yoffset, step, computation_window)
+            chunk = self._eval(cse_cache, computation_area, projection, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
                 chunk = backend.full((step, computation_window.xsize), chunk)
             chunks.append(chunk)
@@ -1086,14 +1238,17 @@ class LayerOperation(LayerMathMixin):
 
         return res
 
+    def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
+        raise RuntimeError("Should not be called")
+
 class ShaderStyleOperation(LayerOperation):
 
-    def _eval(self, area, projection, index, step, target_window=None):
+    def _eval(self, cse_cache, area, projection, index, step, target_window=None):
         if target_window is None:
             target_window = self.window
-        lhs_data = self.lhs._eval(area, projection, index, step, target_window)
+        lhs_data = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
         if self.rhs is not None:
-            rhs_data = self.rhs._eval(area, projection, index, step, target_window)
+            rhs_data = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
         else:
             rhs_data = None
 
@@ -1126,6 +1281,9 @@ class ShaderStyleOperation(LayerOperation):
                     result[yoffset][xoffset] = self.operator(lhs_val, **self.kwargs)
 
         return result
+
+    def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
+        raise RuntimeError("Should not be called")
 
 def where(cond, a, b):
     """Return elements chosen from `a` or `b` depending on `cond`.

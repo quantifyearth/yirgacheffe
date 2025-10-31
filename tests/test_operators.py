@@ -663,17 +663,18 @@ def test_save_and_sum_float32(monkeypatch) -> None:
         for _ in range(10):
             row.append(random.random())
         data.append(row)
-
     data1 = np.array(data, dtype=np.float32)
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    assert layer1.datatype == DataType.Float32
-
-    # Sum forces things to float64
-    expected = np.sum(data1.astype(np.float64))
 
     with monkeypatch.context() as m:
         for blocksize in range(1,11):
             m.setattr(yg.constants, "YSTEP", blocksize)
+
+            layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+            assert layer1.datatype == DataType.Float32
+
+            # Sum forces things to float64
+            expected = np.sum(data1.astype(np.float64))
+
             with RasterLayer.empty_raster_layer_like(layer1) as store:
                 actual = layer1.save(store, and_sum=True)
             assert expected == actual
@@ -693,15 +694,17 @@ def test_parallel_save_and_sum_float32(monkeypatch) -> None:
         data1 = np.array(data, dtype=np.float32)
         dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
         dataset1.Close()
-        layer1 = RasterLayer.layer_from_file(path1)
-        assert layer1.datatype == DataType.Float32
-
-        # Sum forces things to float64
-        expected = np.sum(data1.astype(np.float64))
 
         with monkeypatch.context() as m:
             for blocksize in range(1,11):
                 m.setattr(yg.constants, "YSTEP", blocksize)
+
+                layer1 = RasterLayer.layer_from_file(path1)
+                assert layer1.datatype == DataType.Float32
+
+                # Sum forces things to float64
+                expected = np.sum(data1.astype(np.float64))
+
                 with RasterLayer.empty_raster_layer_like(layer1) as store:
                     actual = layer1.parallel_save(store, and_sum=True)
                 assert expected == actual
@@ -715,17 +718,18 @@ def test_sum_float32(monkeypatch) -> None:
         for _ in range(10):
             row.append(random.random())
         data.append(row)
-
     data1 = np.array(data, dtype=np.float32)
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    assert layer1.datatype == DataType.Float32
-
-    # Sum forces things to float64
-    expected = np.sum(data1.astype(np.float64))
 
     with monkeypatch.context() as m:
         for blocksize in range(1,11):
             m.setattr(yg.constants, "YSTEP", blocksize)
+
+            layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+            assert layer1.datatype == DataType.Float32
+
+            # Sum forces things to float64
+            expected = np.sum(data1.astype(np.float64))
+
             actual = layer1.sum()
             assert expected == actual
 

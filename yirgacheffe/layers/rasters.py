@@ -314,6 +314,18 @@ class RasterLayer(YirgacheffeLayer):
                 raise FileNotFoundError(f"Failed to open pickled raster {self._dataset_path}") from exc
 
     @property
+    def _cse_hash(self) -> int | None:
+        return hash((
+            self.name,
+            self._underlying_area,
+            self.map_projection,
+            self.datatype,
+            self._active_area,
+            self._ignore_nodata,
+            self._band,
+        ))
+
+    @property
     def datatype(self) -> DataType:
         if self._dataset is None:
             self._unpark()

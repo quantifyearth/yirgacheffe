@@ -1,3 +1,15 @@
+## v1.10.0 (30/10/2025)
+
+### Changed
+
+* Implemented [common subexpression elimination](https://en.wikipedia.org/wiki/Common_subexpression_elimination) to improve performance.
+* Area and Window @dataclass types are marked as frozen (i.e., are immutable).
+* Test elements for `isin` can now include sets, not just lists and tuples.
+
+### Fixed
+
+* Grow on Window class calculated updated y offset incorrectly, which impacted `conv2d` usage.
+
 ## v1.9.5 (25/10/2025)
 
 ### Added

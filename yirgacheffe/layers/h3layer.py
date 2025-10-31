@@ -77,6 +77,15 @@ class H3CellLayer(YirgacheffeLayer):
         )
 
     @property
+    def _cse_hash(self) -> int | None:
+        return hash((
+            self.cell_id,
+            self._underlying_area,
+            self.map_projection,
+            self._active_area,
+        ))
+
+    @property
     def _raster_dimensions(self) -> tuple[int, int]:
         return (self._raster_xsize, self._raster_ysize)
 

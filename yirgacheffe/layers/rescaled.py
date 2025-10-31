@@ -52,6 +52,17 @@ class RescaledRasterLayer(YirgacheffeLayer):
         self._x_scale = src_projection.xstep / target_projection.xstep
         self._y_scale = src_projection.ystep / target_projection.ystep
 
+    @property
+    def _cse_hash(self) -> int | None:
+        return hash((
+            self._src._cse_hash,
+            self.name,
+            self._underlying_area,
+            self._nearest_neighbour,
+            self.map_projection,
+            self._active_area
+        ))
+
     def close(self):
         self._src.close()
 

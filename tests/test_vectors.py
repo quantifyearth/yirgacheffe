@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from tests.helpers import make_vectors_with_mutlile_ids, make_vectors_with_id, make_vectors_with_empty_feature
+from tests.helpers import make_vectors_with_multiple_ids, make_vectors_with_id, make_vectors_with_empty_feature
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, RasteredVectorLayer, VectorLayer
 from yirgacheffe.window import Area, PixelScale, Window
@@ -118,7 +118,7 @@ def test_vector_layers_with_default_burn_value(klass) -> None:
             (Area(-10.0, 10.0, 0.0, 0.0), 42),
             (Area(0.0, 0.0, 10, -10), 43)
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         layer = klass.layer_from_file(path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION)
 
@@ -146,7 +146,7 @@ def test_vector_layers_with_fixed_burn_value(klass) -> None:
             (Area(-10.0, 10.0, 0.0, 0.0), 42),
             (Area(0.0, 0.0, 10, -10), 43)
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         layer = klass.layer_from_file(path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value=5)
 
@@ -173,7 +173,7 @@ def test_vector_layers_with_default_burn_value_and_filter(klass) -> None:
             (Area(-10.0, 10.0, 0.0, 0.0), 42),
             (Area(0.0, 0.0, 10, -10), 43)
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         layer = klass.layer_from_file(path, "id_no=42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
 
@@ -199,7 +199,7 @@ def test_vector_layers_with_invalid_burn_value(klass) -> None:
             (Area(-10.0, 10.0, 0.0, 0.0), 42),
             (Area(0.0, 0.0, 10, -10), 43)
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         with pytest.raises(ValueError):
             _ = klass.layer_from_file(
@@ -225,7 +225,7 @@ def test_vector_layers_with_field_value(klass) -> None:
             (Area(-10.0, 10.0, 0.0, 0.0), 42),
             (Area(0.0, 0.0, 10, -10), 43)
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         layer = klass.layer_from_file(path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value="id_no")
 
@@ -257,7 +257,7 @@ def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
         areas = {
             (Area(-10.0, 10.0, 10.0, -10.0), value),
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
             path,
@@ -296,7 +296,7 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
         areas = {
             (Area(-10.0, 10.0, 10.0, -10.0), value),
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
             path,
@@ -330,7 +330,7 @@ def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None
         areas = {
             (Area(-10.0, 10.0, 10.0, -10.0), value),
         }
-        make_vectors_with_mutlile_ids(areas, path)
+        make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
             path,

@@ -16,6 +16,10 @@ class ConstantLayer(YirgacheffeLayer):
         self.value = float(value)
 
     @property
+    def _cse_hash(self) -> int | None:
+        return hash(self.value)
+
+    @property
     def datatype(self) -> DataType:
         return DataType.Float64
 

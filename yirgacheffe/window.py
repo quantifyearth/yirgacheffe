@@ -41,6 +41,9 @@ class MapProjection:
         self.xstep = xstep
         self.ystep = ystep
 
+    def __hash__(self):
+        return hash((self.name, self.xstep, self.ystep))
+
     def __eq__(self, other) -> bool:
         if other is None:
             return True
@@ -61,7 +64,7 @@ class MapProjection:
     def scale(self) -> PixelScale:
         return PixelScale(self.xstep, self.ystep)
 
-@dataclass
+@dataclass(frozen=True)
 class Area:
     """Class to hold a geospatial area of data in the given projection.
 
@@ -154,7 +157,7 @@ class Area:
             (other.top >= self.bottom >= other.bottom)
         )
 
-@dataclass
+@dataclass(frozen=True)
 class Window:
     """Class to hold the pixel dimensions of data in the given projection.
 
@@ -225,7 +228,7 @@ class Window:
         """
         return Window(
             xoff=self.xoff - pixels,
-            yoff=self.xoff - pixels,
+            yoff=self.yoff - pixels,
             xsize=self.xsize + (2 * pixels),
             ysize=self.ysize + (2 * pixels),
         )

@@ -87,3 +87,13 @@ def test_find_intersection_distinct() -> None:
     ]
     with pytest.raises(ValueError):
         _ = Window.find_intersection(windows)
+
+@pytest.mark.parametrize("window,offset,expected", [
+    (Window(10, 10, 100, 100), 4, Window(6, 6, 108, 108)),
+    (Window(10, 20, 30, 40), 4, Window(6, 16, 38, 48)),
+    (Window(10, 20, 30, 40), 14, Window(-4, 6, 58, 68)),
+    (Window(10, 20, 30, 40), -4, Window(14, 24, 22, 32)),
+])
+def test_grow_window(window, offset, expected) -> None:
+    updated = window.grow(offset)
+    assert updated == expected
