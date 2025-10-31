@@ -3,6 +3,7 @@ import pytest
 
 import yirgacheffe as yg
 from yirgacheffe._operators.cse import CSECacheTable
+from yirgacheffe._backends import backend
 
 def test_simple_constant_expression() -> None:
     with (
@@ -127,7 +128,6 @@ def test_caching_versus_boundary_expansion(monkeypatch) -> None:
         data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [12, 13, 14, 15]]).astype(np.float32)
         with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as lhs:
             calc = lhs.conv2d(matrix) * lhs
-            calc.pretty_print()
 
             # this is an API violation, but let's check the table used for CSE
             hash_table = CSECacheTable(calc, calc.window)
@@ -150,3 +150,74 @@ def test_isin_hashable(sequence) -> None:
         expected = np.isin(data1, list(sequence))
         actual = calc.read_array(0, 0, 4, 2)
         assert (expected == actual).all()
+
+def test_nan_to_num_hashable() -> None:
+    data1 = np.array([[1, float("nan"), float("inf"), float("-inf")], [5, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer:
+        calc = layer.nan_to_num(2, 3, 4)
+
+        assert calc._cse_hash is not None
+
+        expected = np.nan_to_num(data1, nan=2, posinf=3, neginf=4)
+        actual = calc.read_array(0, 0, 4, 2)
+        assert (expected == actual).all()
+
+def test_unary_numpy_apply_hashable() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer:
+
+        def simple_add(chunk):
+            return chunk + 1.0
+
+        comp = layer.numpy_apply(simple_add)
+
+        assert comp._cse_hash is not None
+
+def test_cse_cache_table_reset() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with (
+        yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as lhs,
+        yg.constant(3) as rhs,
+    ):
+        calc = (lhs + rhs) * (lhs + rhs)
+        cse_cache = CSECacheTable(calc, calc.window)
+
+        term = lhs + rhs
+        term_hash = term._cse_hash
+
+        assert cse_cache.get_data(term_hash, calc.window) is None
+
+        cse_cache.set_data(term_hash, calc.window, backend.promote(data1))
+
+        cache_result = cse_cache.get_data(term_hash, calc.window)
+        assert cache_result is not None
+        assert (backend.demote_array(cache_result) == data1).all()
+
+        cse_cache.reset_cache()
+
+        assert cse_cache.get_data(term_hash, calc.window) is None
+
+def test_cse_cache_table_cache_miss_on_different_window_size() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with (
+        yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as lhs,
+        yg.constant(3) as rhs,
+    ):
+        calc = (lhs + rhs) * (lhs + rhs)
+        cse_cache = CSECacheTable(calc, calc.window)
+
+        term = lhs + rhs
+        term_hash = term._cse_hash
+
+        assert cse_cache.get_data(term_hash, calc.window) is None
+
+        cse_cache.set_data(term_hash, calc.window, backend.promote(data1))
+
+        cache_result = cse_cache.get_data(term_hash, calc.window)
+        assert (backend.demote_array(cache_result) == data1).all()
+
+        assert cse_cache.get_data(term_hash, calc.window.grow(1)) is None
+        # This just tests that we're not stuck on id(window) check, we do test proper window equality
+        cache_result = cse_cache.get_data(term_hash, calc.window.grow(0))
+        assert cache_result is not None
+        assert (backend.demote_array(cache_result) == data1).all()

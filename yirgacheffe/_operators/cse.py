@@ -39,7 +39,7 @@ class CSECacheTable:
                     except TypeError:
                         pass
 
-    def set_data(self, cse_hash: int | None, window: Window, data: backend.array_t):
+    def set_data(self, cse_hash: int | None, window: Window, data: backend.array_t) -> None:
         if cse_hash is not None:
             try:
                 count, old_data = self._table[(cse_hash, window)]
