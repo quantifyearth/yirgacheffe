@@ -222,4 +222,11 @@ operator_map: dict[op, Callable] = {
     op.ROUND: mx.round,
     op.CEIL: mx.ceil,
     op.ISNAN: mx.isnan,
+    op.RADD: mx.array.__radd__,
+    op.RSUB: mx.array.__rsub__,
+    op.RMUL: mx.array.__rmul__,
+    op.RTRUEDIV: mx.array.__rtruediv__,
+    op.RFLOORDIV: mx.array.__rfloordiv__,
+    op.RREMAINDER: mx.array.__rmod__,
+    op.RPOW: mx.array.__rpow__,
 }

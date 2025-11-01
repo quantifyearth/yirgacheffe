@@ -1,8 +1,12 @@
-## v1.10.0 (30/10/2025)
+## v1.10.0 (1/11/2025)
+
+### Added
+
+* Support for [reverse operators](https://docs.python.org/3/reference/datamodel.html#object.__radd__), so that now you can write `1 + layer` just as you could write `layer + 1`, rather than having to cast left hand constants to `yg.constant(1) + layer`
+* Implemented [common subexpression elimination](https://en.wikipedia.org/wiki/Common_subexpression_elimination) to improve performance.
 
 ### Changed
 
-* Implemented [common subexpression elimination](https://en.wikipedia.org/wiki/Common_subexpression_elimination) to improve performance.
 * Area and Window @dataclass types are marked as frozen (i.e., are immutable).
 * Test elements for `isin` can now include sets, not just lists and tuples.
 

@@ -160,4 +160,15 @@ operator_map: dict[op, Callable] = {
     op.ROUND: np.round,
     op.CEIL: np.ceil,
     op.ISNAN: np.isnan,
+    # Pylint doesn't recognise the reverse operators, despite them
+    # clearly existing on np.ndarray, so we have to disable the checks
+    # pylint: disable=no-member
+    op.RADD: np.ndarray.__radd__,
+    op.RSUB: np.ndarray.__rsub__,
+    op.RMUL: np.ndarray.__rmul__,
+    op.RTRUEDIV: np.ndarray.__rtruediv__,
+    op.RFLOORDIV: np.ndarray.__rfloordiv__,
+    op.RREMAINDER: np.ndarray.__rmod__,
+    op.RPOW: np.ndarray.__rpow__,
+    # pylint: enable=no-member
 }

@@ -253,6 +253,25 @@ def test_add_to_float_layer_by_const(c) -> None:
 
     assert (expected == actual).all()
 
+@pytest.mark.parametrize("c", [
+    (float(2.5)),
+    (int(2)),
+    (np.uint16(2)),
+    (np.float32(2.5)),
+])
+def test_add_to_const_by_float_layer(c) -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = c + layer1
+    comp.save(result)
+
+    expected = c + data1
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
 def test_sub_from_float_layer_by_const() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
@@ -262,6 +281,19 @@ def test_sub_from_float_layer_by_const() -> None:
     comp.save(result)
 
     expected = data1 - 0.5
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_sub_from_const_by_float_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = 0.5 - layer1
+    comp.save(result)
+
+    expected = 0.5 - data1
     actual = result.read_array(0, 0, 4, 2)
 
     assert (expected == actual).all()
@@ -279,6 +311,19 @@ def test_mult_float_layer_by_const() -> None:
 
     assert (expected == actual).all()
 
+def test_mult_const_by_float_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = 0.25 * layer1
+    comp.save(result)
+
+    expected = 0.25 * data1
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
 def test_div_float_layer_by_const() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
@@ -288,6 +333,21 @@ def test_div_float_layer_by_const() -> None:
     comp.save(result)
 
     expected = backend.demote_array(backend.promote(data1) / 2.5)
+    backend.eval_op(expected)
+
+    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
+
+    assert (expected == actual).all()
+
+def test_div_const_by_float_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = 2.5 / layer1
+    comp.save(result)
+
+    expected = backend.demote_array(2.5 / backend.promote(data1))
     backend.eval_op(expected)
 
     actual = backend.demote_array(result.read_array(0, 0, 4, 2))
@@ -309,6 +369,21 @@ def test_floordiv_float_layer_by_const() -> None:
 
     assert (expected == actual).all()
 
+def test_floordiv_const_by_float_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = 2.5 // layer1
+    comp.save(result)
+
+    expected = backend.demote_array(2.5 // backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
+
+    assert (expected == actual).all()
+
 def test_remainder_float_layer_by_const() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
@@ -324,6 +399,21 @@ def test_remainder_float_layer_by_const() -> None:
 
     assert (expected == actual).all()
 
+def test_remainder_const_by_float_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = 2.5 % layer1
+    comp.save(result)
+
+    expected = backend.demote_array(2.5 % backend.promote(data1))
+    backend.eval_op(expected)
+
+    actual = backend.demote_array(result.read_array(0, 0, 4, 2))
+
+    assert (expected == actual).all()
+
 def test_power_float_layer_by_const() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
@@ -333,6 +423,21 @@ def test_power_float_layer_by_const() -> None:
     comp.save(result)
 
     expected = backend.promote(data1) ** 2.5
+    backend.eval_op(expected)
+
+    actual = result.read_array(0, 0, 4, 2)
+
+    assert (expected == actual).all()
+
+def test_power_const_by_float_layer() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
+    result = RasterLayer.empty_raster_layer_like(layer1)
+
+    comp = 2.5 ** layer1
+    comp.save(result)
+
+    expected = 2.5 ** backend.promote(data1)
     backend.eval_op(expected)
 
     actual = result.read_array(0, 0, 4, 2)
