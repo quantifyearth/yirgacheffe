@@ -42,6 +42,13 @@ class operators(Enum):
     ROUND = 34
     CEIL = 35
     ISNAN = 36
+    RADD = 37
+    RSUB = 38
+    RMUL = 39
+    RTRUEDIV = 40
+    RFLOORDIV = 41
+    RREMAINDER = 42
+    RPOW = 43
 
 class dtype(Enum):
     """Represents the type of data returned by a layer.

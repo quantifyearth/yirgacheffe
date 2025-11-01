@@ -77,23 +77,44 @@ class LayerMathMixin:
     def __add__(self, other):
         return LayerOperation(self, op.ADD, other, window_op=WindowOperation.UNION)
 
+    def __radd__(self, other):
+        return LayerOperation(self, op.RADD, other, window_op=WindowOperation.UNION)
+
     def __sub__(self, other):
         return LayerOperation(self, op.SUB, other, window_op=WindowOperation.UNION)
+
+    def __rsub__(self, other):
+        return LayerOperation(self, op.RSUB, other, window_op=WindowOperation.UNION)
 
     def __mul__(self, other):
         return LayerOperation(self, op.MUL, other, window_op=WindowOperation.INTERSECTION)
 
+    def __rmul__(self, other):
+        return LayerOperation(self, op.RMUL, other, window_op=WindowOperation.INTERSECTION)
+
     def __truediv__(self, other):
         return LayerOperation(self, op.TRUEDIV, other, window_op=WindowOperation.INTERSECTION)
+
+    def __rtruediv__(self, other):
+        return LayerOperation(self, op.RTRUEDIV, other, window_op=WindowOperation.INTERSECTION)
 
     def __floordiv__(self, other):
         return LayerOperation(self, op.FLOORDIV, other, window_op=WindowOperation.INTERSECTION)
 
+    def __rfloordiv__(self, other):
+        return LayerOperation(self, op.RFLOORDIV, other, window_op=WindowOperation.INTERSECTION)
+
     def __mod__(self, other):
         return LayerOperation(self, op.REMAINDER, other, window_op=WindowOperation.INTERSECTION)
 
+    def __rmod__(self, other):
+        return LayerOperation(self, op.RREMAINDER, other, window_op=WindowOperation.INTERSECTION)
+
     def __pow__(self, other):
         return LayerOperation(self, op.POW, other, window_op=WindowOperation.UNION)
+
+    def __rpow__(self, other):
+        return LayerOperation(self, op.RPOW, other, window_op=WindowOperation.UNION)
 
     def __eq__(self, other):
         return LayerOperation(self, op.EQ, other, window_op=WindowOperation.INTERSECTION)
