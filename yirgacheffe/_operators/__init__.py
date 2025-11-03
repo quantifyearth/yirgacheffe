@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import deprecation
+import graphviz
 import numpy as np
 import numpy.typing as npt
 from osgeo import gdal
@@ -50,6 +51,7 @@ class WindowOperation(Enum):
 class LayerConstant:
     def __init__(self, val):
         self.val = val
+        self.name = str(val)
 
     def __str__(self) -> str:
         return str(self.val)
@@ -752,6 +754,38 @@ class LayerOperation(LayerMathMixin):
             else:
                 child_connector = "└── " if child_is_last else "├── "
                 print(f"{new_prefix}{child_connector}{repr(child)}")
+
+    def to_graphviz(self):
+        """Create graphviz visualization showing shared nodes."""
+        dot = graphviz.Digraph(comment='Expression Tree')
+        visited = set()
+        self._add_to_graphviz(dot, visited)
+        return dot
+
+    def _add_to_graphviz(self, dot, visited):
+        node_id = str(id(self))
+
+        if node_id in visited:
+            return  # Already added (shows sharing!)
+        visited.add(node_id)
+
+        # Create node label
+        kwargs_str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+        operator_label = str(self.operator).split(".")[1]
+        label = f"{operator_label}\\n{kwargs_str}" if kwargs_str else str(operator_label)
+
+        dot.node(node_id, label)
+
+        # Add edges to children
+        for _, child in enumerate(self._children):
+            if hasattr(child, '_add_to_graphviz'):
+                child_id = str(id(child))
+                dot.edge(node_id, child_id)
+                child._add_to_graphviz(dot, visited)
+            else:
+                leaf_id = f"leaf_{id(child)}"
+                dot.node(leaf_id, child.name, shape='box')
+                dot.edge(node_id, leaf_id)
 
     def _eval(
         self,
