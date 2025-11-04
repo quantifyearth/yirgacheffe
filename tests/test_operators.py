@@ -1,11 +1,13 @@
 import os
 import random
 import tempfile
+from contextlib import ExitStack
 from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
+from osgeo import gdal
 
 import yirgacheffe as yg
 from yirgacheffe.window import Area, PixelScale
@@ -1672,6 +1674,19 @@ def test_to_geotiff_parallel_thread_and_sum(monkeypatch, parallelism) -> None:
                     expected = data1 * 2
                     actual = result.read_array(0, 0, 4, 2)
                     assert (expected == actual).all()
+
+def test_to_geotiff_gdal_vsimem() -> None:
+    data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+
+    with ExitStack() as stack:
+        vsi_filename = "/vsimem/test.tif"
+        stack.callback(gdal.Unlink, vsi_filename)
+        with yg.from_array(data, (0, 0), ("epsg:4326", (1.0, -1.0))) as datalayer:
+            datalayer.to_geotiff(vsi_filename)
+        with yg.read_raster(vsi_filename) as readlayer:
+            actual = readlayer.read_array(0, 0, 4, 2)
+
+    assert (actual == data).all()
 
 def test_raster_and_vector() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
