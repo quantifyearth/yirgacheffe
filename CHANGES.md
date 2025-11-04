@@ -1,3 +1,9 @@
+## v1.10.1 (4/11/2025)
+
+### Added
+
+* Added `sizeof` to the DataType enumeration to get number of bytes a given type requires.
+
 ## v1.10.0 (1/11/2025)
 
 ### Added

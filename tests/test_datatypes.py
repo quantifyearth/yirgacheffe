@@ -41,6 +41,23 @@ def test_round_trip_from_gdal(ytype) -> None:
     gtype = ytype.to_gdal()
     assert DataType.of_gdal(gtype) == ytype
 
+@pytest.mark.parametrize("ytype,expected", [
+    (DataType.Byte, 1),
+    (DataType.Int8, 1),
+    (DataType.Int16, 2),
+    (DataType.Int32, 4),
+    (DataType.Int64, 8),
+    (DataType.UInt8, 1),
+    (DataType.UInt16, 2),
+    (DataType.UInt32, 4),
+    (DataType.UInt64, 8),
+    (DataType.Float32, 4),
+    (DataType.Float64, 8),
+])
+def test_datatype_size(ytype,expected) -> None:
+    actual = ytype.sizeof()
+    assert expected == actual
+
 def test_round_trip_float64() -> None:
     backend_type = backend.dtype_to_backend(DataType.Float64)
     ytype = backend.backend_to_dtype(backend_type)

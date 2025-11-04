@@ -83,15 +83,30 @@ class dtype(Enum):
     UInt32 = gdal.GDT_UInt32
     UInt64 = gdal.GDT_UInt64
 
-    def to_gdal(self):
+    def to_gdal(self) -> int:
+        """Coverts the Yirgacheffe data type to the corresponding GDAL constant.
+
+        Returns:
+            An integer with the corresponding GDAL type constant.
+        """
         return self.value
 
     @classmethod
     def of_gdal(cls, val: int) -> dtype:
+        """Generates the Yirgacheffe data type value from the correspondiong GDAL value.
+
+        Returns:
+            A Yirgacheffe data type value.
+        """
         return cls(val)
 
     @classmethod
     def of_array(cls, val: np.ndarray) -> dtype:
+        """Generates the Yirgacheffe data type value from a numpy array.
+
+        Returns:
+            A Yirgacheffe data type value.
+        """
         match val.dtype:
             case np.float32:
                 return dtype.Float32
@@ -113,5 +128,23 @@ class dtype(Enum):
                 return dtype.UInt32
             case np.uint64:
                 return dtype.UInt64
+            case _:
+                raise ValueError
+
+    def sizeof(self) -> int:
+        """Returns the number of bytes used to store the data type.
+
+        Returns:
+            The number of bytes used to store the data type.
+        """
+        match self:
+            case dtype.Byte | dtype.Int8 | dtype.UInt8:
+                return 1
+            case dtype.Int16 | dtype.UInt16:
+                return 2
+            case dtype.Int32 | dtype.UInt32 | dtype.Float32:
+                return 4
+            case dtype.Int64 | dtype.UInt64 | dtype.Float64:
+                return 8
             case _:
                 raise ValueError
