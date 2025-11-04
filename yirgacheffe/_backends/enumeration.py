@@ -115,3 +115,21 @@ class dtype(Enum):
                 return dtype.UInt64
             case _:
                 raise ValueError
+
+    def sizeof(self) -> int:
+        """Returns the number of bytes used to store the data type.
+
+        Returns:
+            The number of bytes used to store the data type.
+        """
+        match self:
+            case dtype.Byte | dtype.Int8 | dtype.UInt8:
+                return 1
+            case dtype.Int16 | dtype.UInt16:
+                return 2
+            case dtype.Int32 | dtype.UInt32 | dtype.Float32:
+                return 4
+            case dtype.Int64 | dtype.UInt64 | dtype.Float64:
+                return 8
+            case _:
+                raise ValueError
