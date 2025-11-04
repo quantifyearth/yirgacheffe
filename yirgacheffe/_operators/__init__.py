@@ -11,7 +11,7 @@ import tempfile
 import time
 import types
 from collections.abc import Callable
-from contextlib import ExitStack
+from contextlib import ExitStack, nullcontext
 from enum import Enum
 from multiprocessing import Process, Semaphore
 from multiprocessing.synchronize import Semaphore as SemaphoreType
@@ -1191,15 +1191,23 @@ class LayerOperation(LayerMathMixin):
 
         # We want to write to a tempfile before we move the result into place, but we can't use
         # the actual $TMPDIR as that might be on a different device, and so we use a file next to where
-        # the final file will be, so we just need to rename the file at the end, not move it.
+        # the final file will be, so we just need to rename the file at the end, not move it. But for special cases,
+        # like GDAL's vsimem system we should not do this at all.
         if isinstance(filename, str):
             filename = Path(filename)
         target_dir = filename.parent
+        target_dir_parts = target_dir.parts
+        is_vsi_based = len(target_dir_parts) == 2 and target_dir_parts[0] =='/' and target_dir_parts[1] in [
+            'vsimem', 'vsizip', 'vsigzip', 'vsi7z', 'vsirar', 'vsitar', 'vsistdin',
+            'vsistdout', 'vsisubfile', 'vsiparse', 'vsicached', 'vsicrypt',
+        ]
 
-        with tempfile.NamedTemporaryFile(dir=target_dir, delete=False) as tempory_file:
+        context = nullcontext(filename) if is_vsi_based else tempfile.NamedTemporaryFile(dir=target_dir, delete=False) # pylint: disable=R1732
+        with context as tempory_file:
             # Local import due to circular dependancy
             from yirgacheffe.layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
-            with RasterLayer.empty_raster_layer_like(self, filename=tempory_file.name) as layer:
+            inner_filename = tempory_file if is_vsi_based else tempory_file.name
+            with RasterLayer.empty_raster_layer_like(self, filename=inner_filename) as layer: # type: ignore
                 if parallelism is None:
                     result = self.save(layer, and_sum=and_sum, callback=callback)
                 else:
@@ -1208,8 +1216,9 @@ class LayerOperation(LayerMathMixin):
                         parallelism = None
                     result = self.parallel_save(layer, and_sum=and_sum, callback=callback, parallelism=parallelism)
 
-            os.makedirs(target_dir, exist_ok=True)
-            os.rename(src=tempory_file.name, dst=filename)
+            if not is_vsi_based:
+                os.makedirs(target_dir, exist_ok=True)
+                os.rename(src=tempory_file.name, dst=filename)
 
         return result
 

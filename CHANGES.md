@@ -1,3 +1,9 @@
+## v1.10.2 (4/11/2025)
+
+### Fixed
+
+* Detect if `to_geotiff` is being targetted at a GDAL virtual file, in which case don't use a temporary directory.
+
 ## v1.10.1 (4/11/2025)
 
 ### Added
