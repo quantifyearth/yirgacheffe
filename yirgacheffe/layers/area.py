@@ -9,6 +9,7 @@ from osgeo import gdal
 
 from ..window import Area, Window
 from .rasters import RasterLayer
+from .._backends import backend
 
 class UniformAreaLayer(RasterLayer):
     """If you have a pixel area map where all the row entries are identical, then you
@@ -98,4 +99,4 @@ class UniformAreaLayer(RasterLayer):
         if ysize <= 0:
             raise ValueError("Request dimensions must be positive and non-zero")
         offset = window.yoff + yoffset
-        return self.databand[offset:offset + ysize]
+        return backend.promote(self.databand[offset:offset + ysize])

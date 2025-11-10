@@ -1,3 +1,9 @@
+## v1.10.3 (10/11/2025)
+
+### Fixed
+
+* Improved consistency between Numpy and MLX backends when calling sum
+
 ## v1.10.2 (4/11/2025)
 
 ### Fixed
