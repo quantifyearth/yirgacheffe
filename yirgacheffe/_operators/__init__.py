@@ -774,11 +774,11 @@ class LayerOperation(LayerMathMixin):
         return result
 
     def sum(self) -> float:
-        # The result accumulator is float64, and for precision reasons
-        # we force the sum to be done in float64 also. Otherwise we
-        # see variable results depending on chunk size, as different parts
-        # of the sum are done in different types.
-        res = 0.0
+        # Numpy and MLX have different behaviours that make guessing
+        # the type of the accumulator tricky, so we go by the type of the
+        # first chunk returned
+        res = None
+
         computation_window = self.window
         projection = self.map_projection
         if projection is None:
@@ -799,8 +799,9 @@ class LayerOperation(LayerMathMixin):
                 step,
                 computation_window
             )
-            res += backend.sum_op(chunk)
-        return res
+            chunk_sum = backend.sum_op(chunk)
+            res = chunk_sum if res is None else res + chunk_sum
+        return backend.demote_scalar(res) if res is not None else 0
 
     def min(self) -> float:
         res = float('inf')
@@ -894,7 +895,7 @@ class LayerOperation(LayerMathMixin):
                 f"{(destination_window.xsize, destination_window.ysize)} vs "
                 f"{(computation_window.xsize, computation_window.ysize)}"))
 
-        total = 0.0
+        total = None
 
         cse_cache = CSECacheTable(self, computation_window)
 
@@ -916,11 +917,12 @@ class LayerOperation(LayerMathMixin):
                 yoffset + destination_window.yoff,
             )
             if and_sum:
-                total += backend.sum_op(chunk)
+                chunk_sum = backend.sum_op(chunk)
+                total = chunk_sum if total is None else total + chunk_sum
         if callback:
             callback(1.0)
 
-        return total if and_sum else None
+        return backend.demote_scalar(total) if and_sum else None
 
     def _parallel_worker(
         self,
@@ -1030,7 +1032,7 @@ class LayerOperation(LayerMathMixin):
 
         if destination_layer is not None:
             try:
-                band = destination_layer._dataset.GetRasterBand(band)
+                gdal_band = destination_layer._dataset.GetRasterBand(band)
             except AttributeError as exc:
                 raise ValueError("Layer must be a raster backed layer") from exc
 
@@ -1052,16 +1054,23 @@ class LayerOperation(LayerMathMixin):
                 gdal.GDT_UInt32:  np.dtype('uint32'),
                 gdal.GDT_UInt64:  np.dtype('uint64'),
             }
-            np_dtype = np_type_map[band.DataType]
+            np_dtype = np_type_map[gdal_band.DataType]
         else:
-            band = None
-            np_dtype = np.dtype('float64')
+            # the aggregation path
+            gdal_band = None
+            match self.datatype:
+                case DataType.Int8 | DataType.Int16 | DataType.Int32 | DataType.Int64:
+                    np_dtype = np.dtype('int64')
+                case DataType.UInt8 | DataType.UInt16 | DataType.UInt32 | DataType.UInt64:
+                    np_dtype = np.dtype('uint64')
+                case _:
+                    np_dtype = np.dtype('float64')
 
         # The parallel save will cause a fork on linux, so we need to
         # remove all SWIG references
         self._park()
 
-        total = 0.0
+        total = None
 
         with ExitStack() as stack:
             # If we get this far, then we're going to do the multiprocessing path. In general we've had
@@ -1125,14 +1134,15 @@ class LayerOperation(LayerMathMixin):
                             continue
                         index, yoffset, step = res
                         _, sem, arr = mem_sem_cast[index]
-                        if band:
-                            band.WriteArray(
+                        if gdal_band:
+                            gdal_band.WriteArray(
                                 arr[0:step],
                                 destination_window.xoff,
                                 yoffset + destination_window.yoff,
                             )
                         if and_sum:
-                            total += np.sum(np.array(arr[0:step]).astype(np.float64))
+                            chunk_sum = np.sum(np.array(arr[0:step]).astype(np.float64))
+                            total = chunk_sum if total is None else total + chunk_sum
                         sem.release()
                         retired_blocks += 1
                         if callback:
@@ -1150,7 +1160,7 @@ class LayerOperation(LayerMathMixin):
                             processes.remove(candidate)
                         time.sleep(0.01)
 
-        return total if and_sum else None
+        return backend.demote_scalar(total) if and_sum else None
 
     def parallel_save(
         self,

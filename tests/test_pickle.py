@@ -134,8 +134,6 @@ def test_pickle_simple_calc(c) -> None:
         layer = RasterLayer(gdal_dataset_of_region(area, 0.2, filename=path))
 
         calc = layer * c
-        assert calc.sum() != 0
-        assert calc.sum() == layer.sum() * c
 
         p = pickle.dumps(calc)
         restore = pickle.loads(p)

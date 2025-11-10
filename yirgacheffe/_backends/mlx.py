@@ -14,7 +14,7 @@ float_t = mx.float32
 
 promote = mx.array
 demote_array = np.asarray
-demote_scalar = np.float64
+demote_scalar = lambda a: a.item()
 
 eval_op = mx.eval
 
@@ -54,15 +54,25 @@ round_op = mx.round
 ceil_op = mx.ceil
 
 def sum_op(a):
-    # There are weird issues around how MLX overflows int8, so just promote the data ahead of summing
+    # By default the type promotion rules for sum in MLX are not the same as with Numpy. E.g.,
+    #
+    # >>> mx.array(np.array([1, 2, 3], dtype=np.uint8)).sum()
+    # array(6, dtype=uint32)
+    # >>> np.array([1, 2, 3], dtype=np.uint8).sum()
+    # np.uint64(6)
+    #
+    # This has problems for Yirgacheffe as it means we get different answers depending on which
+    # backend is active. MLX is more conservative, which also can cause issues with Geospatial
+    # datasets being large and causing overflows. Thus we force promotion here to match what
+    # numpy does, even if this means things run a little slower.
     match a.dtype:
-        case mx.int8:
-            res = mx.sum(a.astype(mx.int32))
-        case mx.uint8:
-            res = mx.sum(a.astype(mx.uint32))
+        case mx.int8 | mx.int16 | mx.int32:
+            res = mx.sum(a.astype(mx.int64))
+        case mx.uint8 | mx.uint16 | mx.uint32:
+            res = mx.sum(a.astype(mx.uint64))
         case _:
             res = mx.sum(a)
-    return demote_scalar(res)
+    return res
 
 def _is_float(x):
     if isinstance(x, float):
