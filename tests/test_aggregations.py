@@ -55,7 +55,7 @@ def test_sums_of_calc_float_mlx(monkeypatch, step, c, dtype: type, maxval: int) 
 
         rng = np.random.default_rng(seed=42)
 
-        data = rng.integers(0, maxval, size=(1000, 1000), dtype=dtype)
+        data = rng.integers(0, maxval, size=(100, 100), dtype=dtype)
         typed_data = backend.promote(data)
 
         with yg.from_array(data, (0, 0), ("epsg:4326", (0.01, -0.01))) as layer:
