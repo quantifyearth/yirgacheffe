@@ -22,6 +22,40 @@ def test_area_operators(lhs: Area, rhs: Area, is_equal: bool, overlaps: bool) ->
     assert not lhs.is_world
     assert not rhs.is_world
 
+@pytest.mark.parametrize(
+        "lhs,rhs,expected",
+        [
+            # Obvious equality
+            (Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)),
+            (Area(-9.0, 9.0, 9.0, -9.0),     Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)), # subset
+            (Area(-9.0, 9.0, -1.0, 1.0),     Area(1.0, -1.0, 9.0, -9.0),     Area(-9.0, 9.0, 9.0, -9.0)),
+            (Area(-10.0, 10.0, 10.0, -10.0), Area.world(),                   Area.world()),
+            (Area.world(),                   Area(-10.0, 10.0, 10.0, -10.0), Area.world()),
+        ]
+    )
+def test_area_union(lhs: Area, rhs: Area, expected: Area) -> None:
+    union = lhs | rhs
+    assert union == expected
+
+@pytest.mark.parametrize(
+        "lhs,rhs,expected",
+        [
+            # Obvious equality
+            (Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)),
+            (Area(-9.0, 9.0, 9.0, -9.0),     Area(-10.0, 10.0, 10.0, -10.0), Area(-9.0, 9.0, 9.0, -9.0)), # subset
+            (Area(-9.0, 9.0, -1.0, 1.0),     Area(1.0, -1.0, 9.0, -9.0),     None),
+            (Area(-10.0, 10.0, 10.0, -10.0), Area.world(),                   Area(-10.0, 10.0, 10.0, -10.0)),
+            (Area.world(),                   Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)),
+        ]
+    )
+def test_area_intersection(lhs: Area, rhs: Area, expected: Area | None) -> None:
+    if expected is not None:
+        intersection = lhs & rhs
+        assert intersection == expected
+    else:
+        with pytest.raises(ValueError):
+            _ = lhs & rhs
+
 def test_global_area() -> None:
     area = Area.world()
     assert area.is_world

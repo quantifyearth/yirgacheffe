@@ -1,5 +1,7 @@
 from __future__ import annotations
+import operator
 import uuid
+from functools import reduce
 from typing import Any, Sequence
 
 import deprecation
@@ -126,15 +128,7 @@ class YirgacheffeLayer(LayerMathMixin):
             raise ValueError("Not all layers are at the same projectin or pixel scale")
 
         layer_areas = [x._get_operation_area() for x in layers]
-        intersection = Area(
-            left=max(x.left for x in layer_areas),
-            top=min(x.top for x in layer_areas),
-            right=min(x.right for x in layer_areas),
-            bottom=max(x.bottom for x in layer_areas)
-        )
-        if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
-            raise ValueError('No intersection possible')
-        return intersection
+        return reduce(operator.and_, layer_areas)
 
     @staticmethod
     def find_union(layers: Sequence[YirgacheffeLayer]) -> Area:
@@ -150,12 +144,8 @@ class YirgacheffeLayer(LayerMathMixin):
             raise ValueError("Not all layers are at the same projectin or pixel scale")
 
         layer_areas = [x._get_operation_area() for x in layers]
-        return Area(
-            left=min(x.left for x in layer_areas),
-            top=max(x.top for x in layer_areas),
-            right=max(x.right for x in layer_areas),
-            bottom=min(x.bottom for x in layer_areas)
-        )
+        # This removal of global layers is to stop constant layers forcing everything to be global
+        return reduce(operator.or_, [x for x in layer_areas if not x.is_world])
 
     @property
     def geo_transform(self) -> tuple[float, float, float, float, float, float]:

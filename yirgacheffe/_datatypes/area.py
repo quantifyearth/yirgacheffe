@@ -6,6 +6,8 @@ from dataclasses import dataclass
 class Area:
     """Class to hold a geospatial area of data in the given projection.
 
+    You can use set operators | (union) and & (intersection) on Areas.
+
     Args:
         left: Left most point in the projection space.
         top: Top most point in the projection space.
@@ -38,10 +40,48 @@ class Area:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Area):
             return False
+        if self.is_world and other.is_world:
+            return True
         return math.isclose(self.left, other.left, abs_tol=1e-09) and \
             math.isclose(self.right, other.right, abs_tol=1e-09) and \
             math.isclose(self.top, other.top, abs_tol=1e-09) and \
             math.isclose(self.bottom, other.bottom, abs_tol=1e-09)
+
+    def __and__(self, other: object) -> Area:
+        # Set intersection
+        if not isinstance(other, Area):
+            raise  ValueError("Can only intersect two areas")
+        if self.is_world:
+            return other
+        if other.is_world:
+            return self
+        all_areas = [self, other]
+        intersection = Area(
+            left=max(x.left for x in all_areas),
+            top=min(x.top for x in all_areas),
+            right=min(x.right for x in all_areas),
+            bottom=max(x.bottom for x in all_areas)
+        )
+        if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
+            raise ValueError('No intersection possible')
+        return intersection
+
+    def __or__(self, other: object) -> Area:
+        # Set union
+        if not isinstance(other, Area):
+            raise  ValueError("Can only intersect two areas")
+        if self.is_world:
+            return self
+        if other.is_world:
+            return other
+        all_areas = [self, other]
+        union = Area(
+            left=min(x.left for x in all_areas),
+            top=max(x.top for x in all_areas),
+            right=max(x.right for x in all_areas),
+            bottom=min(x.bottom for x in all_areas)
+        )
+        return union
 
     def grow(self, offset: float) -> Area:
         """Expand the area in all directions by the given amount.

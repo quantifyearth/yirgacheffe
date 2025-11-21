@@ -4,6 +4,7 @@ import builtins
 import logging
 import math
 import multiprocessing
+import operator as pyoperator
 import os
 import resource
 import sys
@@ -13,6 +14,7 @@ import types
 from collections.abc import Callable
 from contextlib import ExitStack, nullcontext
 from enum import Enum
+from functools import reduce
 from multiprocessing import Process, Semaphore
 from multiprocessing.synchronize import Semaphore as SemaphoreType
 from multiprocessing.managers import SharedMemoryManager
@@ -604,23 +606,9 @@ class LayerOperation(LayerMathMixin):
                 assert rhs_area is not None
                 return rhs_area
             case WindowOperation.INTERSECTION:
-                intersection = Area(
-                    left=max(x.left for x in all_areas),
-                    top=min(x.top for x in all_areas),
-                    right=min(x.right for x in all_areas),
-                    bottom=max(x.bottom for x in all_areas)
-                )
-                if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
-                    raise ValueError('No intersection possible')
-                return intersection
+                return reduce(pyoperator.and_, all_areas)
             case WindowOperation.UNION:
-                union = Area(
-                    left=min(x.left for x in all_areas),
-                    top=max(x.top for x in all_areas),
-                    right=max(x.right for x in all_areas),
-                    bottom=min(x.bottom for x in all_areas)
-                )
-                return union
+                return reduce(pyoperator.or_, all_areas)
             case _:
                 raise RuntimeError("Should not be reached")
 
