@@ -8,7 +8,6 @@ import deprecation
 
 from .. import __version__
 from .._operators import LayerMathMixin
-from .._datatypes.pixelscale import almost_equal
 from .._datatypes import Area, MapProjection, PixelScale, Window
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
@@ -155,13 +154,6 @@ class YirgacheffeLayer(LayerMathMixin):
             self.area.left, self._projection.xstep, 0.0,
             self.area.top, 0.0, self._projection.ystep
         )
-
-    def check_pixel_scale(self, scale: PixelScale) -> bool:
-        our_scale = self.pixel_scale
-        if our_scale is None:
-            raise ValueError("No check for layers without explicit pixel scale")
-        return almost_equal(our_scale.xstep, scale.xstep) and \
-            almost_equal(our_scale.ystep, scale.ystep)
 
     def set_window_for_intersection(self, new_area: Area) -> None:
         if self._projection is None:

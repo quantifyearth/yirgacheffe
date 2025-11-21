@@ -1,21 +1,7 @@
-import sys
-
 import pytest
 
 from yirgacheffe import MapProjection
-from yirgacheffe._datatypes.pixelscale import almost_equal
 from yirgacheffe._datatypes.mapprojection import MINIMAL_DEGREE_OF_INTEREST, MINIMAL_DISTANCE_OF_INTEREST_IN_M
-
-@pytest.mark.parametrize("lval,rval,expected",
-    [
-        (1.0, 1.0, True),
-        (1.0, 1.1, False),
-        (sys.float_info.epsilon / 2, 0.0, True),
-        (sys.float_info.epsilon * 2, 0.0, False),
-    ]
-)
-def test_almost_equal(lval, rval, expected):
-    assert almost_equal(lval, rval) == expected
 
 # The pixel scale here comes from the jung dataset, which is 400752 pixles
 # wide, or 100M per pixel at the equator roughly.
