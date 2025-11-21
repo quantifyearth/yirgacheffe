@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Sequence
 
 import numpy as np
+from osgeo import gdal
 
 from .layers.area import UniformAreaLayer
 from .layers.base import YirgacheffeLayer
@@ -11,7 +12,7 @@ from .layers.constant import ConstantLayer
 from .layers.group import GroupLayer, TiledGroupLayer
 from .layers.rasters import RasterLayer
 from .layers.vectors import VectorLayer
-from .window import Area, MapProjection
+from .window import MapProjection
 from ._backends.enumeration import dtype as DataType
 
 def read_raster(
@@ -190,23 +191,22 @@ def from_array(
 
     dims = values.shape
 
-    area = Area(
-        left=origin[0],
-        top=origin[1],
-        right=origin[0] + (projection.xstep * dims[1]),
-        bottom=origin[1] + (projection.ystep * dims[0])
+    # The original intent here was not to use GDAL directly, but use empty_raster_layer,
+    # but then we end up tweaking the area multiple times, and hit rounding issues in
+    # certain circumstances due to how it tries to align the output layer with a 0, 0
+    # centered pixel grid.
+    dataset = gdal.GetDriverByName('mem').Create(
+        "mem",
+        dims[1],
+        dims[0],
+        1,
+        DataType.of_array(values).to_gdal(),
+        [],
     )
+    dataset.SetGeoTransform([
+        origin[0], projection.xstep, 0.0, origin[1], 0.0, projection.ystep
+    ])
+    dataset.SetProjection(projection.name)
+    dataset.GetRasterBand(1).WriteArray(values, 0, 0)
 
-    layer = RasterLayer.empty_raster_layer(
-        area,
-        scale=projection.scale,
-        datatype=DataType.of_array(values),
-        filename=None,
-        projection=projection.name,
-    )
-    assert layer._dataset
-    assert layer._dataset.RasterXSize == dims[1]
-    assert layer._dataset.RasterYSize == dims[0]
-    layer._dataset.GetRasterBand(1).WriteArray(values, 0, 0)
-
-    return layer
+    return RasterLayer(dataset)

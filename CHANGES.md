@@ -1,3 +1,9 @@
+## v1.10.4 (21/11/2025)
+
+### Fixed
+
+* Fix issue with creating data layers from numpy arrays where an exception was thrown due to rounding issues on projection math.
+
 ## v1.10.3 (10/11/2025)
 
 ### Fixed
