@@ -7,8 +7,8 @@ import numpy as np
 from osgeo import gdal
 
 from ..constants import WGS_84_PROJECTION
-from ..window import Area, MapProjection, PixelScale, Window
-from ..rounding import round_up_pixels
+from .._datatypes import Area, MapProjection, Window
+from .._datatypes.pixelscale import PixelScale, round_up_pixels
 from .base import YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType

@@ -27,8 +27,8 @@ from dill import dumps, loads # type: ignore
 from pyproj import Transformer
 
 from .. import constants, __version__
-from ..rounding import round_up_pixels, round_down_pixels
-from ..window import Area, PixelScale, MapProjection, Window
+from .._datatypes.pixelscale import round_up_pixels, round_down_pixels
+from .._datatypes import Area, PixelScale, MapProjection, Window
 from .._backends import backend
 from .._backends.enumeration import operators as op
 from .._backends.enumeration import dtype as DataType

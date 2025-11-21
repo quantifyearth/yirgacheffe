@@ -6,8 +6,8 @@ from typing import Any
 import h3
 import numpy as np
 
-from ..rounding import round_up_pixels
-from ..window import Area, MapProjection, Window
+from .._datatypes.pixelscale import round_up_pixels
+from .._datatypes import Area, MapProjection, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType

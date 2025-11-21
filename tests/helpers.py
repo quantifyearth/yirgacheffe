@@ -5,7 +5,7 @@ from osgeo import gdal, ogr
 
 from yirgacheffe.window import Area
 from yirgacheffe.layers import YirgacheffeLayer
-from yirgacheffe.rounding import round_up_pixels
+from yirgacheffe._datatypes.pixelscale import round_up_pixels
 from yirgacheffe import WGS_84_PROJECTION
 
 def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: str | Path | None = None) -> gdal.Dataset:

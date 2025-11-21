@@ -6,8 +6,8 @@ from typing import Any, Sequence
 import numpy as np
 from numpy import ma
 
-from ..rounding import round_down_pixels
-from ..window import Area, Window
+from .._datatypes.pixelscale import round_down_pixels
+from .._datatypes import Area, Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 from .._backends import backend

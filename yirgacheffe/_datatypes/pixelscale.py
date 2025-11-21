@@ -1,10 +1,11 @@
 from __future__ import annotations
-from typing import Sequence
-
 import math
 import sys
+from typing import Sequence
 
-from .window import PixelScale
+from collections import namedtuple
+
+PixelScale = namedtuple('PixelScale', ['xstep', 'ystep'])
 
 def almost_equal(aval: float, bval: float) -> bool:
     """Safe floating point equality check."""

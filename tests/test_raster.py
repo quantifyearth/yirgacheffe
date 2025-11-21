@@ -7,9 +7,9 @@ from osgeo import gdal
 
 import yirgacheffe as yg
 from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data, gdal_dataset_with_data
-from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe import Area, PixelScale, Window
 from yirgacheffe.layers import RasterLayer, InvalidRasterBand
-from yirgacheffe.rounding import round_up_pixels
+from yirgacheffe._datatypes.pixelscale import round_up_pixels
 from yirgacheffe.operators import DataType
 
 

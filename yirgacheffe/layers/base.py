@@ -6,8 +6,8 @@ import deprecation
 
 from .. import __version__
 from .._operators import LayerMathMixin
-from ..rounding import almost_equal, round_up_pixels, round_down_pixels
-from ..window import Area, MapProjection, PixelScale, Window
+from .._datatypes.pixelscale import almost_equal, round_up_pixels, round_down_pixels
+from .._datatypes import Area, MapProjection, PixelScale, Window
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
 
