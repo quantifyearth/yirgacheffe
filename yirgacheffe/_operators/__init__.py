@@ -29,7 +29,6 @@ from dill import dumps, loads # type: ignore
 from pyproj import Transformer
 
 from .. import constants, __version__
-from .._datatypes.pixelscale import round_up_pixels, round_down_pixels
 from .._datatypes import Area, PixelScale, MapProjection, Window
 from .._backends import backend
 from .._backends.enumeration import operators as op
@@ -371,10 +370,9 @@ class LayerMathMixin:
         transformer = Transformer.from_crs("EPSG:4326", projection.name)
         x, y = transformer.transform(lng,lat)
 
-        pixel_scale = projection.scale
-        return (
-            round_down_pixels((x - area.left) / pixel_scale.xstep, builtins.abs(pixel_scale.xstep)),
-            round_down_pixels((y - area.top) / pixel_scale.ystep, builtins.abs(pixel_scale.ystep)),
+        return projection.round_down_pixels(
+            (x - area.left) / projection.xstep,
+            (y - area.top) / projection.ystep,
         )
 
     @property
@@ -640,17 +638,15 @@ class LayerOperation(LayerMathMixin):
         area = self._get_operation_area(projection)
         assert area is not None
 
-        return Window(
-            xoff=round_down_pixels(area.left / projection.xstep, projection.xstep),
-            yoff=round_down_pixels(area.top / (projection.ystep * -1.0), projection.ystep * -1.0),
-            xsize=round_up_pixels(
-                (area.right - area.left) / projection.xstep, projection.xstep
-            ),
-            ysize=round_up_pixels(
-                (area.top - area.bottom) / (projection.ystep * -1.0),
-                (projection.ystep * -1.0)
-            ),
+        xoff, yoff = projection.round_down_pixels(
+            area.left / projection.xstep,
+            area.top / (projection.ystep * -1.0)
         )
+        xsize, ysize = projection.round_up_pixels(
+            (area.right - area.left) / projection.xstep,
+            (area.top - area.bottom) / (projection.ystep * -1.0),
+        )
+        return Window(xoff, yoff, xsize, ysize)
 
     @property
     def datatype(self) -> DataType:

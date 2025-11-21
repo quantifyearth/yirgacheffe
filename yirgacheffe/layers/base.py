@@ -8,7 +8,7 @@ import deprecation
 
 from .. import __version__
 from .._operators import LayerMathMixin
-from .._datatypes.pixelscale import almost_equal, round_up_pixels, round_down_pixels
+from .._datatypes.pixelscale import almost_equal
 from .._datatypes import Area, MapProjection, PixelScale, Window
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
@@ -84,7 +84,7 @@ class YirgacheffeLayer(LayerMathMixin):
     )
     def pixel_scale(self) -> PixelScale | None:
         if self._projection:
-            return PixelScale(self._projection.xstep, self._projection.ystep)
+            return self._projection.scale
         else:
             return None
 
@@ -167,20 +167,16 @@ class YirgacheffeLayer(LayerMathMixin):
         if self._projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
 
-        new_window = Window(
-            xoff=round_down_pixels((new_area.left - self._underlying_area.left) / self._projection.xstep,
-                self._projection.xstep),
-            yoff=round_down_pixels((self._underlying_area.top - new_area.top) / (self._projection.ystep * -1.0),
-                self._projection.ystep * -1.0),
-            xsize=round_up_pixels(
-                (new_area.right - new_area.left) / self._projection.xstep,
-                self._projection.xstep
-            ),
-            ysize=round_up_pixels(
-                (new_area.top - new_area.bottom) / (self._projection.ystep * -1.0),
-                (self._projection.ystep * -1.0)
-            ),
+        xoff, yoff = self._projection.round_down_pixels(
+            (new_area.left - self._underlying_area.left) / abs(self._projection.xstep),
+            (self._underlying_area.top - new_area.top) / abs(self._projection.ystep),
         )
+        xsize, ysize = self._projection.round_up_pixels(
+            (new_area.right - new_area.left) / abs(self._projection.xstep),
+            (new_area.top - new_area.bottom) / abs(self._projection.ystep),
+        )
+        new_window = Window(xoff, yoff, xsize, ysize)
+
         if (new_window.xoff < 0) or (new_window.yoff < 0):
             raise ValueError('Window has negative offset')
         # If there is an underlying raster for this layer, do a sanity check
@@ -199,20 +195,16 @@ class YirgacheffeLayer(LayerMathMixin):
         if self._projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
 
-        new_window = Window(
-            xoff=round_down_pixels((new_area.left - self._underlying_area.left) / self._projection.xstep,
-                self._projection.xstep),
-            yoff=round_down_pixels((self._underlying_area.top - new_area.top) / (self._projection.ystep * -1.0),
-                self._projection.ystep * -1.0),
-            xsize=round_up_pixels(
-                (new_area.right - new_area.left) / self._projection.xstep,
-                self._projection.xstep
-            ),
-            ysize=round_up_pixels(
-                (new_area.top - new_area.bottom) / (self._projection.ystep * -1.0),
-                (self._projection.ystep * -1.0)
-            ),
+        xoff, yoff = self._projection.round_down_pixels(
+            (new_area.left - self._underlying_area.left) / abs(self._projection.xstep),
+            (self._underlying_area.top - new_area.top) / abs(self._projection.ystep),
         )
+        xsize, ysize = self._projection.round_up_pixels(
+            (new_area.right - new_area.left) / abs(self._projection.xstep),
+            (new_area.top - new_area.bottom) / abs(self._projection.ystep),
+        )
+        new_window = Window(xoff, yoff, xsize, ysize)
+
         if (new_window.xoff > 0) or (new_window.yoff > 0):
             raise ValueError('Window has positive offset')
         # If there is an underlying raster for this layer, do a sanity check
@@ -230,13 +222,11 @@ class YirgacheffeLayer(LayerMathMixin):
     def reset_window(self) -> None:
         self._active_area = None
         if self._projection:
-            abs_xstep, abs_ystep = abs(self._projection.xstep), abs(self._projection.ystep)
-            self._window = Window(
-                xoff=0,
-                yoff=0,
-                xsize=round_up_pixels((self.area.right - self.area.left) / self._projection.xstep, abs_xstep),
-                ysize=round_up_pixels((self.area.bottom - self.area.top) / self._projection.ystep, abs_ystep),
+            width, height = self._projection.round_up_pixels(
+                (self.area.right - self.area.left) / self._projection.xstep,
+                (self.area.bottom - self.area.top) / self._projection.ystep,
             )
+            self._window = Window(0, 0, width, height)
 
     def offset_window_by_pixels(self, offset: int) -> None:
         """Grows (if pixels is positive) or shrinks (if pixels is negative) the window for the layer."""
@@ -293,20 +283,16 @@ class YirgacheffeLayer(LayerMathMixin):
         assert self._projection is not None
         assert self._projection == target_projection
 
-        target_window = Window(
-            xoff=round_down_pixels((target_area.left - self._underlying_area.left) / self._projection.xstep,
-                self._projection.xstep),
-            yoff=round_down_pixels((self._underlying_area.top - target_area.top) / (self._projection.ystep * -1.0),
-                self._projection.ystep * -1.0),
-            xsize=round_up_pixels(
-                (target_area.right - target_area.left) / self._projection.xstep,
-                self._projection.xstep
-            ),
-            ysize=round_up_pixels(
-                (target_area.top - target_area.bottom) / (self._projection.ystep * -1.0),
-                (self._projection.ystep * -1.0)
-            ),
+        xoff, yoff = self._projection.round_down_pixels(
+            (target_area.left - self._underlying_area.left) / self._projection.xstep,
+            (self._underlying_area.top - target_area.top) / (self._projection.ystep * -1.0),
         )
+        xsize, ysize = self._projection.round_up_pixels(
+            (target_area.right - target_area.left) / self._projection.xstep,
+            (target_area.top - target_area.bottom) / (self._projection.ystep * -1.0),
+        )
+
+        target_window = Window(xoff, yoff, xsize, ysize)
         return self._read_array_with_window(x, y, width, height, target_window)
 
     def _read_array(self, x: int, y: int, width: int, height: int) -> Any:

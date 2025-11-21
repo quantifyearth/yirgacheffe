@@ -2,9 +2,9 @@ import sys
 
 import pytest
 
-from yirgacheffe.window import PixelScale
-from yirgacheffe._datatypes.pixelscale import almost_equal, are_pixel_scales_equal_enough, round_up_pixels,\
-    round_down_pixels, MINIMAL_DEGREE_OF_INTEREST
+from yirgacheffe import MapProjection
+from yirgacheffe._datatypes.pixelscale import almost_equal
+from yirgacheffe._datatypes.mapprojection import MINIMAL_DEGREE_OF_INTEREST, MINIMAL_DISTANCE_OF_INTEREST_IN_M
 
 @pytest.mark.parametrize("lval,rval,expected",
     [
@@ -28,7 +28,8 @@ def test_almost_equal(lval, rval, expected):
     ]
 )
 def test_pixel_rounding_up(pixels: float, scale: float, expected: int) -> None:
-    assert round_up_pixels(pixels, scale) == expected
+    projection = MapProjection("epsg:4326", scale, -scale)
+    assert projection.round_up_pixels(pixels, pixels) == (expected, expected)
 
 @pytest.mark.parametrize("pixels,scale,expected",
     [
@@ -39,49 +40,60 @@ def test_pixel_rounding_up(pixels: float, scale: float, expected: int) -> None:
     ]
 )
 def test_pixel_rounding_down(pixels: float, scale: float, expected: int) -> None:
-    assert round_down_pixels(pixels, scale) == expected
+    projection = MapProjection("epsg:4326", scale, -scale)
+    assert projection.round_down_pixels(pixels, pixels) == (expected, expected)
 
-@pytest.mark.parametrize("pixel_scales,expected",
-    [
-        (
-            [],
-            True
+@pytest.mark.parametrize("lhs,rhs,expected", [
+    (
+        MapProjection("epsg:4326", 0.1, 0.1),
+        None,
+        True,
+    ),
+    (
+        MapProjection("epsg:4326", 0.1, 0.1),
+        MapProjection("epsg:4326", 0.1, 0.1),
+        True,
+    ),
+    (
+        MapProjection("epsg:4326", 0.1, 0.1),
+        MapProjection("epsg:4326", 0.1 + (MINIMAL_DEGREE_OF_INTEREST / 2), 0.1 + (MINIMAL_DEGREE_OF_INTEREST / 2)),
+        True,
+    ),
+    (
+        MapProjection("epsg:4326", 0.1, 0.1),
+        MapProjection("epsg:4326", 0.1 + (MINIMAL_DEGREE_OF_INTEREST * 2), 0.1 + (MINIMAL_DEGREE_OF_INTEREST * 2)),
+        False,
+    ),
+    (
+        MapProjection("epsg:4326", 0.1, 0.1),
+        MapProjection("esri:54009", 0.1, 0.1),
+        False,
+    ),
+    (
+        MapProjection("esri:54009", 100.0, 100.0),
+        MapProjection("esri:54009", 100.0, 100.0),
+        True,
+    ),
+    (
+        # this test attempts to abuse the fact that ESRI:54009 is in metres
+        MapProjection("esri:54009", 100.0, 100.0),
+        MapProjection(
+            "esri:54009",
+            100.0 + (MINIMAL_DISTANCE_OF_INTEREST_IN_M / 2),
+            100.0 + (MINIMAL_DISTANCE_OF_INTEREST_IN_M / 2),
         ),
-        (
-            [
-                PixelScale(0.1, 0.1),
-            ],
-            True
+        True,
+    ),
+    (
+        # this test attempts to abuse the fact that ESRI:54009 is in metres
+        MapProjection("esri:54009", 100.0, 100.0),
+        MapProjection(
+            "esri:54009",
+            100.0 + (MINIMAL_DISTANCE_OF_INTEREST_IN_M * 2),
+            100.0 + (MINIMAL_DISTANCE_OF_INTEREST_IN_M * 2),
         ),
-        (
-            [
-                PixelScale(0.1, 0.1),
-                None,
-            ],
-            True
-        ),
-        (
-            [
-                PixelScale(0.1, 0.1),
-                PixelScale(0.1, 0.1),
-            ],
-            True
-        ),
-        (
-            [
-                PixelScale(0.1, 0.1),
-                PixelScale(0.1 + (MINIMAL_DEGREE_OF_INTEREST / 2), 0.1 + (MINIMAL_DEGREE_OF_INTEREST / 2)),
-            ],
-            True
-        ),
-        (
-            [
-                PixelScale(0.1, 0.1),
-                PixelScale(0.1 + (MINIMAL_DEGREE_OF_INTEREST * 2), 0.1 + (MINIMAL_DEGREE_OF_INTEREST * 2)),
-            ],
-            False
-        ),
-    ]
-)
-def test_pixel_scale_comparison(pixel_scales: list[PixelScale], expected: bool) -> None:
-    assert are_pixel_scales_equal_enough(pixel_scales) == expected
+        False,
+    ),
+])
+def test_pixel_scale_comparison(lhs: MapProjection, rhs: MapProjection, expected: bool) -> None:
+    assert (lhs == rhs) == expected

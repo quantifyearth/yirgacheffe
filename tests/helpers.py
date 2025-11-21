@@ -3,12 +3,17 @@ from pathlib import Path
 import numpy as np
 from osgeo import gdal, ogr
 
-from yirgacheffe.window import Area
+from yirgacheffe import Area, MapProjection
 from yirgacheffe.layers import YirgacheffeLayer
-from yirgacheffe._datatypes.pixelscale import round_up_pixels
 from yirgacheffe import WGS_84_PROJECTION
 
 def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: str | Path | None = None) -> gdal.Dataset:
+    projection = MapProjection("epsg:4326", pixel_pitch, -pixel_pitch)
+    width, height = projection.round_up_pixels(
+        ((area.right - area.left) / pixel_pitch),
+        ((area.top - area.bottom) / pixel_pitch),
+    )
+
     if filename:
         driver = gdal.GetDriverByName('GTiff')
     else:
@@ -16,8 +21,8 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: str | Path 
         filename = 'mem'
     dataset = driver.Create(
         filename,
-        round_up_pixels(((area.right - area.left) / pixel_pitch), pixel_pitch),
-        round_up_pixels(((area.top - area.bottom) / pixel_pitch), pixel_pitch),
+        width,
+        height,
         1,
         gdal.GDT_Byte,
         []
@@ -33,10 +38,16 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: str | Path 
     return dataset
 
 def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset:
+    projection = MapProjection("epsg:4326", pixel_pitch, -pixel_pitch)
+    width, height = projection.round_up_pixels(
+        ((area.right - area.left) / pixel_pitch),
+        ((area.top - area.bottom) / pixel_pitch),
+    )
+
     dataset = gdal.GetDriverByName('mem').Create(
         'mem',
-        round_up_pixels(((area.right - area.left) / pixel_pitch), pixel_pitch),
-        round_up_pixels(((area.top - area.bottom) / pixel_pitch), pixel_pitch),
+        width,
+        height,
         0,
         gdal.GDT_Byte,
         []
