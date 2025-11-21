@@ -15,7 +15,10 @@ except ModuleNotFoundError:
 from .layers import YirgacheffeLayer
 from ._core import read_raster, read_rasters, read_shape, read_shape_like, constant, read_narrow_raster, from_array
 from .constants import WGS_84_PROJECTION
-from .window import Area, MapProjection, Window
+from ._datatypes.area import Area
+from ._datatypes.mapprojection import MapProjection
+from ._datatypes.pixelscale import PixelScale
+from ._datatypes.window import Window
 from ._backends.enumeration import dtype as DataType
 
 from ._operators import where, minimum, maximum, clip, log, log2, log10, exp, exp2, nan_to_num, isin, \

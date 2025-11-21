@@ -1,8 +1,8 @@
 import pyproj
 import pytest
 
-from yirgacheffe.window import MapProjection
-from yirgacheffe.rounding import MINIMAL_DEGREE_OF_INTEREST
+from yirgacheffe import MapProjection
+from yirgacheffe._datatypes.mapprojection import MINIMAL_DEGREE_OF_INTEREST
 
 @pytest.mark.parametrize("name", [
     "epsg:4326",

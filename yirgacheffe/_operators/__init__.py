@@ -4,6 +4,7 @@ import builtins
 import logging
 import math
 import multiprocessing
+import operator as pyoperator
 import os
 import resource
 import sys
@@ -13,6 +14,7 @@ import types
 from collections.abc import Callable
 from contextlib import ExitStack, nullcontext
 from enum import Enum
+from functools import reduce
 from multiprocessing import Process, Semaphore
 from multiprocessing.synchronize import Semaphore as SemaphoreType
 from multiprocessing.managers import SharedMemoryManager
@@ -27,8 +29,7 @@ from dill import dumps, loads # type: ignore
 from pyproj import Transformer
 
 from .. import constants, __version__
-from ..rounding import round_up_pixels, round_down_pixels
-from ..window import Area, PixelScale, MapProjection, Window
+from .._datatypes import Area, PixelScale, MapProjection, Window
 from .._backends import backend
 from .._backends.enumeration import operators as op
 from .._backends.enumeration import dtype as DataType
@@ -369,10 +370,9 @@ class LayerMathMixin:
         transformer = Transformer.from_crs("EPSG:4326", projection.name)
         x, y = transformer.transform(lng,lat)
 
-        pixel_scale = projection.scale
-        return (
-            round_down_pixels((x - area.left) / pixel_scale.xstep, builtins.abs(pixel_scale.xstep)),
-            round_down_pixels((y - area.top) / pixel_scale.ystep, builtins.abs(pixel_scale.ystep)),
+        return projection.round_down_pixels(
+            (x - area.left) / projection.xstep,
+            (y - area.top) / projection.ystep,
         )
 
     @property
@@ -604,23 +604,9 @@ class LayerOperation(LayerMathMixin):
                 assert rhs_area is not None
                 return rhs_area
             case WindowOperation.INTERSECTION:
-                intersection = Area(
-                    left=max(x.left for x in all_areas),
-                    top=min(x.top for x in all_areas),
-                    right=min(x.right for x in all_areas),
-                    bottom=max(x.bottom for x in all_areas)
-                )
-                if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
-                    raise ValueError('No intersection possible')
-                return intersection
+                return reduce(pyoperator.and_, all_areas)
             case WindowOperation.UNION:
-                union = Area(
-                    left=min(x.left for x in all_areas),
-                    top=max(x.top for x in all_areas),
-                    right=max(x.right for x in all_areas),
-                    bottom=min(x.bottom for x in all_areas)
-                )
-                return union
+                return reduce(pyoperator.or_, all_areas)
             case _:
                 raise RuntimeError("Should not be reached")
 
@@ -652,17 +638,15 @@ class LayerOperation(LayerMathMixin):
         area = self._get_operation_area(projection)
         assert area is not None
 
-        return Window(
-            xoff=round_down_pixels(area.left / projection.xstep, projection.xstep),
-            yoff=round_down_pixels(area.top / (projection.ystep * -1.0), projection.ystep * -1.0),
-            xsize=round_up_pixels(
-                (area.right - area.left) / projection.xstep, projection.xstep
-            ),
-            ysize=round_up_pixels(
-                (area.top - area.bottom) / (projection.ystep * -1.0),
-                (projection.ystep * -1.0)
-            ),
+        xoff, yoff = projection.round_down_pixels(
+            area.left / projection.xstep,
+            area.top / (projection.ystep * -1.0)
         )
+        xsize, ysize = projection.round_up_pixels(
+            (area.right - area.left) / projection.xstep,
+            (area.top - area.bottom) / (projection.ystep * -1.0),
+        )
+        return Window(xoff, yoff, xsize, ysize)
 
     @property
     def datatype(self) -> DataType:
