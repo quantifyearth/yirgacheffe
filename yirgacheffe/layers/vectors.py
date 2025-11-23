@@ -353,6 +353,7 @@ class VectorLayer(YirgacheffeLayer):
                 top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
                 right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
                 bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
+                projection=projection,
             )
         else:
             # If we don't have  a projection just go with the idealised area
@@ -399,6 +400,7 @@ class VectorLayer(YirgacheffeLayer):
                 top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
                 right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
                 bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
+                projection=target_projection,
             )
 
     @property

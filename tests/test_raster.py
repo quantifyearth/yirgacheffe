@@ -18,7 +18,7 @@ from yirgacheffe.operators import DataType
 # file handle within that directory.
 
 def test_make_basic_layer() -> None:
-    area = Area(-10, 10, 10, -10)
+    area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
     dataset = gdal_dataset_of_region(area, 0.02)
 
     # The context manager routines are just called on the base class, so ensure
@@ -52,7 +52,7 @@ def test_layer_from_nonexistent_file() -> None:
 def test_open_file() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10)
+        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
         dataset.Close()
         assert os.path.exists(path)
@@ -149,29 +149,29 @@ def test_empty_layer_from_raster_with_window():
 
 def test_layer_with_positive_offset():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
-    assert source.area == Area(-10, 10, 10, -10)
+    assert source.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
 
     source.offset_window_by_pixels(5)
-    assert source.area == Area(-10 - (5 * 0.02), 10 + (5 * 0.02), 10 + (5 * 0.02), -10 - (5 * 0.02))
+    assert source.area == Area(-10 - (5 * 0.02), 10 + (5 * 0.02), 10 + (5 * 0.02), -10 - (5 * 0.02), MapProjection("epsg:4326", 0.02, -0.02))
     assert source.window == Window(-5, -5, int(20 / 0.02) + 10, int(20 / 0.02) + 10)
 
 def test_layer_with_zero_offset():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
-    assert source.area == Area(-10, 10, 10, -10)
+    assert source.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
 
     source.offset_window_by_pixels(0)
-    assert source.area == Area(-10, 10, 10, -10)
+    assert source.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
 
 def test_layer_with_negative_offset():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
-    assert source.area == Area(-10, 10, 10, -10)
+    assert source.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
 
     source.offset_window_by_pixels(-5)
-    assert source.area == Area(-10 + (5 * 0.02), 10 - (5 * 0.02), 10 - (5 * 0.02), -10 + (5 * 0.02))
+    assert source.area == Area(-10 + (5 * 0.02), 10 - (5 * 0.02), 10 - (5 * 0.02), -10 + (5 * 0.02), MapProjection("epsg:4326", 0.02, -0.02))
     assert source.window == Window(5, 5, int(20 / 0.02) - 10, int(20 / 0.02) - 10)
 
 def test_layer_with_excessive_negative_offset():
@@ -181,18 +181,18 @@ def test_layer_with_excessive_negative_offset():
 
 def test_layer_offsets_accumulate():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
-    assert source.area == Area(-10, 10, 10, -10)
+    assert source.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
 
     source.offset_window_by_pixels(5)
     source.offset_window_by_pixels(-5)
 
-    assert source.area == Area(-10, 10, 10, -10)
+    assert source.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
     assert source.window == Window(0, 0, 20 / 0.02, 20 / 0.02)
 
 def test_scale_up():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.2))
-    assert source.area == Area(-10, 10, 10, -10)
+    assert source.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
     assert source.window == Window(0, 0, 20 / 0.2, 20 / 0.2)
 
     new_pixel_scale = PixelScale(0.1, -0.1)
@@ -200,13 +200,13 @@ def test_scale_up():
         source,
         new_pixel_scale
     )
-    assert scaled.area == Area(-10, 10, 10, -10)
+    assert scaled.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.1, -0.1))
     assert scaled.window == Window(0, 0, 20 / 0.1, 20 / 0.1)
     assert scaled.sum() == source.sum() * 4
 
 def test_scale_down():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.2))
-    assert source.area == Area(-10, 10, 10, -10)
+    assert source.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
     assert source.window == Window(0, 0, 20 / 0.2, 20 / 0.2)
 
     new_pixel_scale = PixelScale(0.5, -0.5)
@@ -214,7 +214,7 @@ def test_scale_down():
         source,
         new_pixel_scale
     )
-    assert scaled.area == Area(-10, 10, 10, -10)
+    assert scaled.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.5, -0.5))
     assert scaled.window == Window(0, 0, 20 / 0.5, 20 / 0.5)
     # because we're dropping pixels, it's not easy to do this comparison
     # but at least make sure its less
@@ -231,7 +231,7 @@ def test_scale_down():
 )
 def test_read_array_size(size, expect_success):
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.2))
-    assert source.area == Area(-10, 10, 10, -10)
+    assert source.area == Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
     assert source.window == Window(0, 0, 20 / 0.2, 20 / 0.2)
 
     if expect_success:

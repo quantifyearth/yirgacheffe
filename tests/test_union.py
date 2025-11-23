@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from tests.helpers import gdal_dataset_of_region, make_vectors_with_id
-from yirgacheffe.window import Area, Window
+from yirgacheffe import Area, MapProjection, Window
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
 
 
@@ -39,7 +39,7 @@ def test_find_union_overlap() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02))
     ]
     union = RasterLayer.find_union(layers)
-    assert union == Area(-15, 15, 10, -10)
+    assert union == Area(-15, 15, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
 
 def test_find_union_distinct() -> None:
     layers = [
@@ -47,7 +47,7 @@ def test_find_union_distinct() -> None:
         RasterLayer(gdal_dataset_of_region(Area(100, 10, 110, -10), 0.02))
     ]
     union = RasterLayer.find_union(layers)
-    assert union == Area(-110, 10, 110, -10)
+    assert union == Area(-110, 10, 110, -10, MapProjection("epsg:4326", 0.02, -0.02))
 
     for layer in layers:
         layer.set_window_for_union(union)
@@ -81,7 +81,8 @@ def test_find_union_with_vector_unbound() -> None:
 
         layers = [raster, vector]
         union = RasterLayer.find_union(layers)
-        assert union == vector.area
+        aligned_area = vector.area.project_like(raster.area)
+        assert union == aligned_area
 
         raster.set_window_for_union(union)
         with pytest.raises(ValueError):

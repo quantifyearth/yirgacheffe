@@ -5,7 +5,7 @@ import pytest
 from osgeo import gdal
 
 from tests.helpers import gdal_dataset_of_region, gdal_empty_dataset_of_region, make_vectors_with_id
-from yirgacheffe.window import Area, MapProjection, Window
+from yirgacheffe import Area, MapProjection, Window
 from yirgacheffe.layers import RasterLayer, ConstantLayer, H3CellLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
 
@@ -41,7 +41,7 @@ def test_find_intersection_overlap() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02))
     ]
     intersection = RasterLayer.find_intersection(layers)
-    assert intersection == Area(-10, 10, -5, -5)
+    assert intersection == Area(-10, 10, -5, -5, layers[0].map_projection)
 
 def test_find_intersection_distinct() -> None:
     layers = [
@@ -75,7 +75,9 @@ def test_find_intersection_with_vector_unbound() -> None:
 
         layers = [raster, vector]
         intersection = RasterLayer.find_intersection(layers)
-        assert intersection == vector.area
+
+        expected_area = area.project_like(raster.area)
+        assert intersection == expected_area
 
         raster.set_window_for_intersection(intersection)
         with pytest.raises(ValueError):
@@ -109,7 +111,7 @@ def test_find_intersection_with_vector_awkward_rounding() -> None:
         raster = RasterLayer(gdal_dataset_of_region(Area(left=-180, top=90, right=180, bottom=-90), 18.0))
         vector = VectorLayer.layer_from_file_like(path, raster)
 
-        rounded_area = Area(left=-90, top=54, right=90, bottom=-54)
+        rounded_area = Area(left=-90, top=54, right=90, bottom=-54, projection=MapProjection("epsg:4326", 18.0, -18.0))
         assert vector.area == rounded_area
 
         layers = [raster, vector]

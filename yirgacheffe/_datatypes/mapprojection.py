@@ -65,14 +65,14 @@ class MapProjection:
         )
 
     def __repr__(self) -> str:
-        return f"MapProjection({self.name!r}, {self.xstep}, {self.ystep})"
+        epsg = self.epsg
+        name = f"epsg:{epsg}" if epsg is not None else self.name
+        return f"MapProjection({name!r}, {self.xstep}, {self.ystep})"
 
     def __hash__(self):
         return hash((self.name, self.xstep, self.ystep))
 
     def __eq__(self, other) -> bool:
-        if other is None:
-            return True
         if not isinstance(other, MapProjection):
             return False
         if self.crs != other.crs:

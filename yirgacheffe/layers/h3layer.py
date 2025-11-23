@@ -56,6 +56,7 @@ class H3CellLayer(YirgacheffeLayer):
                 right=right,
                 top=area.top,
                 bottom=area.bottom,
+                projection=projection
             )
 
         width, height = projection.round_up_pixels(

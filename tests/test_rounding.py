@@ -33,7 +33,7 @@ def test_pixel_rounding_down(pixels: float, scale: float, expected: int) -> None
     (
         MapProjection("epsg:4326", 0.1, 0.1),
         None,
-        True,
+        False,
     ),
     (
         MapProjection("epsg:4326", 0.1, 0.1),

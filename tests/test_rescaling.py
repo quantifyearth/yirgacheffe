@@ -12,7 +12,7 @@ def test_simple_scale_down() -> None:
     with RasterLayer(dataset) as raster:
         target_projection = MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
         with RescaledRasterLayer(raster, target_projection) as layer:
-            assert layer.area == area
+            assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
@@ -24,7 +24,7 @@ def test_simple_scale_up() -> None:
     with RasterLayer(dataset) as raster:
         target_projection = MapProjection(WGS_84_PROJECTION, 0.04, -0.04)
         with RescaledRasterLayer(raster, target_projection) as layer:
-            assert layer.area == area
+            assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
@@ -41,7 +41,7 @@ def test_scaling_up_pixels() -> None:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
         with RescaledRasterLayer(raster, target_projection) as layer:
-            assert layer.area == Area(0, 0, 4, -4)
+            assert layer.area == Area(0, 0, 4, -4, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (0.0, 0.5, 0.0, 0.0, 0.0, -0.5)
@@ -108,7 +108,7 @@ def test_scaling_down_pixels() -> None:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
         with RescaledRasterLayer(raster, target_projection) as layer:
-            assert layer.area == Area(0, 0, 8, -8)
+            assert layer.area == Area(0, 0, 8, -8, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (0.0, 2.0, 0.0, 0.0, 0.0, -2.0)
@@ -221,10 +221,10 @@ def test_rescaled_up_with_window_set() -> None:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
         with RescaledRasterLayer(raster, target_projection) as layer:
-            assert layer.area == Area(0.0, 0.0, 4.0, -4.0)
+            assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
 
             layer.set_window_for_intersection(Area(1.0, -1.0, 3.0, -3.0))
-            assert layer.area == Area(1.0, -1.0, 3.0, -3.0)
+            assert layer.area == Area(1.0, -1.0, 3.0, -3.0, target_projection)
             assert layer.window == Window(2, 2, 4, 4)
 
             actual_raster = layer.read_array(0, 0, 4, 4)
@@ -245,7 +245,7 @@ def test_rescaled_up_with_window_set_2() -> None:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
         with RescaledRasterLayer(raster, target_projection) as layer:
-            assert layer.area == Area(0.0, 0.0, 4.0, -4.0)
+            assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
 
             expected_raster = np.zeros((6, 6))
             expected_raster[0:3,3:6] = 1
@@ -256,7 +256,7 @@ def test_rescaled_up_with_window_set_2() -> None:
             assert (actual_raster == expected_raster).all()
 
             layer.set_window_for_intersection(Area(0.5, -0.5, 3.5, -3.5))
-            assert layer.area == Area(0.5, -0.5, 3.5, -3.5)
+            assert layer.area == Area(0.5, -0.5, 3.5, -3.5, target_projection)
             assert layer.window == Window(1, 1, 6, 6)
 
             actual_raster = layer.read_array(0, 0, 6, 6)
@@ -273,10 +273,10 @@ def test_rescaled_down_with_window_set() -> None:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
         with RescaledRasterLayer(raster, target_projection) as layer:
-            assert layer.area == Area(0.0, 0.0, 8.0, -8.0)
+            assert layer.area == Area(0.0, 0.0, 8.0, -8.0, target_projection)
 
             layer.set_window_for_intersection(Area(2.0, -2.0, 6.0, -6.0))
-            assert layer.area == Area(2.0, -2.0, 6.0, -6.0)
+            assert layer.area == Area(2.0, -2.0, 6.0, -6.0, target_projection)
             assert layer.window == Window(1, 1, 2, 2)
 
             actual_raster = layer.read_array(0, 0, 2, 2)

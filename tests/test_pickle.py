@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from tests.helpers import gdal_dataset_of_region, make_vectors_with_id
-from yirgacheffe.window import Area, MapProjection, PixelScale, Window
+from yirgacheffe import Area, MapProjection, PixelScale, Window
 from yirgacheffe.layers import ConstantLayer, GroupLayer, RasterLayer, RescaledRasterLayer, \
     UniformAreaLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
@@ -17,7 +17,7 @@ from yirgacheffe import WGS_84_PROJECTION
 def test_pickle_raster_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10)
+        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
         layer = RasterLayer(gdal_dataset_of_region(area, 0.02, filename=path))
 
         p = pickle.dumps(layer)
@@ -37,7 +37,7 @@ def test_pickle_raster_mem_layer_fails() -> None:
 def test_pickle_dyanamic_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
-        area = Area(-10.0, 10.0, 10.0, 0.0)
+        area = Area(-10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0))
         make_vectors_with_id(42, {area}, path)
 
         layer = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
@@ -77,7 +77,8 @@ def test_pickle_uniform_area_layer() -> None:
             math.floor(-180 / pixel_scale) * pixel_scale,
             math.ceil(90 / pixel_scale) * pixel_scale,
             math.ceil(180 / pixel_scale) * pixel_scale,
-            math.floor(-90 / pixel_scale) * pixel_scale
+            math.floor(-90 / pixel_scale) * pixel_scale,
+            MapProjection("epsg:4326", pixel_scale, -pixel_scale)
         )
         assert restore.window == Window(
             0,
@@ -89,7 +90,7 @@ def test_pickle_uniform_area_layer() -> None:
 def test_pickle_group_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10)
+        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
         dataset = gdal_dataset_of_region(area, 0.2, filename=path)
         dataset.Close()
 
@@ -182,7 +183,7 @@ def test_pickle_rescaled_raster_layer() -> None:
         p = pickle.dumps(layer)
         restore = pickle.loads(p)
 
-        assert restore.area == area
+        assert restore.area == Area(-10, 10, 10, -10, MapProjection(WGS_84_PROJECTION, 0.01, -0.01))
         assert restore.pixel_scale == (0.01, -0.01)
         assert restore.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
         assert restore.window == Window(0, 0, 2000, 2000)

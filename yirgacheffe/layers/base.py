@@ -129,7 +129,7 @@ class YirgacheffeLayer(LayerMathMixin):
         if not projections:
             raise ValueError("No layers have a projection")
         if not all(projections[0] == x for x in projections[1:]):
-            raise ValueError("Not all layers are at the same projectin or pixel scale")
+            raise ValueError("Not all layers are at the same projection or pixel scale")
 
         layer_areas = [x._get_operation_area() for x in layers]
         return reduce(operator.and_, layer_areas)
@@ -164,6 +164,9 @@ class YirgacheffeLayer(LayerMathMixin):
         if self._projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
 
+        if new_area.projection is None:
+            new_area = new_area.project_like(self._underlying_area)
+
         xoff, yoff = self._projection.round_down_pixels(
             (new_area.left - self._underlying_area.left) / abs(self._projection.xstep),
             (self._underlying_area.top - new_area.top) / abs(self._projection.ystep),
@@ -191,6 +194,9 @@ class YirgacheffeLayer(LayerMathMixin):
     def set_window_for_union(self, new_area: Area) -> None:
         if self._projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
+
+        if new_area.projection is None:
+            new_area = new_area.project_like(self._underlying_area)
 
         xoff, yoff = self._projection.round_down_pixels(
             (new_area.left - self._underlying_area.left) / abs(self._projection.xstep),
@@ -253,7 +259,8 @@ class YirgacheffeLayer(LayerMathMixin):
             left=new_left,
             top=new_top,
             right=new_left + (new_window.xsize * scale.xstep),
-            bottom=new_top + (new_window.ysize * scale.ystep)
+            bottom=new_top + (new_window.ysize * scale.ystep),
+            projection=self._underlying_area.projection,
         )
         self._window = new_window
         self._active_area = new_area

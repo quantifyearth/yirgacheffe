@@ -6,7 +6,7 @@ import pytest
 from tests.helpers import make_vectors_with_multiple_ids, make_vectors_with_id, make_vectors_with_empty_feature
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, RasteredVectorLayer, VectorLayer
-from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe import Area, MapProjection, PixelScale, Window
 from yirgacheffe.operators import DataType
 
 def test_basic_vector_layer_no_filter_match() -> None:
@@ -26,7 +26,7 @@ def test_basic_dynamic_vector_layer() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
-            assert layer.area == area
+            assert layer.area == Area(-10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0))
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.map_projection.epsg == 4326
@@ -42,7 +42,7 @@ def test_rastered_vector_layer() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with RasteredVectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION) as layer:
-            assert layer.area == area
+            assert layer.area == Area(-10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0))
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.map_projection.epsg == 4326
@@ -70,7 +70,7 @@ def test_multi_area_vector() -> None:
         dynamic_layer = VectorLayer.layer_from_file(path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
 
         for layer in (dynamic_layer, rastered_layer):
-            assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+            assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))
             assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 20)
 
@@ -122,7 +122,7 @@ def test_vector_layers_with_default_burn_value(klass) -> None:
 
         layer = klass.layer_from_file(path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION)
 
-        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte
@@ -150,7 +150,7 @@ def test_vector_layers_with_fixed_burn_value(klass) -> None:
 
         layer = klass.layer_from_file(path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value=5)
 
-        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
 
@@ -177,7 +177,7 @@ def test_vector_layers_with_default_burn_value_and_filter(klass) -> None:
 
         layer = klass.layer_from_file(path, "id_no=42", PixelScale(1.0, -1.0), WGS_84_PROJECTION)
 
-        assert layer.area == Area(-10.0, 10.0, 0.0, 0.0)
+        assert layer.area == Area(-10.0, 10.0, 0.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0))
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 10, 10)
 
@@ -229,7 +229,7 @@ def test_vector_layers_with_field_value(klass) -> None:
 
         layer = klass.layer_from_file(path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value="id_no")
 
-        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
 
@@ -267,7 +267,7 @@ def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
             burn_value=value
         )
 
-        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
@@ -307,7 +307,7 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
             burn_value="id_no"
         )
 
-        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
 
@@ -340,7 +340,7 @@ def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None
             burn_value="id_no"
         )
 
-        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
@@ -377,29 +377,29 @@ def test_read_array_size(size, expect_success):
 
 @pytest.mark.parametrize("anchor,area,expected",
     [
-        ((0.0, 0.0), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)),
-        ((0.0, 0.0), Area(-9.9, 9.9, 9.9, -9.9), Area(-10.0, 10.0, 10.0, -10.0)),
-        ((0.0, 0.0), Area(-9.1, 9.1, 9.1, -9.1), Area(-10.0, 10.0, 10.0, -10.0)),
+        ((0.0, 0.0), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.0, 0.0), Area(-9.9, 9.9, 9.9, -9.9), Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.0, 0.0), Area(-9.1, 9.1, 9.1, -9.1), Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))),
 
-        ((0.0, 0.0), Area(5.0, 10.0, 10.0, 5.0), Area(5.0, 10.0, 10.0, 5.0)),
-        ((0.0, 0.0), Area(5.0, -5.0, 10.0, -10.0), Area(5.0, -5.0, 10.0, -10.0)),
-        ((0.0, 0.0), Area(-10.0, -5.0, -5.0, -10.0), Area(-10.0, -5.0, -5.0, -10.0)),
-        ((0.0, 0.0), Area(-10.0, 10.0, -5.0, 5.0), Area(-10.0, 10.0, -5.0, 5.0)),
+        ((0.0, 0.0), Area(5.0, 10.0, 10.0, 5.0), Area(5.0, 10.0, 10.0, 5.0, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.0, 0.0), Area(5.0, -5.0, 10.0, -10.0), Area(5.0, -5.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.0, 0.0), Area(-10.0, -5.0, -5.0, -10.0), Area(-10.0, -5.0, -5.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.0, 0.0), Area(-10.0, 10.0, -5.0, 5.0), Area(-10.0, 10.0, -5.0, 5.0, MapProjection("epsg:4326", 1.0, -1.0))),
 
-        ((0.0, 0.0), Area(5.1, 9.9, 9.9, 5.1), Area(5.0, 10.0, 10.0, 5.0)),
-        ((0.0, 0.0), Area(5.1, -5.1, 9.9, -9.9), Area(5.0, -5.0, 10.0, -10.0)),
-        ((0.0, 0.0), Area(-9.9, -5.1, -5.1, -9.9), Area(-10.0, -5.0, -5.0, -10.0)),
-        ((0.0, 0.0), Area(-9.9, 9.9, -5.1, 5.1), Area(-10.0, 10.0, -5.0, 5.0)),
+        ((0.0, 0.0), Area(5.1, 9.9, 9.9, 5.1), Area(5.0, 10.0, 10.0, 5.0, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.0, 0.0), Area(5.1, -5.1, 9.9, -9.9), Area(5.0, -5.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.0, 0.0), Area(-9.9, -5.1, -5.1, -9.9), Area(-10.0, -5.0, -5.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.0, 0.0), Area(-9.9, 9.9, -5.1, 5.1), Area(-10.0, 10.0, -5.0, 5.0, MapProjection("epsg:4326", 1.0, -1.0))),
 
-        ((0.1, 0.1), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.9, 10.1, 10.1, -10.9)),
+        ((0.1, 0.1), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.9, 10.1, 10.1, -10.9, MapProjection("epsg:4326", 1.0, -1.0))),
 
-        ((0.1, 0.1), Area(5.0, 10.0, 10.0, 5.0), Area(4.1, 10.1, 10.1, 4.1)),
-        ((0.1, 0.1), Area(5.0, -5.0, 10.0, -10.0), Area(4.1, -4.9, 10.1, -10.9)),
-        ((0.1, 0.1), Area(-10.0, -5.0, -5.0, -10.0), Area(-10.9, -4.9, -4.9, -10.9)),
-        ((0.1, 0.1), Area(-10.0, 10.0, -5.0, 5.0), Area(-10.9, 10.1, -4.9, 4.1)),
+        ((0.1, 0.1), Area(5.0, 10.0, 10.0, 5.0), Area(4.1, 10.1, 10.1, 4.1, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.1, 0.1), Area(5.0, -5.0, 10.0, -10.0), Area(4.1, -4.9, 10.1, -10.9, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.1, 0.1), Area(-10.0, -5.0, -5.0, -10.0), Area(-10.9, -4.9, -4.9, -10.9, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((0.1, 0.1), Area(-10.0, 10.0, -5.0, 5.0), Area(-10.9, 10.1, -4.9, 4.1, MapProjection("epsg:4326", 1.0, -1.0))),
 
-        ((-0.9, -0.9), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.9, 10.1, 10.1, -10.9)),
-        ((-1000.9, 100.1), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.9, 10.1, 10.1, -10.9)),
+        ((-0.9, -0.9), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.9, 10.1, 10.1, -10.9, MapProjection("epsg:4326", 1.0, -1.0))),
+        ((-1000.9, 100.1), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.9, 10.1, 10.1, -10.9, MapProjection("epsg:4326", 1.0, -1.0))),
     ]
 )
 def test_anchor_offsets(anchor, area, expected):
@@ -437,7 +437,7 @@ def test_vector_layers_with_empty_features(klass) -> None:
 
         layer = klass.layer_from_file(path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION)
 
-        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0)
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte

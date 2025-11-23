@@ -76,7 +76,8 @@ class UniformAreaLayer(RasterLayer):
             floor(-180 / projection.xstep) * projection.xstep,
             self.area.top,
             ceil(180 / projection.xstep) * projection.xstep,
-            self.area.bottom
+            self.area.bottom,
+            projection=projection,
         )
         self._active_area = self._underlying_area
 

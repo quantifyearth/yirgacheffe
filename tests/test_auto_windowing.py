@@ -218,6 +218,8 @@ def test_vector_layers_add() -> None:
                 raster_layer.map_projection.name,
                 burn_value=burn_value
             ) as vector_layer:
+                assert vector_layer.area.projection is not None
+
                 layer2_total = vector_layer.sum()
                 assert layer2_total == ((vector_layer.window.xsize * vector_layer.window.ysize) / 2) * burn_value
 

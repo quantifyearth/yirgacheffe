@@ -7,11 +7,62 @@ from yirgacheffe import Area, MapProjection
 @pytest.mark.parametrize(
     "lhs,rhs,is_equal,overlaps",
     [
-        # Obvious equality
-        (Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0), True,  True),
-        (Area(-9.0, 9.0, 9.0, -9.0),     Area(-10.0, 10.0, 10.0, -10.0), False, True), # subset
-        (Area(-9.0, 9.0, -1.0, 1.0),     Area(1.0, -1.0, 9.0, -9.0),     False, False),
-        (Area(-10.0, 10.0, 1.0, -10.0),  Area(-1.0, 10.0, 10.0, -10.0),  False, True),
+        # No projections
+        ( # Obvious equality
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            True,
+            True,
+        ),
+        ( # subset
+            Area(-9.0, 9.0, 9.0, -9.0),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            False,
+            True,
+        ),
+        (
+            Area(-9.0, 9.0, -1.0, 1.0),
+            Area(1.0, -1.0, 9.0, -9.0),
+            False,
+            False
+        ),
+        (
+            Area(-10.0, 10.0, 1.0, -10.0),
+            Area(-1.0, 10.0, 10.0, -10.0),
+            False,
+            True
+        ),
+        # Same projection equal offset
+        ( # Obvious equality
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            True,
+            True,
+        ),
+        ( # subset
+            Area(-9.0, 9.0, 9.0, -9.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            False,
+            True,
+        ),
+        (
+            Area(-9.0, 9.0, -1.0, 1.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(1.0, -1.0, 9.0, -9.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            False,
+            False
+        ),
+        (
+            Area(-10.0, 10.0, 1.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-1.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            False,
+            True
+        ),
+        (
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, None),
+            False,
+            True,
+        ),
     ]
 )
 def test_area_operators(lhs: Area, rhs: Area, is_equal: bool, overlaps: bool) -> None:
@@ -21,6 +72,18 @@ def test_area_operators(lhs: Area, rhs: Area, is_equal: bool, overlaps: bool) ->
     assert (rhs.overlaps(lhs)) == overlaps
     assert not lhs.is_world
     assert not rhs.is_world
+
+def test_area_operators_mixed_projections() -> None:
+    lhs = Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0))
+    rhs = Area(-100.0, 100.0, 100.0, -100.0, MapProjection("esri:54009", 100, -100))
+    assert (lhs == rhs) == False
+    assert (lhs != rhs) == True
+    with pytest.raises(ValueError):
+        _ = lhs.overlaps(rhs)
+    with pytest.raises(ValueError):
+        _ = lhs | rhs
+    with pytest.raises(ValueError):
+        _ = lhs & rhs
 
 @pytest.mark.parametrize(
         "lhs,rhs,expected",
@@ -77,36 +140,36 @@ def test_wrong_types_on_eq() -> None:
         ),
         # X shifted from perfect
         (
-            Area(-10.1, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.1, 10.0, 9.9, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
             (-0.1, 0.0),
         ),
         (
-            Area(10.1, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(10.1, 10.0, 11.1, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
             (0.1, 0.0),
         ),
         (
-            Area(-9.9, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-9.9, 10.0, 10.1, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
             (0.1, 0.0),
         ),
         (
-            Area(9.9, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(9.9, 10.0, 10.9, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
             (-0.1, 0.0),
         ),
         # Y shifted from perfect
         (
-            Area(10.0, -10.1, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(10.0, -10.1, 10.0, -11.1, MapProjection("epsg:4326", 1.0, -1.0)),
             (0.0, -0.1),
         ),
         (
-            Area(10.0, 10.1, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(10.0, 10.1, 10.0, -9.9, MapProjection("epsg:4326", 1.0, -1.0)),
             (0.0, 0.1),
         ),
         (
-            Area(10.0, -9.9, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(10.0, -9.9, 10.0, -10.9, MapProjection("epsg:4326", 1.0, -1.0)),
             (0.0, 0.1),
         ),
         (
-            Area(10.0, 9.9, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(10.0, 9.9, 10.0, -10.1, MapProjection("epsg:4326", 1.0, -1.0)),
             (0.0, -0.1),
         ),
         # No projection
@@ -124,3 +187,34 @@ def test_grid_offset(area: Area, expected: tuple[float,float] | None) -> None:
         assert offset is not None
         assert math.isclose(offset[0], expected[0])
         assert math.isclose(offset[1], expected[1])
+
+@pytest.mark.parametrize(
+    "lhs,rhs,expected",
+    [
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-5.0, 5.0, 5.0, -5.0, MapProjection("epsg:4326", 0.1, -0.1)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 0.1, -0.1)),
+        ),
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-5.01, 5.0, 4.99, -5.0, MapProjection("epsg:4326", 0.1, -0.1)),
+            Area(-10.01, 10.0, 9.99, -10.0, MapProjection("epsg:4326", 0.1, -0.1)),
+        ),
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-5.0, 5.01, 5.0, -4.99, MapProjection("epsg:4326", 0.1, -0.1)),
+            Area(-10.01, 10.0, 9.99, -10.0, MapProjection("epsg:4326", 0.1, -0.1)),
+        ),
+    ]
+)
+def test_project_like(lhs: Area, rhs: Area, expected: Area) -> None:
+    assert lhs.project_like(rhs) == expected
+
+@pytest.mark.parametrize("area_args", [
+    (-5.01, 5.0, 5.0, -5.0, MapProjection("epsg:4326", 0.1, -0.1)),
+    (-5.0, 5.01, 5.0, -5.0, MapProjection("epsg:4326", 0.1, -0.1)),
+])
+def test_invalid_projected_areas(area_args) -> None:
+    with pytest.raises(ValueError):
+        _ = Area(*area_args)
