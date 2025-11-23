@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..window import Area, MapProjection, PixelScale, Window
+from .._datatypes import Area, MapProjection, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
@@ -22,9 +22,6 @@ class ConstantLayer(YirgacheffeLayer):
     @property
     def datatype(self) -> DataType:
         return DataType.Float64
-
-    def check_pixel_scale(self, _scale: PixelScale) -> bool:
-        return True
 
     def set_window_for_intersection(self, _intersection: Area) -> None:
         pass

@@ -7,8 +7,7 @@ import numpy as np
 from osgeo import gdal
 
 from ..constants import WGS_84_PROJECTION
-from ..window import Area, MapProjection, PixelScale, Window
-from ..rounding import round_up_pixels
+from .._datatypes import Area, MapProjection, PixelScale, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
@@ -58,6 +57,12 @@ class RasterLayer(YirgacheffeLayer):
         if nbits is not None:
             options.append(f"NBITS={nbits}")
 
+        map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+        width, height = map_projection.round_up_pixels(
+            (pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep,
+            (pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep,
+        )
+
         if filename:
             driver = gdal.GetDriverByName('GTiff')
             options.append('BIGTIFF=YES')
@@ -68,11 +73,10 @@ class RasterLayer(YirgacheffeLayer):
         else:
             driver = gdal.GetDriverByName('mem')
             filename = 'mem'
-            compress = False
         dataset = driver.Create(
             filename,
-            round_up_pixels((pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep, abs_xstep),
-            round_up_pixels((pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep, abs_ystep),
+            width,
+            height,
             bands,
             datatype_arg.to_gdal(),
             options
@@ -80,7 +84,7 @@ class RasterLayer(YirgacheffeLayer):
         dataset.SetGeoTransform([
             pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
         ])
-        dataset.SetProjection(projection)
+        dataset.SetProjection(map_projection.name)
         if nodata is not None:
             dataset.GetRasterBand(1).SetNoDataValue(nodata)
         return RasterLayer(dataset, name=name)
@@ -109,8 +113,10 @@ class RasterLayer(YirgacheffeLayer):
         if projection is None:
             raise ValueError("Can not work out area without explicit pixel scale")
         abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
-        width = round_up_pixels((area.right - area.left) / abs_xstep, abs_xstep)
-        height = round_up_pixels((area.top - area.bottom) / abs_ystep, abs_ystep)
+        width, height = projection.round_up_pixels(
+            (area.right - area.left) / abs_xstep,
+            (area.top - area.bottom) / abs_ystep,
+        )
         geo_transform = (
             area.left, projection.xstep, 0.0, area.top, 0.0, projection.ystep
         )
@@ -175,14 +181,16 @@ class RasterLayer(YirgacheffeLayer):
         old_projection = source.map_projection
         assert old_projection is not None
 
+        new_projection = MapProjection(old_projection.name, new_pixel_scale.xstep, new_pixel_scale.ystep)
+
         x_scale = old_projection.xstep / new_pixel_scale.xstep
         y_scale = old_projection.ystep / new_pixel_scale.ystep
-        new_width = round_up_pixels(source_dataset.RasterXSize * x_scale,
-            abs(new_pixel_scale.xstep))
-        new_height = round_up_pixels(source_dataset.RasterYSize * y_scale,
-            abs(new_pixel_scale.ystep))
+        new_width, new_height = new_projection.round_down_pixels(
+            source_dataset.RasterXSize * x_scale,
+            source_dataset.RasterYSize * y_scale,
+        )
 
-        # in yirgacheffe we like to have things aligned to the pixel_scale, so work
+        # in Yirgacheffe we like to have things aligned to the pixel_scale, so work
         # out new top left corner
         new_left = math.floor((source.area.left / new_pixel_scale.xstep)) * new_pixel_scale.xstep
         new_top = math.ceil((source.area.top / new_pixel_scale.ystep)) * new_pixel_scale.ystep
@@ -212,7 +220,7 @@ class RasterLayer(YirgacheffeLayer):
         ))
         dataset.SetProjection(source_dataset.GetProjection())
 
-        # now use gdal to do the reprojection
+        # now use GDAL to do the re-projection
         gdal.ReprojectImage(source_dataset, dataset, eResampleAlg=algorithm)
 
         return RasterLayer(dataset)

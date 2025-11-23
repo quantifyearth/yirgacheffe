@@ -6,8 +6,7 @@ from typing import Any
 import h3
 import numpy as np
 
-from ..rounding import round_up_pixels
-from ..window import Area, MapProjection, Window
+from .._datatypes import Area, MapProjection, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
@@ -58,12 +57,17 @@ class H3CellLayer(YirgacheffeLayer):
                 bottom=area.bottom,
             )
 
+        width, height = projection.round_up_pixels(
+            (area.right - area.left) / projection.xstep,
+            (area.bottom - area.top) / projection.ystep,
+        )
+
         super().__init__(area, projection)
         self._window = Window(
             xoff=0,
             yoff=0,
-            xsize=round_up_pixels((area.right - area.left) / projection.xstep, abs_xstep),
-            ysize=round_up_pixels((area.bottom - area.top) / projection.ystep, abs_ystep),
+            xsize=width,
+            ysize=height,
         )
         self._raster_xsize = self.window.xsize
         self._raster_ysize = self.window.ysize

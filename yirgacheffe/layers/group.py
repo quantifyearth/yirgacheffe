@@ -6,8 +6,7 @@ from typing import Any, Sequence
 import numpy as np
 from numpy import ma
 
-from ..rounding import round_down_pixels
-from ..window import Area, Window
+from .._datatypes import Area, Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 from .._backends import backend
@@ -131,11 +130,13 @@ class GroupLayer(YirgacheffeLayer):
         contributing_layers = []
         for layer in self.layers:
             # Normally this is hidden with set_window_for_...
+            xoff, yoff = map_projection.round_down_pixels(
+                ((layer.area.left - self._underlying_area.left) / scale.xstep),
+                (layer.area.top - self._underlying_area.top) / scale.ystep,
+            )
             adjusted_layer_window = Window(
-                layer.window.xoff + \
-                    round_down_pixels(((layer.area.left - self._underlying_area.left) / scale.xstep), abs(scale.xstep)),
-                layer.window.yoff + \
-                    round_down_pixels(((layer.area.top - self._underlying_area.top) / scale.ystep), abs(scale.ystep)),
+                layer.window.xoff + xoff,
+                layer.window.yoff + yoff,
                 layer.window.xsize,
                 layer.window.ysize,
             )
@@ -249,8 +250,8 @@ class TiledGroupLayer(GroupLayer):
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
-        scale = self.pixel_scale
-        assert scale is not None
+        map_projection = self.map_projection
+        assert map_projection is not None
 
         target_window = Window(
             window.xoff + xoffset,
@@ -262,11 +263,13 @@ class TiledGroupLayer(GroupLayer):
         partials: list[TileData] = []
         for layer in self.layers:
             # Normally this is hidden with set_window_for_...
+            xoff, yoff = map_projection.round_down_pixels(
+                (layer.area.left - self._underlying_area.left) / map_projection.xstep,
+                (layer.area.top - self._underlying_area.top) / map_projection.ystep,
+            )
             adjusted_layer_window = Window(
-                layer.window.xoff + \
-                    round_down_pixels(((layer.area.left - self._underlying_area.left) / scale.xstep), abs(scale.xstep)),
-                layer.window.yoff + \
-                    round_down_pixels(((layer.area.top - self._underlying_area.top) / scale.ystep), abs(scale.ystep)),
+                layer.window.xoff + xoff,
+                layer.window.yoff + yoff,
                 layer.window.xsize,
                 layer.window.ysize,
             )

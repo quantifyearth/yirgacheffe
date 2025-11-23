@@ -1,3 +1,14 @@
+## v1.11.0 (21/11/2025)
+
+### Fixed
+
+* Approximations used in comparing pixel scales and rounding down/up arrays are now projection aware, rather than always done in EPSG:4326.
+* Fix issue with creating data layers from numpy arrays where an exception was thrown due to rounding issues on projection math.
+
+### Changed
+
+* Allow set operations | (union) and & (intersection) on Area types.
+
 ## v1.10.3 (10/11/2025)
 
 ### Fixed

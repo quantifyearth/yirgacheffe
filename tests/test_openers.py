@@ -290,3 +290,13 @@ def test_create_simple_direct_projection() -> None:
 
         actual = layer.read_array(0, 0, 4, 2)
         assert (data == actual).all()
+
+def test_rounding_errors() -> None:
+    # This is based on a real failure spotted where the first implementation of from_array
+    # got confused by forcing things to the natural pixel grid
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    projection = yg.MapProjection("epsg:4326", 0.083333333333333, -0.083333333333333)
+
+    with yg.from_array(data1, (-180.0, 90.0), projection) as layer1:
+        assert layer1.window.xsize == 4
+        assert layer1.window.ysize == 4

@@ -7,9 +7,8 @@ from osgeo import gdal
 
 import yirgacheffe as yg
 from tests.helpers import gdal_dataset_of_region, gdal_multiband_dataset_with_data, gdal_dataset_with_data
-from yirgacheffe.window import Area, PixelScale, Window
+from yirgacheffe import Area, MapProjection, PixelScale, Window
 from yirgacheffe.layers import RasterLayer, InvalidRasterBand
-from yirgacheffe.rounding import round_up_pixels
 from yirgacheffe.operators import DataType
 
 
@@ -75,17 +74,18 @@ def test_open_file() -> None:
 )
 def test_empty_layers_are_pixel_aligned(initial_area):
     scale = PixelScale(0.000898315284120,-0.000898315284120)
+    projection = MapProjection("epsg:4326", scale.xstep, scale.ystep)
 
     expanded_area = initial_area.grow(0.1)
 
     initial_layer = RasterLayer.empty_raster_layer(initial_area, scale, gdal.GDT_Float64)
 
     pixel_width = (initial_layer.area.right - initial_layer.area.left) / scale.xstep
-    assert round_up_pixels(pixel_width, scale.xstep) == initial_layer.window.xsize
+    assert projection.round_up_pixels(pixel_width, 0)[0] == initial_layer.window.xsize
 
     expanded_layer = RasterLayer.empty_raster_layer(expanded_area, scale, gdal.GDT_Float64)
     pixel_width = (expanded_layer.area.right - expanded_layer.area.left) / scale.xstep
-    assert round_up_pixels(pixel_width, scale.xstep) == expanded_layer.window.xsize
+    assert projection.round_up_pixels(pixel_width, 0)[0] == expanded_layer.window.xsize
 
 def test_empty_layer_from_raster():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
