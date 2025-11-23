@@ -1,8 +1,8 @@
+import math
+
 import pytest
 
-# I've no idea why pylint dislikes this particular import but accepts
-# other entries in the module.
-from yirgacheffe.window import Area # pylint: disable=E0401, E0611
+from yirgacheffe import Area, MapProjection
 
 @pytest.mark.parametrize(
     "lhs,rhs,is_equal,overlaps",
@@ -66,3 +66,61 @@ def test_global_area() -> None:
 
 def test_wrong_types_on_eq() -> None:
     assert Area(-10, 10, 10, -10) != 42
+
+@pytest.mark.parametrize(
+    "area,expected",
+    [
+        # No shift from "perfect"
+        (
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            (0.0, 0.0),
+        ),
+        # X shifted from perfect
+        (
+            Area(-10.1, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            (-0.1, 0.0),
+        ),
+        (
+            Area(10.1, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            (0.1, 0.0),
+        ),
+        (
+            Area(-9.9, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            (0.1, 0.0),
+        ),
+        (
+            Area(9.9, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            (-0.1, 0.0),
+        ),
+        # Y shifted from perfect
+        (
+            Area(10.0, -10.1, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            (0.0, -0.1),
+        ),
+        (
+            Area(10.0, 10.1, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            (0.0, 0.1),
+        ),
+        (
+            Area(10.0, -9.9, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            (0.0, 0.1),
+        ),
+        (
+            Area(10.0, 9.9, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            (0.0, -0.1),
+        ),
+        # No projection
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            None,
+        ),
+    ]
+)
+def test_grid_offset(area: Area, expected: tuple[float,float] | None) -> None:
+    offset = area._grid_offset
+    if expected is None:
+        assert offset is None
+    else:
+        assert offset is not None
+        assert math.isclose(offset[0], expected[0])
+        assert math.isclose(offset[1], expected[1])

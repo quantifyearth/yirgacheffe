@@ -260,6 +260,7 @@ class RasterLayer(YirgacheffeLayer):
             top=transform[3],
             right=transform[0] + (dataset.RasterXSize * projection.xstep),
             bottom=transform[3] + (dataset.RasterYSize * projection.ystep),
+            projection=projection,
         )
 
         super().__init__(

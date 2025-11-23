@@ -27,6 +27,7 @@ class H3CellLayer(YirgacheffeLayer):
             top=(ceil(max(x[0] for x in self.cell_boundary) / abs_ystep) * abs_ystep),
             right=(ceil(max(x[1] for x in self.cell_boundary) / abs_xstep) * abs_xstep),
             bottom=(floor(min(x[0] for x in self.cell_boundary) / abs_ystep) * abs_ystep),
+            projection=projection,
         )
 
         # Statistically, most hex tiles will be within a projection, but some will wrap around

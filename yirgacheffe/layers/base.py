@@ -26,6 +26,9 @@ class YirgacheffeLayer(LayerMathMixin):
         if projection is not None and not isinstance(projection, MapProjection):
             raise TypeError("projection value of wrong type")
 
+        # This assert implies we need to just have one of these things
+        assert area.projection == projection
+
         self._underlying_area = area
         self._active_area: Area | None = None
         self._projection = projection
@@ -89,10 +92,12 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def map_projection(self) -> MapProjection | None:
+        """Returns the map projection (projection name and pixel size) of the layer."""
         return self._projection
 
     @property
     def area(self) -> Area:
+        """Returns the geospatial bounds of the layer."""
         if self._active_area is not None:
             return self._active_area
         else:

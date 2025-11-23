@@ -2,6 +2,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from .mapprojection import MapProjection
+
 @dataclass(frozen=True)
 class Area:
     """Class to hold a geospatial area of data in the given projection.
@@ -24,6 +26,7 @@ class Area:
     top: float
     right: float
     bottom: float
+    projection: MapProjection | None = None
 
     @staticmethod
     def world() -> Area:
@@ -42,7 +45,8 @@ class Area:
             return False
         if self.is_world and other.is_world:
             return True
-        return math.isclose(self.left, other.left, abs_tol=1e-09) and \
+        return self.projection == other.projection and \
+            math.isclose(self.left, other.left, abs_tol=1e-09) and \
             math.isclose(self.right, other.right, abs_tol=1e-09) and \
             math.isclose(self.top, other.top, abs_tol=1e-09) and \
             math.isclose(self.bottom, other.bottom, abs_tol=1e-09)
@@ -82,6 +86,24 @@ class Area:
             bottom=min(x.bottom for x in all_areas)
         )
         return union
+
+    @property
+    def _grid_offset(self) -> tuple[float,float] | None:
+        if self.projection is None:
+            return None
+
+        abs_xstep = abs(self.projection.xstep)
+        abs_ystep = abs(self.projection.ystep)
+
+        xoff = self.left - ((self.left // abs_xstep) * abs_xstep)
+        yoff = self.top - ((self.top // abs_ystep) * abs_ystep)
+
+        if xoff > (abs_xstep / 2):
+            xoff -= abs_xstep
+        if yoff > (abs_ystep / 2):
+            yoff -= abs_ystep
+
+        return xoff, yoff
 
     def grow(self, offset: float) -> Area:
         """Expand the area in all directions by the given amount.

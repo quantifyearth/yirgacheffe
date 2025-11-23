@@ -64,6 +64,9 @@ class MapProjection:
             MINIMAL_DEGREE_OF_INTEREST,
         )
 
+    def __repr__(self) -> str:
+        return f"MapProjection({self.name!r}, {self.xstep}, {self.ystep})"
+
     def __hash__(self):
         return hash((self.name, self.xstep, self.ystep))
 

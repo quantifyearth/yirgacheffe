@@ -1236,13 +1236,14 @@ class LayerOperation(LayerMathMixin):
         computation_window = Window(0, 0, width, height)
         expression_area = self.area
         pixel_scale = projection.scale
-        left = expression_area.left + (x * pixel_scale.xstep)
-        top = expression_area.top + (y * pixel_scale.ystep)
+        left = expression_area.left + (x * projection.xstep)
+        top = expression_area.top + (y * projection.ystep)
         computation_area = Area(
             left=left,
             top=top,
-            right=left + (width * pixel_scale.xstep),
-            bottom=top + (height * pixel_scale.ystep),
+            right=left + (width * projection.xstep),
+            bottom=top + (height * projection.ystep),
+            projection=projection,
         )
 
         chunks = []
