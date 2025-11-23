@@ -479,7 +479,6 @@ class LayerOperation(LayerMathMixin):
         self.kwargs = kwargs
         self.window_op = window_op
         self.buffer_padding = buffer_padding
-        self._forced_area = None
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -580,9 +579,6 @@ class LayerOperation(LayerMathMixin):
         return self._get_operation_area(self.map_projection)
 
     def _get_operation_area(self, projection: MapProjection | None) -> Area:
-        if self._forced_area is not None:
-            return self._forced_area
-
         lhs_area = self.lhs._get_operation_area(projection)
         try:
             rhs_area = self.rhs._get_operation_area(projection)
