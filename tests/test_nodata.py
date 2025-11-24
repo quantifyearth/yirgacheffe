@@ -5,6 +5,7 @@ from yirgacheffe.layers.group import GroupLayer
 
 from tests.helpers import gdal_dataset_with_data
 
+
 def test_raster_without_nodata_value() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
     dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
@@ -12,6 +13,7 @@ def test_raster_without_nodata_value() -> None:
         assert layer.nodata is None
         actual = layer.read_array(0, 0, 4, 2)
         assert np.array_equal(data1, actual, equal_nan=True)
+
 
 def test_raster_with_nodata_value() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
@@ -23,6 +25,7 @@ def test_raster_with_nodata_value() -> None:
         actual = layer.read_array(0, 0, 4, 2)
         assert np.array_equal(data1, actual, equal_nan=True)
 
+
 def test_raster_with_nodata_value_ignored() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
     dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
@@ -31,6 +34,7 @@ def test_raster_with_nodata_value_ignored() -> None:
         assert layer.nodata == 5.0
         actual = layer.read_array(0, 0, 4, 2)
         assert np.array_equal(data1, actual, equal_nan=True)
+
 
 def test_group_layer_with_nodata_values() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 5.0, 5.0, 5.0]])
@@ -48,6 +52,7 @@ def test_group_layer_with_nodata_values() -> None:
                 expected = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
                 assert np.array_equal(expected, actual, equal_nan=True)
 
+
 def test_group_layer_with_nodata_values_ignore_nodata() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 5.0, 5.0, 5.0]])
     dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
@@ -62,6 +67,7 @@ def test_group_layer_with_nodata_values_ignore_nodata() -> None:
             with GroupLayer([layer1, layer2]) as group:
                 actual = group.read_array(0, 0, 4, 2)
                 assert np.array_equal(data1, actual, equal_nan=True)
+
 
 def test_group_layer_with_nodata_read_from_empty_area() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 5.0, 5.0, 5.0]])

@@ -12,39 +12,44 @@ def test_find_union_empty_list() -> None:
     with pytest.raises(ValueError):
         _ = RasterLayer.find_union([])
 
+
 def test_find_union_single_item() -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     union = RasterLayer.find_union([layer])
     assert union == layer.area
 
+
 def test_find_union_same() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+        RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
     ]
     union = RasterLayer.find_union(layers)
     assert union == layers[0].area
+
 
 def test_find_union_subset() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(-1, 1, 1, -1), 0.02))
+        RasterLayer(gdal_dataset_of_region(Area(-1, 1, 1, -1), 0.02)),
     ]
     union = RasterLayer.find_union(layers)
     assert union == layers[0].area
 
+
 def test_find_union_overlap() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02))
+        RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02)),
     ]
     union = RasterLayer.find_union(layers)
     assert union == Area(-15, 15, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
 
+
 def test_find_union_distinct() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-110, 10, -100, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(100, 10, 110, -10), 0.02))
+        RasterLayer(gdal_dataset_of_region(Area(100, 10, 110, -10), 0.02)),
     ]
     union = RasterLayer.find_union(layers)
     assert union == Area(-110, 10, 110, -10, MapProjection("epsg:4326", 0.02, -0.02))
@@ -52,21 +57,24 @@ def test_find_union_distinct() -> None:
     for layer in layers:
         layer.set_window_for_union(union)
 
+
 def test_find_union_with_null() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        ConstantLayer(0.0)
+        ConstantLayer(0.0),
     ]
     union = RasterLayer.find_union(layers)
     assert union == layers[0].area
 
+
 def test_find_union_different_pixel_pitch() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.01))
+        RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.01)),
     ]
     with pytest.raises(ValueError):
         _ = RasterLayer.find_union(layers)
+
 
 def test_find_union_with_vector_unbound() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -75,7 +83,11 @@ def test_find_union_with_vector_unbound() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        raster = RasterLayer(gdal_dataset_of_region(Area(left=59.93, top=70.07, right=170.04, bottom=44.98), 0.13))
+        raster = RasterLayer(
+            gdal_dataset_of_region(
+                Area(left=59.93, top=70.07, right=170.04, bottom=44.98), 0.13
+            )
+        )
         vector = VectorLayer.layer_from_file(path, None, None, None)
         assert vector.area == area
 
@@ -96,7 +108,11 @@ def test_find_union_with_vector_bound() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        raster = RasterLayer(gdal_dataset_of_region(Area(left=59.93, top=70.07, right=170.04, bottom=44.98), 0.13))
+        raster = RasterLayer(
+            gdal_dataset_of_region(
+                Area(left=59.93, top=70.07, right=170.04, bottom=44.98), 0.13
+            )
+        )
         vector = VectorLayer.layer_from_file_like(path, raster)
         assert vector.area != area
 
@@ -107,7 +123,10 @@ def test_find_union_with_vector_bound() -> None:
         for layer in layers:
             layer.set_window_for_union(union)
 
-@pytest.mark.parametrize("scale", [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09])
+
+@pytest.mark.parametrize(
+    "scale", [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
+)
 def test_set_union_self(scale) -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), scale))
     old_window = layer.window
@@ -120,6 +139,7 @@ def test_set_union_self(scale) -> None:
     # reset should not do much here
     layer.reset_window()
     assert layer.window == old_window
+
 
 @pytest.mark.parametrize(
     "left_padding,right_padding,top_padding,bottom_padding",
@@ -140,9 +160,11 @@ def test_set_union_self(scale) -> None:
         (0, 1, 1, 1),
         (1, 0, 1, 1),
         (0, 0, 1, 1),
-    ]
+    ],
 )
-def test_set_union_superset(left_padding: int, right_padding: int, top_padding: int, bottom_padding: int) -> None:
+def test_set_union_superset(
+    left_padding: int, right_padding: int, top_padding: int, bottom_padding: int
+) -> None:
 
     pixel_density = 0.02
     origin_area = Area(-1, 1, 1, -1)
@@ -153,10 +175,17 @@ def test_set_union_superset(left_padding: int, right_padding: int, top_padding: 
     # The make_dataset... function fills rows with the yoffset, and so the first row
     # will be 0s, matching our padding value, so we use the second row here
     origin_before_pixel = layer.read_array(0, 1, 100, 1)
-    assert list(origin_before_pixel[0]) == ([1,] * 100)
+    assert list(origin_before_pixel[0]) == (
+        [
+            1,
+        ]
+        * 100
+    )
 
     # Superset only extends on both sides
-    superset = Area(-1 - left_padding, 1 + top_padding, 1 + right_padding, -1 - bottom_padding)
+    superset = Area(
+        -1 - left_padding, 1 + top_padding, 1 + right_padding, -1 - bottom_padding
+    )
     layer.set_window_for_union(superset)
     assert layer.window == Window(
         round((0 - left_padding) / pixel_density),
@@ -169,12 +198,18 @@ def test_set_union_superset(left_padding: int, right_padding: int, top_padding: 
         0,
         1 + int(top_padding / pixel_density),
         100 + int((left_padding + right_padding) / pixel_density),
-        1
+        1,
     )
     assert list(origin_after_pixel[0]) == (
-        [0,] * int(left_padding / pixel_density)) +\
-        list(origin_before_pixel[0]) +\
-        ([0,] * int(right_padding / pixel_density)
+        [
+            0,
+        ]
+        * int(left_padding / pixel_density)
+    ) + list(origin_before_pixel[0]) + (
+        [
+            0,
+        ]
+        * int(right_padding / pixel_density)
     )
 
     layer.reset_window()

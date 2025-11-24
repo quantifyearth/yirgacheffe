@@ -1,4 +1,3 @@
-
 import h3
 import numpy as np
 import pytest
@@ -8,12 +7,13 @@ from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, MapProjection
 import yirgacheffe.operators as yo
 
+
 class NaiveH3CellLayer(H3CellLayer):
     """h3.latlng_to_cell is quite expensive when you call it thousands of times
     so the H3CellLayer has a bunch of tricks to try reduce the work done. This is a naive
     version that checks for every cell."""
 
-    def read_array(self, xoffset, yoffset, xsize, ysize): # pylint: disable=W0237
+    def read_array(self, xoffset, yoffset, xsize, ysize):  # pylint: disable=W0237
         assert self._projection is not None
         res = np.zeros((ysize, xsize), dtype=float)
         start_x = self.area.left + (xoffset * self._projection.xstep)
@@ -27,6 +27,7 @@ class NaiveH3CellLayer(H3CellLayer):
                     res[ypixel][xpixel] = 1.0
         return res
 
+
 @pytest.mark.parametrize(
     "lat,lng",
     [
@@ -37,12 +38,14 @@ class NaiveH3CellLayer(H3CellLayer):
         (85.0, 0.0),
         (85.0, 45.0),
         (1.0, 95.0),
-    ]
+    ],
 )
 def test_h3_vs_naive(lat: float, lng: float) -> None:
     for zoom in range(5, 9):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
-        projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120,-0.000898315284120)
+        projection = MapProjection(
+            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+        )
         optimised_layer = H3CellLayer(cell_id, projection)
         naive_layer = NaiveH3CellLayer(cell_id, projection)
 
@@ -52,6 +55,7 @@ def test_h3_vs_naive(lat: float, lng: float) -> None:
         assert optimised_cell_count != 0
         assert optimised_cell_count == naive_cell_count
 
+
 @pytest.mark.parametrize(
     "lat,lng",
     [
@@ -62,12 +66,14 @@ def test_h3_vs_naive(lat: float, lng: float) -> None:
         (85.0, 0.0),
         (85.0, 45.0),
         (1.0, 95.0),
-    ]
+    ],
 )
 def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
     for zoom in range(7, 9):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
-        projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120,-0.000898315284120)
+        projection = MapProjection(
+            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+        )
         optimised_layer = H3CellLayer(cell_id, projection)
         naive_layer = NaiveH3CellLayer(cell_id, projection)
 
@@ -88,6 +94,7 @@ def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
         assert optimised_cell_count == before_cell_count
         assert optimised_cell_count == naive_cell_count
 
+
 @pytest.mark.parametrize(
     "lat,lng",
     [
@@ -98,12 +105,14 @@ def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
         (85.0, 0.0),
         (85.0, 45.0),
         (1.0, 95.0),
-    ]
+    ],
 )
 def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
     for zoom in range(7, 9):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
-        projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120,-0.000898315284120)
+        projection = MapProjection(
+            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+        )
         optimised_layer = H3CellLayer(cell_id, projection)
         naive_layer = NaiveH3CellLayer(cell_id, projection)
 
@@ -124,6 +133,7 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
         assert optimised_cell_count < before_cell_count
         assert optimised_cell_count == naive_cell_count
 
+
 # This test exits because certain hexagons have convex edges due to projection
 # distortion. This means that my original naive attempt to speed up rendering by
 # just finding the left and right most pixels on a line and filling between them
@@ -140,12 +150,12 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
         "87a968000ffffff",
         "87a96b934ffffff",
         "87a968130ffffff",
-    ]
+    ],
 )
 def test_cells_dont_overlap(cell_id):
 
     cluster = h3.grid_disk(cell_id, 1)
-    projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120,-0.000898315284120)
+    projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120)
     layers = [H3CellLayer(x, projection) for x in cluster]
 
     union = RasterLayer.find_union(layers)

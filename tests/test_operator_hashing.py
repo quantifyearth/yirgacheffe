@@ -4,12 +4,17 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.helpers import make_vectors_with_id, make_vectors_with_multiple_ids, gdal_dataset_of_region, \
-    gdal_multiband_dataset_with_data
+from tests.helpers import (
+    make_vectors_with_id,
+    make_vectors_with_multiple_ids,
+    gdal_dataset_of_region,
+    gdal_multiband_dataset_with_data,
+)
 import yirgacheffe as yg
 from yirgacheffe.layers import H3CellLayer
 from yirgacheffe._operators.cse import CSECacheTable
 from yirgacheffe._backends import backend
+
 
 def test_simple_constant_expression() -> None:
     with (
@@ -25,11 +30,12 @@ def test_simple_constant_expression() -> None:
         assert calc0._cse_hash == calc1._cse_hash
         assert calc1._cse_hash != calc2._cse_hash
 
+
 def test_simple_raster_expression() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]])
 
-    with(
+    with (
         yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer1,
         yg.from_array(data2, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer2,
     ):
@@ -41,12 +47,17 @@ def test_simple_raster_expression() -> None:
         assert calc0._cse_hash == calc1._cse_hash
         assert calc1._cse_hash != calc2._cse_hash
 
+
 def test_raster_different_datatype() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
 
-    with(
-        yg.from_array(data1.astype(np.int16), (0, 0), ("epsg:4326", (1.0, -1.0))) as layer1,
-        yg.from_array(data1.astype(np.float32), (0, 0), ("epsg:4326", (1.0, -1.0))) as layer2,
+    with (
+        yg.from_array(
+            data1.astype(np.int16), (0, 0), ("epsg:4326", (1.0, -1.0))
+        ) as layer1,
+        yg.from_array(
+            data1.astype(np.float32), (0, 0), ("epsg:4326", (1.0, -1.0))
+        ) as layer2,
     ):
         assert layer1.datatype == yg.DataType.Int16
         assert layer2.datatype == yg.DataType.Float32
@@ -54,6 +65,7 @@ def test_raster_different_datatype() -> None:
         assert layer1._cse_hash is not None
         assert layer2._cse_hash is not None
         assert layer1._cse_hash != layer2._cse_hash
+
 
 def test_raster_ignore_nodata() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -68,6 +80,7 @@ def test_raster_ignore_nodata() -> None:
             assert layer1._cse_hash is not None
             assert layer2._cse_hash is not None
             assert layer1._cse_hash != layer2._cse_hash
+
 
 def test_raster_different_bands() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -86,6 +99,7 @@ def test_raster_different_bands() -> None:
             assert layer2._cse_hash is not None
             assert layer1._cse_hash != layer2._cse_hash
 
+
 def test_simple_vector_expression() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.gpkg"
@@ -96,6 +110,7 @@ def test_simple_vector_expression() -> None:
             assert shape._cse_hash is not None
             calc = shape * 2
             assert calc._cse_hash is not None
+
 
 def test_vector_different_burn() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -111,13 +126,11 @@ def test_vector_different_burn() -> None:
             assert shape2._cse_hash is not None
             assert shape1._cse_hash != shape2._cse_hash
 
+
 def test_vector_different_where() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.gpkg"
-        areas = {
-            (yg.Area(0.0, 0.0, 10, -10), 42),
-            (yg.Area(0.0, 0.0, 10, -10), 43)
-        }
+        areas = {(yg.Area(0.0, 0.0, 10, -10), 42), (yg.Area(0.0, 0.0, 10, -10), 43)}
         make_vectors_with_multiple_ids(areas, path)
 
         with (
@@ -132,6 +145,7 @@ def test_vector_different_where() -> None:
             assert shape1._cse_hash != shape2._cse_hash
             assert shape0._cse_hash != shape2._cse_hash
 
+
 def test_vector_different_datatype() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.gpkg"
@@ -145,6 +159,7 @@ def test_vector_different_datatype() -> None:
             assert shape1._cse_hash is not None
             assert shape2._cse_hash is not None
             assert shape1._cse_hash != shape2._cse_hash
+
 
 def test_simple_group_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -169,12 +184,21 @@ def test_simple_group_layer() -> None:
             assert group0._cse_hash == group1._cse_hash
             assert group1._cse_hash != group2._cse_hash
 
+
 def test_simple_h3_layers() -> None:
     with (
-        H3CellLayer("88972eac11fffff", yg.MapProjection("epsg:4326", 0.001, -0.001)) as layer0,
-        H3CellLayer("88972eac11fffff", yg.MapProjection("epsg:4326", 0.001, -0.001)) as layer1,
-        H3CellLayer("88972eac19fffff", yg.MapProjection("epsg:4326", 0.001, -0.001)) as layer2,
-        H3CellLayer("88972eac11fffff", yg.MapProjection("epsg:4326", 0.002, -0.002)) as layer3,
+        H3CellLayer(
+            "88972eac11fffff", yg.MapProjection("epsg:4326", 0.001, -0.001)
+        ) as layer0,
+        H3CellLayer(
+            "88972eac11fffff", yg.MapProjection("epsg:4326", 0.001, -0.001)
+        ) as layer1,
+        H3CellLayer(
+            "88972eac19fffff", yg.MapProjection("epsg:4326", 0.001, -0.001)
+        ) as layer2,
+        H3CellLayer(
+            "88972eac11fffff", yg.MapProjection("epsg:4326", 0.002, -0.002)
+        ) as layer3,
     ):
         assert layer0._cse_hash is not None
         assert layer1._cse_hash is not None
@@ -184,10 +208,11 @@ def test_simple_h3_layers() -> None:
         assert layer1._cse_hash != layer2._cse_hash
         assert layer1._cse_hash != layer3._cse_hash
 
+
 def test_mixed_raster_constant() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
 
-    with(
+    with (
         yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer1,
         yg.constant(2) as layer2,
         yg.constant(2.0) as layer3,
@@ -202,6 +227,7 @@ def test_mixed_raster_constant() -> None:
         assert calc0._cse_hash == calc1._cse_hash
         assert calc1._cse_hash != calc2._cse_hash
         assert calc1._cse_hash == calc3._cse_hash
+
 
 def test_cse_simple(mocker, monkeypatch) -> None:
     with monkeypatch.context() as m:
@@ -229,8 +255,8 @@ def test_cse_simple(mocker, monkeypatch) -> None:
             assert hash_table._table[(lhs_hash, calc.window)] == (1, None)
             assert hash_table._table[(rhs_hash, calc.window)] == (1, None)
 
-            lhs_spy = mocker.spy(lhs, '_read_array_with_window')
-            rhs_spy = mocker.spy(rhs, '_read_array_for_area')
+            lhs_spy = mocker.spy(lhs, "_read_array_with_window")
+            rhs_spy = mocker.spy(rhs, "_read_array_for_area")
 
             expected = (data1 + 3) * (data1 + 3)
             actual = calc.read_array(0, 0, 4, 2)
@@ -238,6 +264,7 @@ def test_cse_simple(mocker, monkeypatch) -> None:
 
             assert lhs_spy.call_count == 2
             assert rhs_spy.call_count == 2
+
 
 def test_simple_aoh_style_range_check(mocker, monkeypatch) -> None:
     with monkeypatch.context() as m:
@@ -257,7 +284,7 @@ def test_simple_aoh_style_range_check(mocker, monkeypatch) -> None:
                     continue
                 assert v == (1, None)
 
-            lhs_spy = mocker.spy(lhs, '_read_array_with_window')
+            lhs_spy = mocker.spy(lhs, "_read_array_with_window")
 
             expected = (data1 > 2) & (data1 < 7)
 
@@ -265,6 +292,7 @@ def test_simple_aoh_style_range_check(mocker, monkeypatch) -> None:
             assert (expected == actual).all()
 
             assert lhs_spy.call_count == 2
+
 
 def test_caching_versus_boundary_expansion(monkeypatch) -> None:
     # If you have a layer that is the source for a convolution, then the window read from it is
@@ -274,7 +302,9 @@ def test_caching_versus_boundary_expansion(monkeypatch) -> None:
         m.setattr(yg.constants, "YSTEP", 1)
 
         matrix = np.array([[0.0, 1.0, 0.0], [1.0, 1.0, 1.0], [0.0, 1.0, 0.0]])
-        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [12, 13, 14, 15]]).astype(np.float32)
+        data1 = np.array(
+            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [12, 13, 14, 15]]
+        ).astype(np.float32)
         with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as lhs:
             calc = lhs.conv2d(matrix) * lhs
 
@@ -282,13 +312,20 @@ def test_caching_versus_boundary_expansion(monkeypatch) -> None:
             hash_table = CSECacheTable(calc, calc.window)
             assert len(hash_table) == 4
             for val in hash_table._table.values():
-                assert val == (1, None) # i.e., the two lhs values did not get put in the same hash table row
+                assert val == (
+                    1,
+                    None,
+                )  # i.e., the two lhs values did not get put in the same hash table row
 
-@pytest.mark.parametrize("sequence", [
-    [1, 2, 3],
-    (1, 2, 3),
-    {1, 2, 3},
-])
+
+@pytest.mark.parametrize(
+    "sequence",
+    [
+        [1, 2, 3],
+        (1, 2, 3),
+        {1, 2, 3},
+    ],
+)
 def test_isin_hashable(sequence) -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer:
@@ -299,6 +336,7 @@ def test_isin_hashable(sequence) -> None:
         expected = np.isin(data1, list(sequence))
         actual = calc.read_array(0, 0, 4, 2)
         assert (expected == actual).all()
+
 
 def test_nan_to_num_hashable() -> None:
     data1 = np.array([[1, float("nan"), float("inf"), float("-inf")], [5, 6, 7, 8]])
@@ -311,6 +349,7 @@ def test_nan_to_num_hashable() -> None:
         actual = calc.read_array(0, 0, 4, 2)
         assert (expected == actual).all()
 
+
 def test_unary_numpy_apply_hashable() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer:
@@ -321,6 +360,7 @@ def test_unary_numpy_apply_hashable() -> None:
         comp = layer.numpy_apply(simple_add)
 
         assert comp._cse_hash is not None
+
 
 def test_cse_cache_table_reset() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
@@ -345,6 +385,7 @@ def test_cse_cache_table_reset() -> None:
         cse_cache.reset_cache()
 
         assert cse_cache.get_data(term_hash, calc.window) is None
+
 
 def test_cse_cache_table_cache_miss_on_different_window_size() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])

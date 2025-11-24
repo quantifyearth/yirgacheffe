@@ -7,7 +7,10 @@ from yirgacheffe import Area, MapProjection
 from yirgacheffe.layers import YirgacheffeLayer
 from yirgacheffe import WGS_84_PROJECTION
 
-def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: str | Path | None = None) -> gdal.Dataset:
+
+def gdal_dataset_of_region(
+    area: Area, pixel_pitch: float, filename: str | Path | None = None
+) -> gdal.Dataset:
     projection = MapProjection("epsg:4326", pixel_pitch, -pixel_pitch)
     width, height = projection.round_up_pixels(
         ((area.right - area.left) / pixel_pitch),
@@ -15,27 +18,32 @@ def gdal_dataset_of_region(area: Area, pixel_pitch: float, filename: str | Path 
     )
 
     if filename:
-        driver = gdal.GetDriverByName('GTiff')
+        driver = gdal.GetDriverByName("GTiff")
     else:
-        driver = gdal.GetDriverByName('mem')
-        filename = 'mem'
-    dataset = driver.Create(
-        filename,
-        width,
-        height,
-        1,
-        gdal.GDT_Byte,
-        []
+        driver = gdal.GetDriverByName("mem")
+        filename = "mem"
+    dataset = driver.Create(filename, width, height, 1, gdal.GDT_Byte, [])
+    dataset.SetGeoTransform(
+        [area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0]
     )
-    dataset.SetGeoTransform([
-        area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0
-    ])
     dataset.SetProjection(WGS_84_PROJECTION)
     # the dataset isn't valid until you populate the data
     band = dataset.GetRasterBand(1)
     for yoffset in range(dataset.RasterYSize):
-        band.WriteArray(np.array([[(yoffset % 256),] * dataset.RasterXSize]), 0, yoffset)
+        band.WriteArray(
+            np.array(
+                [
+                    [
+                        (yoffset % 256),
+                    ]
+                    * dataset.RasterXSize
+                ]
+            ),
+            0,
+            yoffset,
+        )
     return dataset
+
 
 def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset:
     projection = MapProjection("epsg:4326", pixel_pitch, -pixel_pitch)
@@ -44,37 +52,31 @@ def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset
         ((area.top - area.bottom) / pixel_pitch),
     )
 
-    dataset = gdal.GetDriverByName('mem').Create(
-        'mem',
-        width,
-        height,
-        0,
-        gdal.GDT_Byte,
-        []
+    dataset = gdal.GetDriverByName("mem").Create(
+        "mem", width, height, 0, gdal.GDT_Byte, []
     )
-    dataset.SetGeoTransform([
-        area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0
-    ])
+    dataset.SetGeoTransform(
+        [area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0]
+    )
     dataset.SetProjection(WGS_84_PROJECTION)
     return dataset
 
-def gdal_dataset_of_layer(layer: YirgacheffeLayer, filename: str | None = None) -> gdal.Dataset:
+
+def gdal_dataset_of_layer(
+    layer: YirgacheffeLayer, filename: str | None = None
+) -> gdal.Dataset:
     if filename:
-        driver = gdal.GetDriverByName('GTiff')
+        driver = gdal.GetDriverByName("GTiff")
     else:
-        driver = gdal.GetDriverByName('mem')
-        filename = 'mem'
+        driver = gdal.GetDriverByName("mem")
+        filename = "mem"
     dataset = driver.Create(
-        filename,
-        layer.window.xsize,
-        layer.window.ysize,
-        1,
-        gdal.GDT_Float32,
-        []
+        filename, layer.window.xsize, layer.window.ysize, 1, gdal.GDT_Float32, []
     )
     dataset.SetGeoTransform(layer.geo_transform)
     dataset.SetProjection(layer.projection)
     return dataset
+
 
 def numpy_to_gdal_type(val: np.ndarray) -> int:
     match val.dtype:
@@ -115,26 +117,20 @@ def gdal_dataset_with_data(
     if isinstance(data[0][0], float):
         datatype = gdal.GDT_Float64
     if filename:
-        driver = gdal.GetDriverByName('GTiff')
+        driver = gdal.GetDriverByName("GTiff")
     else:
-        driver = gdal.GetDriverByName('mem')
-        filename = 'mem'
-    dataset = driver.Create(
-        filename,
-        len(data[0]),
-        len(data),
-        1,
-        datatype,
-        []
+        driver = gdal.GetDriverByName("mem")
+        filename = "mem"
+    dataset = driver.Create(filename, len(data[0]), len(data), 1, datatype, [])
+    dataset.SetGeoTransform(
+        [origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0]
     )
-    dataset.SetGeoTransform([
-        origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0
-    ])
     dataset.SetProjection(WGS_84_PROJECTION)
     band = dataset.GetRasterBand(1)
     for index, val in enumerate(data):
         band.WriteArray(np.array([list(val)]), 0, index)
     return dataset
+
 
 def gdal_multiband_dataset_with_data(
     origin: tuple,
@@ -149,21 +145,16 @@ def gdal_multiband_dataset_with_data(
     if isinstance(data[0][0], float):
         datatype = gdal.GDT_Float64
     if filename:
-        driver = gdal.GetDriverByName('GTiff')
+        driver = gdal.GetDriverByName("GTiff")
     else:
-        driver = gdal.GetDriverByName('mem')
-        filename = 'mem'
+        driver = gdal.GetDriverByName("mem")
+        filename = "mem"
     dataset = driver.Create(
-        filename,
-        len(datas[0][0]),
-        len(datas[0]),
-        len(datas),
-        datatype,
-        []
+        filename, len(datas[0][0]), len(datas[0]), len(datas), datatype, []
     )
-    dataset.SetGeoTransform([
-        origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0
-    ])
+    dataset.SetGeoTransform(
+        [origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0]
+    )
     dataset.SetProjection(WGS_84_PROJECTION)
     for i, data in enumerate(datas):
         band = dataset.GetRasterBand(i + 1)
@@ -171,7 +162,10 @@ def gdal_multiband_dataset_with_data(
             band.WriteArray(np.array([list(val)]), 0, index)
     return dataset
 
-def make_vectors_with_id(identifier: int, areas: set[Area], filename: str | Path) -> None:
+
+def make_vectors_with_id(
+    identifier: int, areas: set[Area], filename: str | Path
+) -> None:
     poly = ogr.Geometry(ogr.wkbPolygon)
 
     for area in areas:
@@ -199,7 +193,10 @@ def make_vectors_with_id(identifier: int, areas: set[Area], filename: str | Path
 
     package.Close()
 
-def make_vectors_with_multiple_ids(areas: set[tuple[Area, int]], filename: str | Path) -> None:
+
+def make_vectors_with_multiple_ids(
+    areas: set[tuple[Area, int]], filename: str | Path
+) -> None:
     srs = ogr.osr.SpatialReference()
     srs.ImportFromEPSG(4326)
 
@@ -232,13 +229,14 @@ def make_vectors_with_multiple_ids(areas: set[tuple[Area, int]], filename: str |
 
     package.Close()
 
+
 def generate_child_tile(
     xoffset: int,
     yoffset: int,
     width: int,
     height: int,
     outer_width: int,
-    outer_height: int
+    outer_height: int,
 ) -> np.ndarray:
     data = np.zeros((height, width))
     assert xoffset + width <= outer_width
@@ -248,7 +246,10 @@ def generate_child_tile(
             data[y][x] = ((yoffset + y) * outer_width) + (x + xoffset)
     return data
 
-def make_vectors_with_empty_feature(areas: set[tuple[Area, int]], filename: str) -> None:
+
+def make_vectors_with_empty_feature(
+    areas: set[tuple[Area, int]], filename: str
+) -> None:
     srs = ogr.osr.SpatialReference()
     srs.ImportFromEPSG(4326)
 
