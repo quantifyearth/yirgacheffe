@@ -70,10 +70,7 @@ def test_latlng_to_pixel_no_projection() -> None:
 def test_latlng_for_pixel(
     area: Area, pixel: tuple[int, int], expected: tuple[float, float]
 ) -> None:
-    layer = YirgacheffeLayer(
-        area,
-        area.projection,
-    )
+    layer = YirgacheffeLayer(area)
     result = layer.latlng_for_pixel(*pixel)
     assert math.isclose(result[0], expected[0])
     assert math.isclose(result[1], expected[1])
@@ -123,10 +120,7 @@ def test_latlng_for_pixel_on_operator() -> None:
 def test_pixel_for_latlng(
     area: Area, coord: tuple[float, float], expected: tuple[int, int]
 ) -> None:
-    layer = YirgacheffeLayer(
-        area,
-        area.projection,
-    )
+    layer = YirgacheffeLayer(area)
     result = layer.pixel_for_latlng(*coord)
     assert result == expected
 
@@ -196,10 +190,7 @@ def test_pixel_for_latlng_on_operator() -> None:
 def test_latlng_for_pixel_with_intersection(
     area: Area, window: Area, pixel: tuple[int, int], expected: tuple[float, float]
 ) -> None:
-    layer = YirgacheffeLayer(
-        area,
-        area.projection,
-    )
+    layer = YirgacheffeLayer(area)
     layer.set_window_for_intersection(window)
     result = layer.latlng_for_pixel(*pixel)
     assert math.isclose(result[0], expected[0])
@@ -232,10 +223,7 @@ def test_latlng_for_pixel_with_intersection(
 def test_pixel_for_latlng_with_intersection(
     area: Area, window: Area, coord: tuple[float, float], expected: tuple[int, int]
 ) -> None:
-    layer = YirgacheffeLayer(
-        area,
-        area.projection,
-    )
+    layer = YirgacheffeLayer(area)
     layer.set_window_for_intersection(window)
     result = layer.pixel_for_latlng(*coord)
     assert result == expected

@@ -12,7 +12,7 @@ class ConstantLayer(YirgacheffeLayer):
     missing (e.g., area) without having the calculation full of branches."""
     def __init__(self, value: int | float): # pylint: disable=W0231
         area = Area.world()
-        super().__init__(area, None)
+        super().__init__(area)
         self.value = float(value)
 
     @property

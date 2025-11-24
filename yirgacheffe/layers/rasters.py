@@ -272,7 +272,6 @@ class RasterLayer(YirgacheffeLayer):
 
         super().__init__(
             area,
-            projection,
             name=name
         )
 

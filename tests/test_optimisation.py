@@ -13,15 +13,15 @@ class NaiveH3CellLayer(H3CellLayer):
     so the H3CellLayer has a bunch of tricks to try reduce the work done. This is a naive
     version that checks for every cell."""
 
-    def read_array(self, xoffset, yoffset, xsize, ysize):  # pylint: disable=W0237
-        assert self._projection is not None
+    def _read_array_with_window(self, xoffset, yoffset, xsize, ysize, _window):  # pylint: disable=W0237
+        assert self.map_projection is not None
         res = np.zeros((ysize, xsize), dtype=float)
-        start_x = self.area.left + (xoffset * self._projection.xstep)
-        start_y = self.area.top + (yoffset * self._projection.ystep)
+        start_x = self.area.left + (xoffset * self.map_projection.xstep)
+        start_y = self.area.top + (yoffset * self.map_projection.ystep)
         for ypixel in range(ysize):
-            lat = start_y + (ypixel * self._projection.ystep)
+            lat = start_y + (ypixel * self.map_projection.ystep)
             for xpixel in range(xsize):
-                lng = start_x + (xpixel * self._projection.xstep)
+                lng = start_x + (xpixel * self.map_projection.xstep)
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:
                     res[ypixel][xpixel] = 1.0

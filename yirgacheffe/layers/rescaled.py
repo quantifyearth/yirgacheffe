@@ -47,7 +47,6 @@ class RescaledRasterLayer(YirgacheffeLayer):
 
         super().__init__(
             target_area,
-            target_projection,
             name=name
         )
 
