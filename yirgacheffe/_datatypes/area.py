@@ -6,7 +6,11 @@ from .mapprojection import MapProjection
 
 @dataclass(frozen=True)
 class Area:
-    """Class to hold a geospatial area of data in the given projection.
+    """Class to hold a geospatial area. Can optionally have a projection associated.
+
+    Ideally areas should always have a projection associated with them, however some data sources,
+    notably polygon datasets like GeoJSON, do not store this, so we have to allow for projectionless
+    areas.
 
     You can use set operators | (union) and & (intersection) on Areas.
 
@@ -15,12 +19,14 @@ class Area:
         top: Top most point in the projection space.
         right: Right most point in the projection space.
         bottom: Bottom most point in the projection space.
+        projection: An optional map projection.
 
     Attributes:
         left: Left most point in the projection space.
         top: Top most point in the projection space.
         right: Right most point in the projection space.
         bottom: Bottom most point in the projection space.
+        projection: An optional map projection.
     """
     left: float
     top: float
@@ -257,6 +263,19 @@ class Area:
         )
 
     def project_like(self, other: Area) -> Area:
+        """Takes a projectionless area and maps it onto a map projection based on an existing area.
+
+        Because map projections have pixel scales associated with them, the area may be expanded
+        to ensure that the original area is within the bounds when mapped to the pixel space of the other area.
+
+        Will raise an exception if this area already has a map projection set, or if the other area does not.
+
+        Args:
+            other: The other area to take the map projection from.
+
+        Returns:
+            A new area with the projection map.
+        """
         if self.projection is not None:
             raise ValueError("Changing projection is not supported currently")
         if other.projection is None:
