@@ -495,7 +495,9 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not ((lhs.map_projection == rhs.map_projection) or (lhs.map_projection is None) or (rhs.map_projection is None)):
+                if not ((lhs.map_projection == rhs.map_projection) or \
+                        (lhs.map_projection is None) or \
+                        (rhs.map_projection is None)):
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.rhs = rhs
         else:
@@ -510,7 +512,9 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not ((lhs.map_projection == other.map_projection) or (lhs.map_projection is None) or (other.map_projection is None)):
+                if not ((lhs.map_projection == other.map_projection) or \
+                        (lhs.map_projection is None) or \
+                        (other.map_projection is None)):
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.other = other
         else:
@@ -1232,7 +1236,6 @@ class LayerOperation(LayerMathMixin):
         computation_window = Window(0, 0, width, height)
         expression_area = self.area
         assert self.area.projection == projection
-        pixel_scale = projection.scale
         left = expression_area.left + (x * projection.xstep)
         top = expression_area.top + (y * projection.ystep)
         computation_area = Area(
