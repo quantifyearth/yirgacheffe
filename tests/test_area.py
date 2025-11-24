@@ -63,6 +63,36 @@ from yirgacheffe import Area, MapProjection
             False,
             True,
         ),
+        ( # Equal if we allow for grid offset wobble on one side
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.1, 10.0,  9.9, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            True,
+            True,
+        ),
+        ( # Equal if we allow for grid offset wobble on one side
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.1, 10.0,  -9.9, MapProjection("epsg:4326", 1.0, -1.0)),
+            True,
+            True,
+        ),
+        ( # Equal if we allow for grid offset wobble on both sides
+            Area( -9.9, 10.0, 10.1, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.1, 10.0,  9.9, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            True,
+            True,
+        ),
+        ( # Equal if we allow for grid offset wobble on both sides
+            Area(-10.0,  9.9, 10.0, -10.1, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.1, 10.0,  -9.9, MapProjection("epsg:4326", 1.0, -1.0)),
+            True,
+            True,
+        ),
+        ( # Not if we allow for larger grid offset wobble on both sides
+            Area(-10.0,  9.6, 10.0, -10.4, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.6, 10.0,  -9.4, MapProjection("epsg:4326", 1.0, -1.0)),
+            False,
+            True,
+        ),
     ]
 )
 def test_area_operators(lhs: Area, rhs: Area, is_equal: bool, overlaps: bool) -> None:
@@ -86,31 +116,120 @@ def test_area_operators_mixed_projections() -> None:
         _ = lhs & rhs
 
 @pytest.mark.parametrize(
-        "lhs,rhs,expected",
-        [
-            # Obvious equality
-            (Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)),
-            (Area(-9.0, 9.0, 9.0, -9.0),     Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)), # subset
-            (Area(-9.0, 9.0, -1.0, 1.0),     Area(1.0, -1.0, 9.0, -9.0),     Area(-9.0, 9.0, 9.0, -9.0)),
-            (Area(-10.0, 10.0, 10.0, -10.0), Area.world(),                   Area.world()),
-            (Area.world(),                   Area(-10.0, 10.0, 10.0, -10.0), Area.world()),
-        ]
-    )
+    "lhs,rhs,expected",
+    [
+        ( # Obvious equality
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-10.0, 10.0, 10.0, -10.0)
+        ),
+        ( # subset
+            Area(-9.0, 9.0, 9.0, -9.0),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-10.0, 10.0, 10.0, -10.0)
+        ),
+        (
+            Area(-9.0, 9.0, -1.0, 1.0),
+            Area(1.0, -1.0, 9.0, -9.0),
+            Area(-9.0, 9.0, 9.0, -9.0)
+        ),
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area.world(),
+            Area.world()
+        ),
+        (
+            Area.world(),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area.world()
+        ),
+        ( # Obvious equality, mixed projection and non
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+        ( # Obvious equality, same projection
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+        ( # Expect the unprojected one to be rounded up
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.2, 10.2, 10.2, -10.2),
+            Area(-11.0, 11.0, 11.0, -11.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+        ( # Expect the unprojected one to be rounded up
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-9.8, 9.8, 9.8, -9.8),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+        ( # Two different grid offsets on the same projection
+            Area(-10.1, 10.0,  9.9, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area( -9.9, 10.0, 10.1, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+    ]
+)
 def test_area_union(lhs: Area, rhs: Area, expected: Area) -> None:
     union = lhs | rhs
     assert union == expected
 
 @pytest.mark.parametrize(
-        "lhs,rhs,expected",
-        [
-            # Obvious equality
-            (Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)),
-            (Area(-9.0, 9.0, 9.0, -9.0),     Area(-10.0, 10.0, 10.0, -10.0), Area(-9.0, 9.0, 9.0, -9.0)), # subset
-            (Area(-9.0, 9.0, -1.0, 1.0),     Area(1.0, -1.0, 9.0, -9.0),     None),
-            (Area(-10.0, 10.0, 10.0, -10.0), Area.world(),                   Area(-10.0, 10.0, 10.0, -10.0)),
-            (Area.world(),                   Area(-10.0, 10.0, 10.0, -10.0), Area(-10.0, 10.0, 10.0, -10.0)),
-        ]
-    )
+    "lhs,rhs,expected",
+    [
+        # Obvious equality
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-10.0, 10.0, 10.0, -10.0),
+        ),
+        (
+            Area(-9.0, 9.0, 9.0, -9.0),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-9.0, 9.0, 9.0, -9.0),
+        ), # subset
+        (
+            Area(-9.0, 9.0, -1.0, 1.0),
+            Area(1.0, -1.0, 9.0, -9.0),
+            None,
+        ),
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area.world(),
+            Area(-10.0, 10.0, 10.0, -10.0),
+        ),
+        (
+            Area.world(),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-10.0, 10.0, 10.0, -10.0)
+        ),
+        ( # Obvious equality
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+        ( # Obvious equality
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+        (
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.2, 10.2, 10.2, -10.2),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+        ( # Expect the unprojected one to be rounded up
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-9.2, 9.2, 9.2, -9.2),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+        ( # Two different grid offsets on the same projection
+            Area(-10.1, 10.0,  9.9, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area( -9.9, 10.0, 10.1, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+        ),
+    ]
+)
 def test_area_intersection(lhs: Area, rhs: Area, expected: Area | None) -> None:
     if expected is not None:
         intersection = lhs & rhs

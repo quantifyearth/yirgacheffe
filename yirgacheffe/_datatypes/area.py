@@ -107,13 +107,26 @@ class Area:
 
         if lhs.projection != rhs.projection:
             raise ValueError("Cannot intersect areas with different projections")
-        all_areas = [lhs, rhs]
+
+        # If we intersect two layers with different grid wobbles, then generate
+        # a result that is aligned with the midpoint between them.
+        if self.projection and other.projection:
+            lhs_offset = lhs._grid_offset
+            rhs_offset = rhs._grid_offset
+            x_offset = (lhs_offset[0] - rhs_offset[0]) / 2
+            y_offset = (lhs_offset[1] - rhs_offset[1]) / 2
+        else:
+            lhs_offset = (0.0, 0.0)
+            rhs_offset = (0.0, 0.0)
+            x_offset = 0.0
+            y_offset = 0.0
+
         intersection = Area(
-            left=max(x.left for x in all_areas),
-            top=min(x.top for x in all_areas),
-            right=min(x.right for x in all_areas),
-            bottom=max(x.bottom for x in all_areas),
-            projection=self.projection,
+            left=max(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) + x_offset,
+            top=min(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) + y_offset,
+            right=min(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) + x_offset,
+            bottom=max(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) + y_offset,
+            projection=lhs.projection,
         )
         if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
             raise ValueError('No intersection possible')
@@ -138,13 +151,26 @@ class Area:
 
         if lhs.projection != rhs.projection:
             raise ValueError("Cannot union areas with different projections")
-        all_areas = [lhs, rhs]
+
+        # If we union two layers with different grid wobbles, then generate
+        # a result that is aligned with the midpoint between them.
+        if self.projection and other.projection:
+            lhs_offset = lhs._grid_offset
+            rhs_offset = rhs._grid_offset
+            x_offset = (lhs_offset[0] - rhs_offset[0]) / 2
+            y_offset = (lhs_offset[1] - rhs_offset[1]) / 2
+        else:
+            lhs_offset = (0.0, 0.0)
+            rhs_offset = (0.0, 0.0)
+            x_offset = 0.0
+            y_offset = 0.0
+
         union = Area(
-            left=min(x.left for x in all_areas),
-            top=max(x.top for x in all_areas),
-            right=max(x.right for x in all_areas),
-            bottom=min(x.bottom for x in all_areas),
-            projection=self.projection,
+            left=min(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) + x_offset,
+            top=max(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) + y_offset,
+            right=max(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) + x_offset,
+            bottom=min(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) + y_offset,
+            projection=lhs.projection,
         )
         return union
 
