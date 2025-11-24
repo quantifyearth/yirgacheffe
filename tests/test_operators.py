@@ -10,7 +10,7 @@ import torch
 from osgeo import gdal
 
 import yirgacheffe as yg
-from yirgacheffe.window import Area, PixelScale
+from yirgacheffe import Area, PixelScale, Window
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
 from yirgacheffe.operators import DataType
 from yirgacheffe._operators import LayerOperation
@@ -61,9 +61,8 @@ def test_incompatible_source_and_destination_projections() -> None:
 
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
 
-    with RasterLayer.empty_raster_layer(layer1.area, PixelScale(1.0, -1.0), layer1.datatype) as result:
-        with pytest.raises(ValueError):
-            layer1.save(result)
+    with pytest.raises(ValueError):
+        _ = RasterLayer.empty_raster_layer(layer1.area, PixelScale(1.0, -1.0), layer1.datatype)
 
 @pytest.mark.parametrize("skip,expected_steps", [
     (1, [0.0, 0.5, 1.0]),
@@ -1828,3 +1827,31 @@ def test_add_byte_layers_read_array_superset(monkeypatch, blocksize) -> None:
             expected = np.pad(inner_expected, (1, 1))
             actual = comp.read_array(-1, -1, 6, 6)
             assert (expected == actual).all()
+
+def test_very_slightly_missaligned_layers() -> None:
+    # This is based on a real failure spotted where two layers closely but didn't perfectly align
+    # and we mistakenly nudged things the wrong way
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    data2 = np.array([[10, 10, 10, 10], [20, 20, 20, 20], [30, 30, 30, 30], [40, 40, 40, 40]])
+
+    # These two layers have an offset that is less than half the pixel scale, so we should
+    # consider them aligned.
+    projection = yg.MapProjection("epsg:4326", 0.083333333333333, -0.083333333333333)
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        tmp =  Path(tempdir)
+        with (
+            yg.from_array(data1, (-180.0, 90.0), projection) as layer1,
+            yg.from_array(data2, (-180.000823370733258, 90.000411685366629), projection) as layer2,
+        ):
+            assert layer1.window == layer2.window
+            expected_area = layer1.area | layer2.area
+            diff = layer1 + layer2
+            diff.to_geotiff(tmp / "test.tif")
+
+        with yg.read_raster(tmp / "test.tif") as r:
+            assert r.window == Window(0, 0, 4, 4)
+            assert r.area == expected_area
+
+            data = r.read_array(0, 0, 4, 4)
+            assert (data == (data1 + data2)).all()

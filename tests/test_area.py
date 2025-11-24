@@ -322,7 +322,17 @@ def test_grid_offset(area: Area, expected: tuple[float,float] | None) -> None:
         ),
         (
             Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-4.99, 5.0, 5.01, -5.0, MapProjection("epsg:4326", 0.1, -0.1)),
+            Area(-10.01, 10.0, 9.99, -10.0, MapProjection("epsg:4326", 0.1, -0.1)),
+        ),
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
             Area(-5.0, 5.01, 5.0, -4.99, MapProjection("epsg:4326", 0.1, -0.1)),
+            Area(-10.01, 10.0, 9.99, -10.0, MapProjection("epsg:4326", 0.1, -0.1)),
+        ),
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            Area(-5.0, 4.99, 5.0, -5.01, MapProjection("epsg:4326", 0.1, -0.1)),
             Area(-10.01, 10.0, 9.99, -10.0, MapProjection("epsg:4326", 0.1, -0.1)),
         ),
     ]

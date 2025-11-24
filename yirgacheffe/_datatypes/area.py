@@ -255,7 +255,6 @@ class Area:
             (rhs.top >= lhs.bottom >= rhs.bottom)
         )
 
-
     def project_like(self, other: Area) -> Area:
         if self.projection is not None:
             raise ValueError("Changing projection is not supported currently")
@@ -273,6 +272,3 @@ class Area:
             bottom=(math.floor(self.bottom / abs_ystep) * abs_ystep) + y_off,
             projection=other.projection
         )
-
-
-
