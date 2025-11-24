@@ -6,6 +6,7 @@ from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, MapProjection
 import yirgacheffe.operators as yo
+from yirgacheffe._backends import backend
 
 
 class NaiveH3CellLayer(H3CellLayer):
@@ -25,7 +26,7 @@ class NaiveH3CellLayer(H3CellLayer):
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:
                     res[ypixel][xpixel] = 1.0
-        return res
+        return backend.promote(res)
 
 
 @pytest.mark.parametrize(
