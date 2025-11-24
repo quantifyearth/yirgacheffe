@@ -73,9 +73,10 @@ class Area:
             # raise ValueError("Cannot compare areas with different projections")
             return False
 
-        if self.projection and other.projection:
-            self_offset = self._grid_offset
-            other_offset = other._grid_offset
+        self_offset = self._grid_offset
+        other_offset = other._grid_offset
+
+        if self_offset and other_offset:
             x_diff = self_offset[0] - other_offset[0]
             y_diff = self_offset[1] - other_offset[1]
         else:
@@ -110,9 +111,9 @@ class Area:
 
         # If we intersect two layers with different grid wobbles, then generate
         # a result that is aligned with the midpoint between them.
-        if self.projection and other.projection:
-            lhs_offset = lhs._grid_offset
-            rhs_offset = rhs._grid_offset
+        lhs_offset = lhs._grid_offset
+        rhs_offset = rhs._grid_offset
+        if lhs_offset and rhs_offset:
             x_offset = (lhs_offset[0] - rhs_offset[0]) / 2
             y_offset = (lhs_offset[1] - rhs_offset[1]) / 2
         else:
@@ -154,9 +155,9 @@ class Area:
 
         # If we union two layers with different grid wobbles, then generate
         # a result that is aligned with the midpoint between them.
-        if self.projection and other.projection:
-            lhs_offset = lhs._grid_offset
-            rhs_offset = rhs._grid_offset
+        lhs_offset = lhs._grid_offset
+        rhs_offset = rhs._grid_offset
+        if lhs_offset and rhs_offset:
             x_offset = (lhs_offset[0] - rhs_offset[0]) / 2
             y_offset = (lhs_offset[1] - rhs_offset[1]) / 2
         else:
@@ -261,7 +262,9 @@ class Area:
         if other.projection is None:
             raise ValueError("Like area must be have map projection")
 
-        x_off, y_off = other._grid_offset
+        offset = other._grid_offset
+        assert offset # We know this should be true due to the above guard, but pylint does not.
+        x_off, y_off = offset
         abs_xstep = abs(other.projection.xstep)
         abs_ystep = abs(other.projection.ystep)
 
