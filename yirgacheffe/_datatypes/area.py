@@ -129,10 +129,10 @@ class Area:
             y_offset = 0.0
 
         intersection = Area(
-            left=max(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) + x_offset,
-            top=min(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) + y_offset,
-            right=min(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) + x_offset,
-            bottom=max(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) + y_offset,
+            left=max(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) - x_offset,
+            top=min(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) - y_offset,
+            right=min(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) - x_offset,
+            bottom=max(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) - y_offset,
             projection=lhs.projection,
         )
         if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
@@ -173,10 +173,10 @@ class Area:
             y_offset = 0.0
 
         union = Area(
-            left=min(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) + x_offset,
-            top=max(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) + y_offset,
-            right=max(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) + x_offset,
-            bottom=min(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) + y_offset,
+            left=min(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) - x_offset,
+            top=max(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) - y_offset,
+            right=max(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) - x_offset,
+            bottom=min(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) - y_offset,
             projection=lhs.projection,
         )
         return union

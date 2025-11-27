@@ -279,6 +279,23 @@ class YirgacheffeLayer(LayerMathMixin):
         assert self.map_projection is not None
         assert self.map_projection == target_projection
 
+        # move the target area to align with our grid offset
+        target_offset = target_area._grid_offset
+        if target_offset is not None:
+            self_offset = self._underlying_area._grid_offset
+            assert self_offset is not None
+            target_offset_x, target_offset_y = target_offset
+            self_offset_x, self_offset_y = self_offset
+            diff_x = self_offset_x - target_offset_x
+            diff_y = self_offset_y - target_offset_y
+            target_area = Area(
+                target_area.left + diff_x,
+                target_area.top + diff_y,
+                target_area.right + diff_x,
+                target_area.bottom + diff_y,
+                target_area.projection,
+            )
+
         xoff, yoff = self.map_projection.round_down_pixels(
             (target_area.left - self._underlying_area.left) / self.map_projection.xstep,
             (self._underlying_area.top - target_area.top) / (self.map_projection.ystep * -1.0),

@@ -65,9 +65,7 @@ class MapProjection:
         )
 
     def __repr__(self) -> str:
-        epsg = self.epsg
-        name = f"epsg:{epsg}" if epsg is not None else self.name
-        return f"MapProjection({name!r}, {self.xstep}, {self.ystep})"
+        return f"MapProjection({self.crs.to_string()!r}, {self.xstep}, {self.ystep})"
 
     def __hash__(self):
         return hash((self.name, self.xstep, self.ystep))

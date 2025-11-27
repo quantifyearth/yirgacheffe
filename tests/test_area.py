@@ -221,6 +221,76 @@ def test_area_intersection(lhs: Area, rhs: Area, expected: Area | None) -> None:
             _ = lhs & rhs
 
 
+@pytest.mark.parametrize("offset,expected_offset", [
+    (0.0, None),
+    (1.0, None),
+    (2.0, None),
+    (3.0, None),
+    (4.0, None),
+    (5.0, None),
+    (6.0, 8.0),
+    (7.0, 8.5),
+    (8.0, 9.0),
+    (9.0, 9.5),
+    (10.0, 10.0),
+    (11.0, 10.5),
+    (12.0, 11.0),
+    (13.0, 11.5),
+    (14.0, 12.0),
+    (15.0, 12.5),
+    (16.0, None),
+    (17.0, None),
+    (18.0, None),
+    (19.0, None),
+    (20.0, None),
+])
+def test_sliding_horizontal_intersection(offset, expected_offset) -> None:
+    projection = MapProjection("esri:54009", 10.0, -10.0)
+    lhs = Area(10.0, 0.0, 20.0, -10.0, projection)
+    rhs = Area(offset, 0.0, 10.0 + offset, -10.0, projection)
+    if expected_offset is not None:
+        result = lhs & rhs
+        assert result.left == expected_offset
+    else:
+        with pytest.raises(ValueError):
+            _ = lhs & rhs
+
+
+@pytest.mark.parametrize("offset,expected_offset", [
+    (0.0, None),
+    (1.0, None),
+    (2.0, None),
+    (3.0, None),
+    (4.0, None),
+    (5.0, None),
+    (6.0, 8.0),
+    (7.0, 8.5),
+    (8.0, 9.0),
+    (9.0, 9.5),
+    (10.0, 10.0),
+    (11.0, 10.5),
+    (12.0, 11.0),
+    (13.0, 11.5),
+    (14.0, 12.0),
+    (15.0, 12.5),
+    (16.0, None),
+    (17.0, None),
+    (18.0, None),
+    (19.0, None),
+    (20.0, None),
+])
+def test_sliding_vertical_intersection(offset, expected_offset) -> None:
+    projection = MapProjection("esri:54009", 10.0, -10.0)
+    lhs = Area(0.0, 10.0, 10.0, 0.0, projection)
+    rhs = Area(0.0, offset, 10.0, -10.0 + offset, projection)
+    if expected_offset is not None:
+        result = lhs & rhs
+        assert result.top == expected_offset
+    else:
+        with pytest.raises(ValueError):
+            _ = lhs & rhs
+
+
 def test_global_area() -> None:
     area = Area.world()
     assert area.is_world
