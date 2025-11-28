@@ -14,7 +14,9 @@ class NaiveH3CellLayer(H3CellLayer):
     so the H3CellLayer has a bunch of tricks to try reduce the work done. This is a naive
     version that checks for every cell."""
 
-    def _read_array_with_window(self, xoffset, yoffset, xsize, ysize, _window):  # pylint: disable=W0237
+    def _read_array_with_window(
+        self, xoffset, yoffset, xsize, ysize, _window
+    ):  # pylint: disable=W0237
         assert self.map_projection is not None
         res = np.zeros((ysize, xsize), dtype=float)
         start_x = self.area.left + (xoffset * self.map_projection.xstep)

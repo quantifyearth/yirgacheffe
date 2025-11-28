@@ -159,9 +159,13 @@ class YirgacheffeLayer(LayerMathMixin):
         if new_area.projection is None:
             new_area = new_area.project_like(self._underlying_area)
 
+        # We force everything onto a grid aligned basis for calculating the window to avoid rounding issues
+        new_area = new_area._grid_aligned
+        underlying_area = self._underlying_area._grid_aligned
+
         xoff, yoff = self.map_projection.round_down_pixels(
-            (new_area.left - self._underlying_area.left) / abs(self.map_projection.xstep),
-            (self._underlying_area.top - new_area.top) / abs(self.map_projection.ystep),
+            (new_area.left - underlying_area.left) / abs(self.map_projection.xstep),
+            (underlying_area.top - new_area.top) / abs(self.map_projection.ystep),
         )
         xsize, ysize = self.map_projection.round_up_pixels(
             (new_area.right - new_area.left) / abs(self.map_projection.xstep),
@@ -190,9 +194,13 @@ class YirgacheffeLayer(LayerMathMixin):
         if new_area.projection is None:
             new_area = new_area.project_like(self._underlying_area)
 
+        # We force everything onto a grid aligned basis for calculating the window to avoid rounding issues
+        new_area = new_area._grid_aligned
+        underlying_area = self._underlying_area._grid_aligned
+
         xoff, yoff = self.map_projection.round_down_pixels(
-            (new_area.left - self._underlying_area.left) / abs(self.map_projection.xstep),
-            (self._underlying_area.top - new_area.top) / abs(self.map_projection.ystep),
+            (new_area.left - underlying_area.left) / abs(self.map_projection.xstep),
+            (underlying_area.top - new_area.top) / abs(self.map_projection.ystep),
         )
         xsize, ysize = self.map_projection.round_up_pixels(
             (new_area.right - new_area.left) / abs(self.map_projection.xstep),
@@ -281,6 +289,8 @@ class YirgacheffeLayer(LayerMathMixin):
 
         # move the target area to align with our grid offset
         target_offset = target_area._grid_offset
+        print(self.name)
+        print("before", target_area)
         if target_offset is not None:
             self_offset = self._underlying_area._grid_offset
             assert self_offset is not None
@@ -295,11 +305,14 @@ class YirgacheffeLayer(LayerMathMixin):
                 target_area.bottom + diff_y,
                 target_area.projection,
             )
+        print("after", target_area)
+
 
         xoff, yoff = self.map_projection.round_down_pixels(
             (target_area.left - self._underlying_area.left) / self.map_projection.xstep,
             (self._underlying_area.top - target_area.top) / (self.map_projection.ystep * -1.0),
         )
+        print(self.name, xoff, yoff)
         xsize, ysize = self.map_projection.round_up_pixels(
             (target_area.right - target_area.left) / self.map_projection.xstep,
             (target_area.top - target_area.bottom) / (self.map_projection.ystep * -1.0),

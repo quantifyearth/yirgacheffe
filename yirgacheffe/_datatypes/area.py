@@ -119,25 +119,37 @@ class Area:
         # a result that is aligned with the midpoint between them.
         lhs_offset = lhs._grid_offset
         rhs_offset = rhs._grid_offset
+
         if lhs_offset and rhs_offset:
-            x_offset = (lhs_offset[0] - rhs_offset[0]) / 2
-            y_offset = (lhs_offset[1] - rhs_offset[1]) / 2
+            x_offset = (lhs_offset[0] + rhs_offset[0]) / 2
+            y_offset = (lhs_offset[1] + rhs_offset[1]) / 2
         else:
             lhs_offset = (0.0, 0.0)
             rhs_offset = (0.0, 0.0)
             x_offset = 0.0
             y_offset = 0.0
 
+        # We do this on the grid aligned space, as it's easier to spot bugs in the
+        # numbers that way (usually)
         intersection = Area(
-            left=max(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) - x_offset,
-            top=min(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) - y_offset,
-            right=min(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) - x_offset,
-            bottom=max(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) - y_offset,
+            left=max(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]),
+            top=min(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]),
+            right=min(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]),
+            bottom=max(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]),
             projection=lhs.projection,
         )
-        if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
+
+        if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top) or \
+                 math.isclose(intersection.left, intersection.right) or \
+                 math.isclose(intersection.top, intersection.bottom):
             raise ValueError('No intersection possible')
-        return intersection
+        return Area(
+            intersection.left + x_offset,
+            intersection.top + y_offset,
+            intersection.right + x_offset,
+            intersection.bottom + y_offset,
+            intersection.projection,
+        )
 
     def __or__(self, other: object) -> Area:
         # Set union
@@ -164,8 +176,8 @@ class Area:
         lhs_offset = lhs._grid_offset
         rhs_offset = rhs._grid_offset
         if lhs_offset and rhs_offset:
-            x_offset = (lhs_offset[0] - rhs_offset[0]) / 2
-            y_offset = (lhs_offset[1] - rhs_offset[1]) / 2
+            x_offset = (lhs_offset[0] + rhs_offset[0]) / 2
+            y_offset = (lhs_offset[1] + rhs_offset[1]) / 2
         else:
             lhs_offset = (0.0, 0.0)
             rhs_offset = (0.0, 0.0)
@@ -173,31 +185,55 @@ class Area:
             y_offset = 0.0
 
         union = Area(
-            left=min(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) - x_offset,
-            top=max(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) - y_offset,
-            right=max(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) - x_offset,
-            bottom=min(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) - y_offset,
+            left=min(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) + x_offset,
+            top=max(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) + y_offset,
+            right=max(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) + x_offset,
+            bottom=min(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) + y_offset,
             projection=lhs.projection,
         )
         return union
 
     @property
-    def _grid_offset(self) -> tuple[float,float] | None:
+    def _grid_offset(self) -> tuple[float, float] | None:
         if self.projection is None:
             return None
 
         abs_xstep = abs(self.projection.xstep)
         abs_ystep = abs(self.projection.ystep)
 
-        xoff = self.left - ((self.left // abs_xstep) * abs_xstep)
-        yoff = self.top - ((self.top // abs_ystep) * abs_ystep)
+        xoff = self.left % abs_xstep
+        yoff = self.top % abs_ystep
 
-        if xoff > (abs_xstep / 2):
+        epsilon_x = abs_xstep * 1e-6
+        epsilon_y = abs_ystep * 1e-6
+
+        threshold_x = abs_xstep / 2
+        threshold_y = abs_ystep / 2
+
+        if xoff > threshold_x + epsilon_x:
             xoff -= abs_xstep
-        if yoff > (abs_ystep / 2):
+        elif xoff > threshold_x - epsilon_x:
+            xoff = threshold_x
+
+        if yoff > threshold_y + epsilon_y:
             yoff -= abs_ystep
+        elif yoff > threshold_y - epsilon_y:
+            yoff = threshold_y
 
         return xoff, yoff
+
+    @property
+    def _grid_aligned(self) -> Area:
+        offset = self._grid_offset
+        if offset is None:
+            return self
+        return Area(
+            self.left - offset[0],
+            self.top - offset[1],
+            self.right - offset[0],
+            self.bottom - offset[1],
+            self.projection,
+        )
 
     def grow(self, offset: float) -> Area:
         """Expand the area in all directions by the given amount.
