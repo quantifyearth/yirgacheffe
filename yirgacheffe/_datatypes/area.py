@@ -14,6 +14,11 @@ class Area:
 
     You can use set operators | (union) and & (intersection) on Areas.
 
+    If two areas are intersected or unioned and they have the same map projection and geospatial
+    pixel size, but they do not perfectly align on the same pixel grid, then the operation will be
+    performed based on nearest neighbour alignment of the pixel grids, such that the resulting area
+    is still pixel aligned.
+
     Args:
         left: Left most point in the projection space.
         top: Top most point in the projection space.
@@ -76,7 +81,6 @@ class Area:
         if self.is_world and other.is_world:
             return True
         if self.projection != other.projection:
-            # raise ValueError("Cannot compare areas with different projections")
             return False
 
         self_offset = self._grid_offset

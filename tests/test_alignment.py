@@ -59,7 +59,6 @@ def test_nearest_neighbour_raster_alignment_small_step() -> None:
 
                 expect_error = not 0 <= x_index < 3 or not 0 <= y_index < 3
 
-                # print(x_offset, y_offset, expect_error)
                 with yg.from_array(
                     data2,
                     (0.0 + (x_offset * 0.001), 0.0 + (y_offset * 0.001)),

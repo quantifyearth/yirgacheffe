@@ -289,8 +289,6 @@ class YirgacheffeLayer(LayerMathMixin):
 
         # move the target area to align with our grid offset
         target_offset = target_area._grid_offset
-        print(self.name)
-        print("before", target_area)
         if target_offset is not None:
             self_offset = self._underlying_area._grid_offset
             assert self_offset is not None
@@ -305,14 +303,11 @@ class YirgacheffeLayer(LayerMathMixin):
                 target_area.bottom + diff_y,
                 target_area.projection,
             )
-        print("after", target_area)
-
 
         xoff, yoff = self.map_projection.round_down_pixels(
             (target_area.left - self._underlying_area.left) / self.map_projection.xstep,
             (self._underlying_area.top - target_area.top) / (self.map_projection.ystep * -1.0),
         )
-        print(self.name, xoff, yoff)
         xsize, ysize = self.map_projection.round_up_pixels(
             (target_area.right - target_area.left) / self.map_projection.xstep,
             (target_area.top - target_area.bottom) / (self.map_projection.ystep * -1.0),
