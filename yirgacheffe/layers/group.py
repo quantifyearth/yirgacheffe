@@ -62,7 +62,7 @@ class GroupLayer(YirgacheffeLayer):
 
         # area/window are superset of all tiles
         union = YirgacheffeLayer.find_union(layers)
-        super().__init__(union, layers[0].map_projection, name=name)
+        super().__init__(union, name=name)
 
         # We store them in reverse order so that from the user's perspective
         # the first layer in the list will be the most important in terms

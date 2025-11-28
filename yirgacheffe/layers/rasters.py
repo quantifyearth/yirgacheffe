@@ -37,14 +37,6 @@ class RasterLayer(YirgacheffeLayer):
     ) -> RasterLayer:
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
-        # We treat the provided area as aspirational, and we need to align it to pixel boundaries
-        pixel_friendly_area = Area(
-            left=math.floor(area.left / abs_xstep) * abs_xstep,
-            right=math.ceil(area.right / abs_xstep) * abs_xstep,
-            top=math.ceil(area.top / abs_ystep) * abs_ystep,
-            bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
-        )
-
         # This used to the the GDAL type, so we support that for legacy reasons
         if isinstance(datatype, int):
             datatype_arg = DataType.of_gdal(datatype)
@@ -58,6 +50,21 @@ class RasterLayer(YirgacheffeLayer):
             options.append(f"NBITS={nbits}")
 
         map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+        # If the area is projected, use that, otherwise we need to project it
+        if area.projection is not None:
+            if area.projection != map_projection:
+                raise ValueError("Area projection does not match provided projection.")
+            pixel_friendly_area = area
+        else:
+            pixel_friendly_area = Area(
+                left=math.floor(area.left / abs_xstep) * abs_xstep,
+                right=math.ceil(area.right / abs_xstep) * abs_xstep,
+                top=math.ceil(area.top / abs_ystep) * abs_ystep,
+                bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
+                projection=map_projection,
+            )
+
+        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
         width, height = map_projection.round_up_pixels(
             (pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep,
             (pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep,
@@ -260,11 +267,11 @@ class RasterLayer(YirgacheffeLayer):
             top=transform[3],
             right=transform[0] + (dataset.RasterXSize * projection.xstep),
             bottom=transform[3] + (dataset.RasterYSize * projection.ystep),
+            projection=projection,
         )
 
         super().__init__(
             area,
-            projection,
             name=name
         )
 

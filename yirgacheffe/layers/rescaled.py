@@ -5,7 +5,7 @@ from typing import Any
 
 from skimage import transform
 
-from ..window import MapProjection, PixelScale, Window
+from .._datatypes import Area, MapProjection, PixelScale, Window
 from .rasters import RasterLayer, YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
@@ -37,9 +37,16 @@ class RescaledRasterLayer(YirgacheffeLayer):
         nearest_neighbour: bool = True,
         name: str | None = None,
     ):
-        super().__init__(
-            src.area,
+        target_area = Area(
+            src.area.left,
+            src.area.top,
+            src.area.right,
+            src.area.bottom,
             target_projection,
+        )
+
+        super().__init__(
+            target_area,
             name=name
         )
 

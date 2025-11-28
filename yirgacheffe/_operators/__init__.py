@@ -479,7 +479,6 @@ class LayerOperation(LayerMathMixin):
         self.kwargs = kwargs
         self.window_op = window_op
         self.buffer_padding = buffer_padding
-        self._forced_area = None
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -496,7 +495,9 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not lhs.map_projection == rhs.map_projection:
+                if not ((lhs.map_projection == rhs.map_projection) or \
+                        (lhs.map_projection is None) or \
+                        (rhs.map_projection is None)):
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.rhs = rhs
         else:
@@ -511,7 +512,9 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not lhs.map_projection == other.map_projection:
+                if not ((lhs.map_projection == other.map_projection) or \
+                        (lhs.map_projection is None) or \
+                        (other.map_projection is None)):
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.other = other
         else:
@@ -580,9 +583,6 @@ class LayerOperation(LayerMathMixin):
         return self._get_operation_area(self.map_projection)
 
     def _get_operation_area(self, projection: MapProjection | None) -> Area:
-        if self._forced_area is not None:
-            return self._forced_area
-
         lhs_area = self.lhs._get_operation_area(projection)
         try:
             rhs_area = self.rhs._get_operation_area(projection)
@@ -1235,14 +1235,15 @@ class LayerOperation(LayerMathMixin):
 
         computation_window = Window(0, 0, width, height)
         expression_area = self.area
-        pixel_scale = projection.scale
-        left = expression_area.left + (x * pixel_scale.xstep)
-        top = expression_area.top + (y * pixel_scale.ystep)
+        assert self.area.projection == projection
+        left = expression_area.left + (x * projection.xstep)
+        top = expression_area.top + (y * projection.ystep)
         computation_area = Area(
             left=left,
             top=top,
-            right=left + (width * pixel_scale.xstep),
-            bottom=top + (height * pixel_scale.ystep),
+            right=left + (width * projection.xstep),
+            bottom=top + (height * projection.ystep),
+            projection=projection,
         )
 
         chunks = []

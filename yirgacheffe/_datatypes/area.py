@@ -2,28 +2,66 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from .mapprojection import MapProjection
+
 @dataclass(frozen=True)
 class Area:
-    """Class to hold a geospatial area of data in the given projection.
+    """Class to hold a geospatial area. Can optionally have a projection associated.
+
+    Ideally areas should always have a projection associated with them, however some data sources,
+    notably polygon datasets like GeoJSON, do not store this, so we have to allow for projectionless
+    areas.
 
     You can use set operators | (union) and & (intersection) on Areas.
+
+    If two areas are intersected or unioned and they have the same map projection and geospatial
+    pixel size, but they do not perfectly align on the same pixel grid, then the operation will be
+    performed based on nearest neighbour alignment of the pixel grids, such that the resulting area
+    is still pixel aligned.
 
     Args:
         left: Left most point in the projection space.
         top: Top most point in the projection space.
         right: Right most point in the projection space.
         bottom: Bottom most point in the projection space.
+        projection: An optional map projection.
 
     Attributes:
         left: Left most point in the projection space.
         top: Top most point in the projection space.
         right: Right most point in the projection space.
         bottom: Bottom most point in the projection space.
+        projection: An optional map projection.
     """
     left: float
     top: float
     right: float
     bottom: float
+    projection: MapProjection | None = None
+
+    def __post_init__(self) -> None:
+        if self.projection is None:
+            return
+
+        # If we have a map projection then validate the dimensions are based on the pixel scale
+        # Note we have to not use the obvious approach of using mod here, as floating point mod
+        # is a bit iffy with values between 1 and 0
+        # >>> 20 % 2
+        # 0
+        # >>> 20 % 1
+        # 0
+        # >>> 20 % 0.1
+        # 0.0999999999999989
+        # Note this is an FP issue not a Python issue AFAICT, I get the same behaviour in OCaml
+        # for instance.
+        width = self.right - self.left
+        height = self.top - self.bottom
+        x_pixels = abs(width / self.projection.xstep)
+        y_pixels = abs(height / self.projection.ystep)
+
+        if not math.isclose(x_pixels - round(x_pixels), 0.0, abs_tol=1e-09) or \
+                not math.isclose(y_pixels - round(y_pixels), 0.0, abs_tol=1e-09):
+            raise ValueError("Area expected to be an integer multiple of projection units")
 
     @staticmethod
     def world() -> Area:
@@ -42,10 +80,24 @@ class Area:
             return False
         if self.is_world and other.is_world:
             return True
-        return math.isclose(self.left, other.left, abs_tol=1e-09) and \
-            math.isclose(self.right, other.right, abs_tol=1e-09) and \
-            math.isclose(self.top, other.top, abs_tol=1e-09) and \
-            math.isclose(self.bottom, other.bottom, abs_tol=1e-09)
+        if self.projection != other.projection:
+            return False
+
+        self_offset = self._grid_offset
+        other_offset = other._grid_offset
+
+        if self_offset and other_offset:
+            x_diff = self_offset[0] - other_offset[0]
+            y_diff = self_offset[1] - other_offset[1]
+        else:
+            x_diff = 0.0
+            y_diff = 0.0
+
+        return \
+            math.isclose(self.left, other.left + x_diff, abs_tol=1e-09) and \
+            math.isclose(self.right, other.right + x_diff, abs_tol=1e-09) and \
+            math.isclose(self.top, other.top + y_diff, abs_tol=1e-09) and \
+            math.isclose(self.bottom, other.bottom + y_diff, abs_tol=1e-09)
 
     def __and__(self, other: object) -> Area:
         # Set intersection
@@ -55,33 +107,137 @@ class Area:
             return other
         if other.is_world:
             return self
-        all_areas = [self, other]
+
+        lhs = self
+        rhs = other
+
+        if lhs.projection is None and rhs.projection is not None:
+            lhs = lhs.project_like(rhs)
+        elif rhs.projection is None and lhs.projection is not None:
+            rhs = rhs.project_like(lhs)
+
+        if lhs.projection != rhs.projection:
+            raise ValueError("Cannot intersect areas with different projections")
+
+        # If we intersect two layers with different grid wobbles, then generate
+        # a result that is aligned with the midpoint between them.
+        lhs_offset = lhs._grid_offset
+        rhs_offset = rhs._grid_offset
+
+        if lhs_offset and rhs_offset:
+            x_offset = (lhs_offset[0] + rhs_offset[0]) / 2
+            y_offset = (lhs_offset[1] + rhs_offset[1]) / 2
+        else:
+            lhs_offset = (0.0, 0.0)
+            rhs_offset = (0.0, 0.0)
+            x_offset = 0.0
+            y_offset = 0.0
+
+        # We do this on the grid aligned space, as it's easier to spot bugs in the
+        # numbers that way (usually)
         intersection = Area(
-            left=max(x.left for x in all_areas),
-            top=min(x.top for x in all_areas),
-            right=min(x.right for x in all_areas),
-            bottom=max(x.bottom for x in all_areas)
+            left=max(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]),
+            top=min(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]),
+            right=min(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]),
+            bottom=max(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]),
+            projection=lhs.projection,
         )
-        if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top):
+
+        if (intersection.left >= intersection.right) or (intersection.bottom >= intersection.top) or \
+                 math.isclose(intersection.left, intersection.right) or \
+                 math.isclose(intersection.top, intersection.bottom):
             raise ValueError('No intersection possible')
-        return intersection
+        return Area(
+            intersection.left + x_offset,
+            intersection.top + y_offset,
+            intersection.right + x_offset,
+            intersection.bottom + y_offset,
+            intersection.projection,
+        )
 
     def __or__(self, other: object) -> Area:
         # Set union
         if not isinstance(other, Area):
-            raise  ValueError("Can only intersect two areas")
+            raise  ValueError("Can only union two areas")
         if self.is_world:
             return self
         if other.is_world:
             return other
-        all_areas = [self, other]
+
+        lhs = self
+        rhs = other
+
+        if lhs.projection is None and rhs.projection is not None:
+            lhs = lhs.project_like(rhs)
+        elif rhs.projection is None and lhs.projection is not None:
+            rhs = rhs.project_like(lhs)
+
+        if lhs.projection != rhs.projection:
+            raise ValueError("Cannot union areas with different projections")
+
+        # If we union two layers with different grid wobbles, then generate
+        # a result that is aligned with the midpoint between them.
+        lhs_offset = lhs._grid_offset
+        rhs_offset = rhs._grid_offset
+        if lhs_offset and rhs_offset:
+            x_offset = (lhs_offset[0] + rhs_offset[0]) / 2
+            y_offset = (lhs_offset[1] + rhs_offset[1]) / 2
+        else:
+            lhs_offset = (0.0, 0.0)
+            rhs_offset = (0.0, 0.0)
+            x_offset = 0.0
+            y_offset = 0.0
+
         union = Area(
-            left=min(x.left for x in all_areas),
-            top=max(x.top for x in all_areas),
-            right=max(x.right for x in all_areas),
-            bottom=min(x.bottom for x in all_areas)
+            left=min(lhs.left - lhs_offset[0], rhs.left - rhs_offset[0]) + x_offset,
+            top=max(lhs.top - lhs_offset[1], rhs.top - rhs_offset[1]) + y_offset,
+            right=max(lhs.right - lhs_offset[0], rhs.right - rhs_offset[0]) + x_offset,
+            bottom=min(lhs.bottom - lhs_offset[1], rhs.bottom - rhs_offset[1]) + y_offset,
+            projection=lhs.projection,
         )
         return union
+
+    @property
+    def _grid_offset(self) -> tuple[float, float] | None:
+        if self.projection is None:
+            return None
+
+        abs_xstep = abs(self.projection.xstep)
+        abs_ystep = abs(self.projection.ystep)
+
+        xoff = self.left % abs_xstep
+        yoff = self.top % abs_ystep
+
+        epsilon_x = abs_xstep * 1e-6
+        epsilon_y = abs_ystep * 1e-6
+
+        threshold_x = abs_xstep / 2
+        threshold_y = abs_ystep / 2
+
+        if xoff > threshold_x + epsilon_x:
+            xoff -= abs_xstep
+        elif xoff > threshold_x - epsilon_x:
+            xoff = threshold_x
+
+        if yoff > threshold_y + epsilon_y:
+            yoff -= abs_ystep
+        elif yoff > threshold_y - epsilon_y:
+            yoff = threshold_y
+
+        return xoff, yoff
+
+    @property
+    def _grid_aligned(self) -> Area:
+        offset = self._grid_offset
+        if offset is None:
+            return self
+        return Area(
+            self.left - offset[0],
+            self.top - offset[1],
+            self.right - offset[0],
+            self.bottom - offset[1],
+            self.projection,
+        )
 
     def grow(self, offset: float) -> Area:
         """Expand the area in all directions by the given amount.
@@ -123,14 +279,58 @@ class Area:
         if self.is_world or other.is_world:
             return True
 
+        lhs = self
+        rhs = other
+
+        if lhs.projection is None and rhs.projection is not None:
+            lhs = lhs.project_like(rhs)
+        elif rhs.projection is None and lhs.projection is not None:
+            rhs = rhs.project_like(lhs)
+
+        if lhs.projection != rhs.projection:
+            raise ValueError("Cannot compare areas with different projections")
+
         return (
-            (self.left <= other.left <= self.right) or
-            (self.left <= other.right <= self.right) or
-            (other.left <= self.left <= other.right) or
-            (other.left <= self.right <= other.right)
+            (lhs.left <= rhs.left <= lhs.right) or
+            (lhs.left <= rhs.right <= lhs.right) or
+            (rhs.left <= lhs.left <= rhs.right) or
+            (rhs.left <= lhs.right <= rhs.right)
         ) and (
-            (self.top >= other.top >= self.bottom) or
-            (self.top >= other.bottom >= self.bottom) or
-            (other.top >= self.top >= other.bottom) or
-            (other.top >= self.bottom >= other.bottom)
+            (lhs.top >= rhs.top >= lhs.bottom) or
+            (lhs.top >= rhs.bottom >= lhs.bottom) or
+            (rhs.top >= lhs.top >= rhs.bottom) or
+            (rhs.top >= lhs.bottom >= rhs.bottom)
+        )
+
+    def project_like(self, other: Area) -> Area:
+        """Takes a projectionless area and maps it onto a map projection based on an existing area.
+
+        Because map projections have pixel scales associated with them, the area may be expanded
+        to ensure that the original area is within the bounds when mapped to the pixel space of the other area.
+
+        Will raise an exception if this area already has a map projection set, or if the other area does not.
+
+        Args:
+            other: The other area to take the map projection from.
+
+        Returns:
+            A new area with the projection map.
+        """
+        if self.projection is not None:
+            raise ValueError("Changing projection is not supported currently")
+        if other.projection is None:
+            raise ValueError("Like area must be have map projection")
+
+        offset = other._grid_offset
+        assert offset # We know this should be true due to the above guard, but pylint does not.
+        x_off, y_off = offset
+        abs_xstep = abs(other.projection.xstep)
+        abs_ystep = abs(other.projection.ystep)
+
+        return Area(
+            left=(math.floor(self.left / abs_xstep) * abs_xstep) + x_off,
+            top=(math.ceil(self.top / abs_ystep) * abs_ystep) + y_off,
+            right=(math.ceil(self.right / abs_xstep) * abs_xstep) + x_off,
+            bottom=(math.floor(self.bottom / abs_ystep) * abs_ystep) + y_off,
+            projection=other.projection
         )

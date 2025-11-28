@@ -20,6 +20,7 @@ from yirgacheffe._operators import LayerOperation
 # It seems that under the hood MLX is doing some threading of its own and my
 # guess is that that's interacting with the Python threading here.
 
+
 def test_add_byte_layers_with_one_thread_uses_regular_save(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 4)
@@ -43,7 +44,10 @@ def test_add_byte_layers_with_one_thread_uses_regular_save(monkeypatch) -> None:
             with pytest.raises(TypeError):
                 comp.parallel_save(result)
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_add_byte_layers(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -71,7 +75,10 @@ def test_add_byte_layers(monkeypatch) -> None:
 
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_rlimit_nofiles(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -83,18 +90,23 @@ def test_rlimit_nofiles(monkeypatch) -> None:
             dataset1.Close()
 
             rlimit_log = []
+
             def callback_rlimit_recorder(_progress: float) -> None:
                 rlimit_log.append(resource.getrlimit(resource.RLIMIT_NOFILE))
 
             with RasterLayer.layer_from_file(path1) as layer:
                 with RasterLayer.empty_raster_layer_like(layer) as result:
 
-                    before_current_fd_limit, before_max_fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+                    before_current_fd_limit, before_max_fd_limit = resource.getrlimit(
+                        resource.RLIMIT_NOFILE
+                    )
 
                     comp = layer * 2
                     comp.parallel_save(result, callback=callback_rlimit_recorder)
 
-                    after_current_fd_limit, after_max_fd_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+                    after_current_fd_limit, after_max_fd_limit = resource.getrlimit(
+                        resource.RLIMIT_NOFILE
+                    )
 
                     assert after_current_fd_limit == before_current_fd_limit
                     assert after_max_fd_limit == before_max_fd_limit
@@ -104,7 +116,10 @@ def test_rlimit_nofiles(monkeypatch) -> None:
                         assert recorded_current_fd_limit == before_max_fd_limit
                         assert recorded_max_fd_limit == before_max_fd_limit
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_add_byte_layers_and_sum(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -133,7 +148,10 @@ def test_add_byte_layers_and_sum(monkeypatch) -> None:
             assert (expected == actual).all()
             assert sum_total == expected.sum()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_parallel_sum(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -158,11 +176,17 @@ def test_parallel_sum(monkeypatch) -> None:
             expected = data1 + data2
             assert sum_total == expected.sum()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
-@pytest.mark.parametrize("skip,expected_steps", [
-    (1, [0.0, 0.25, 0.5, 0.75, 1.0]),
-    (2, [0.0, 0.5, 1.0]),
-])
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
+@pytest.mark.parametrize(
+    "skip,expected_steps",
+    [
+        (1, [0.0, 0.25, 0.5, 0.75, 1.0]),
+        (2, [0.0, 0.5, 1.0]),
+    ],
+)
 def test_parallel_with_different_skip(monkeypatch, skip, expected_steps) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -174,7 +198,9 @@ def test_parallel_with_different_skip(monkeypatch, skip, expected_steps) -> None
             dataset1.Close()
 
             path2 = os.path.join(tempdir, "test2.tif")
-            data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80], [10, 20, 30, 40], [50, 60, 70, 80]])
+            data2 = np.array(
+                [[10, 20, 30, 40], [50, 60, 70, 80], [10, 20, 30, 40], [50, 60, 70, 80]]
+            )
             dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2, filename=path2)
             dataset2.Close()
 
@@ -195,7 +221,10 @@ def test_parallel_with_different_skip(monkeypatch, skip, expected_steps) -> None
 
             assert callback_positions == expected_steps
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_parallel_equality(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -215,7 +244,10 @@ def test_parallel_equality(monkeypatch) -> None:
 
                     assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_parallel_equality_to_file(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -228,14 +260,19 @@ def test_parallel_equality_to_file(monkeypatch) -> None:
             dataset1.Close()
             with RasterLayer.layer_from_file(path1) as layer1:
                 comp = layer1 == 2
-                with RasterLayer.empty_raster_layer_like(layer1, filename=path2) as result:
+                with RasterLayer.empty_raster_layer_like(
+                    layer1, filename=path2
+                ) as result:
                     comp.parallel_save(result)
             with RasterLayer.layer_from_file(path2) as actual_result:
                 expected = np.array([[0, 1, 0, 0], [0, 0, 1, 0]])
                 actual = actual_result.read_array(0, 0, 4, 2)
                 assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_parallel_unary_numpy_apply_with_function(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -261,7 +298,10 @@ def test_parallel_unary_numpy_apply_with_function(monkeypatch) -> None:
 
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_parallel_unary_numpy_apply_with_lambda(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -284,7 +324,10 @@ def test_parallel_unary_numpy_apply_with_lambda(monkeypatch) -> None:
 
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_parallel_where_simple(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yirgacheffe.constants, "YSTEP", 1)
@@ -306,25 +349,34 @@ def test_parallel_where_simple(monkeypatch) -> None:
             actual = result.read_array(0, 0, 4, 2)
             assert (expected == actual).all()
 
-@pytest.mark.skipif(yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy")
+
+@pytest.mark.skipif(
+    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
 def test_parallel_conv2d() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
 
-        data1 = np.array([
-            [0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 0],
-            [0, 1, 1, 1, 0],
-            [0, 1, 1, 1, 0],
-            [0, 0, 0, 0, 0],
-        ]).astype(np.float32)
-        weights = np.array([
-            [0.0, 0.1, 0.0],
-            [0.1, 0.6, 0.1],
-            [0.0, 0.1, 0.0],
-        ])
+        data1 = np.array(
+            [
+                [0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 0],
+                [0, 1, 1, 1, 0],
+                [0, 1, 1, 1, 0],
+                [0, 0, 0, 0, 0],
+            ]
+        ).astype(np.float32)
+        weights = np.array(
+            [
+                [0.0, 0.1, 0.0],
+                [0.1, 0.6, 0.1],
+                [0.0, 0.1, 0.0],
+            ]
+        )
 
         conv = torch.nn.Conv2d(1, 1, 3, padding=1, bias=False)
-        conv.weight = torch.nn.Parameter(torch.from_numpy(np.array([[weights.astype(np.float32)]])))
+        conv.weight = torch.nn.Parameter(
+            torch.from_numpy(np.array([[weights.astype(np.float32)]]))
+        )
         tensorres = conv(torch.from_numpy(np.array([[data1]])))
         expected = tensorres.detach().numpy()[0][0]
 

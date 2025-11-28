@@ -53,6 +53,7 @@ dev = [
     "mkdocstrings-python",
     "mike",
     "mkdocs-gen-files",
+    "black",
 ]
 
 [project.urls]

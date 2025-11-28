@@ -145,6 +145,7 @@ class RasteredVectorLayer(RasterLayer):
             top=ceil(max(x[3] for x in envelopes) / abs_ystep) * abs_ystep,
             right=ceil(max(x[1] for x in envelopes) / abs_xstep) * abs_xstep,
             bottom=floor(min(x[2] for x in envelopes) / abs_ystep) * abs_ystep,
+            projection=projection,
         )
 
         # create new dataset for just that area
@@ -353,6 +354,7 @@ class VectorLayer(YirgacheffeLayer):
                 top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
                 right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
                 bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
+                projection=projection,
             )
         else:
             # If we don't have  a projection just go with the idealised area
@@ -363,14 +365,14 @@ class VectorLayer(YirgacheffeLayer):
                 bottom=floor(min(x[2] for x in envelopes)),
             )
 
-        super().__init__(area, projection, name=name)
+        super().__init__(area, name=name)
 
 
     def _get_operation_area(self, projection: MapProjection | None = None) -> Area:
-        if self._projection is not None and projection is not None and self._projection != projection:
+        if self.map_projection is not None and projection is not None and self.map_projection != projection:
             raise ValueError("Calculation projection does not match layer projection")
 
-        target_projection = projection if projection is not None else self._projection
+        target_projection = projection if projection is not None else self.map_projection
 
         if target_projection is None:
             if self._active_area is not None:
@@ -399,6 +401,7 @@ class VectorLayer(YirgacheffeLayer):
                 top=(ceil((max(x[3] for x in envelopes) - top_shift) / abs_ystep) * abs_ystep) + top_shift,
                 right=(ceil((max(x[1] for x in envelopes) - right_shift) / abs_xstep) * abs_xstep) + right_shift,
                 bottom=(floor((min(x[2] for x in envelopes) - bottom_shift) / abs_ystep) * abs_ystep) + bottom_shift,
+                projection=target_projection,
             )
 
     @property
@@ -465,7 +468,7 @@ class VectorLayer(YirgacheffeLayer):
         width: int,
         height: int,
     ) -> Any:
-        projection = target_projection if target_projection is not None else self._projection
+        projection = target_projection if target_projection is not None else self.map_projection
         assert projection is not None
 
         if self._original is None:

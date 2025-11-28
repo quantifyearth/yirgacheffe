@@ -4,8 +4,12 @@ from pathlib import Path
 import pytest
 from osgeo import gdal
 
-from tests.helpers import gdal_dataset_of_region, gdal_empty_dataset_of_region, make_vectors_with_id
-from yirgacheffe.window import Area, MapProjection, Window
+from tests.helpers import (
+    gdal_dataset_of_region,
+    gdal_empty_dataset_of_region,
+    make_vectors_with_id,
+)
+from yirgacheffe import Area, MapProjection, Window
 from yirgacheffe.layers import RasterLayer, ConstantLayer, H3CellLayer, VectorLayer
 from yirgacheffe import WGS_84_PROJECTION
 
@@ -14,53 +18,60 @@ def test_find_intersection_empty_list() -> None:
     with pytest.raises(ValueError):
         _ = RasterLayer.find_intersection([])
 
+
 def test_find_intersection_single_item() -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     intersection = RasterLayer.find_intersection([layer])
     assert intersection == layer.area
 
+
 def test_find_intersection_same() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+        RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
     ]
     intersection = RasterLayer.find_intersection(layers)
     assert intersection == layers[0].area
 
+
 def test_find_intersection_subset() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(-1, 1, 1, -1), 0.02))
+        RasterLayer(gdal_dataset_of_region(Area(-1, 1, 1, -1), 0.02)),
     ]
     intersection = RasterLayer.find_intersection(layers)
     assert intersection == layers[1].area
 
+
 def test_find_intersection_overlap() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02))
+        RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02)),
     ]
     intersection = RasterLayer.find_intersection(layers)
-    assert intersection == Area(-10, 10, -5, -5)
+    assert intersection == Area(-10, 10, -5, -5, layers[0].map_projection)
+
 
 def test_find_intersection_distinct() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-110, 10, -100, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(100, 10, 110, -10), 0.02))
+        RasterLayer(gdal_dataset_of_region(Area(100, 10, 110, -10), 0.02)),
     ]
     with pytest.raises(ValueError):
         _ = RasterLayer.find_intersection(layers)
 
+
 def test_find_intersection_with_constant() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        ConstantLayer(1.0)
+        ConstantLayer(1.0),
     ]
     intersection = RasterLayer.find_intersection(layers)
     assert intersection == layers[0].area
 
     for layer in layers:
         layer.set_window_for_intersection(intersection)
+
 
 def test_find_intersection_with_vector_unbound() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -69,17 +80,24 @@ def test_find_intersection_with_vector_unbound() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        raster = RasterLayer(gdal_dataset_of_region(Area(left=-180.05, top=90.09, right=180.05, bottom=-90.09), 0.13))
+        raster = RasterLayer(
+            gdal_dataset_of_region(
+                Area(left=-180.05, top=90.09, right=180.05, bottom=-90.09), 0.13
+            )
+        )
         vector = VectorLayer.layer_from_file(path, None, None, None)
         assert vector.area == area
 
         layers = [raster, vector]
         intersection = RasterLayer.find_intersection(layers)
-        assert intersection == vector.area
+
+        expected_area = area.project_like(raster.area)
+        assert intersection == expected_area
 
         raster.set_window_for_intersection(intersection)
         with pytest.raises(ValueError):
             vector.set_window_for_intersection(intersection)
+
 
 def test_find_intersection_with_vector_bound() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
@@ -88,7 +106,11 @@ def test_find_intersection_with_vector_bound() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        raster = RasterLayer(gdal_dataset_of_region(Area(left=-180.05, top=90.09, right=180.05, bottom=-90.09), 0.13))
+        raster = RasterLayer(
+            gdal_dataset_of_region(
+                Area(left=-180.05, top=90.09, right=180.05, bottom=-90.09), 0.13
+            )
+        )
         vector = VectorLayer.layer_from_file_like(path, raster)
         assert vector.area != area
 
@@ -99,6 +121,7 @@ def test_find_intersection_with_vector_bound() -> None:
         for layer in layers:
             layer.set_window_for_intersection(intersection)
 
+
 def test_find_intersection_with_vector_awkward_rounding() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.gpkg"
@@ -106,10 +129,18 @@ def test_find_intersection_with_vector_awkward_rounding() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        raster = RasterLayer(gdal_dataset_of_region(Area(left=-180, top=90, right=180, bottom=-90), 18.0))
+        raster = RasterLayer(
+            gdal_dataset_of_region(Area(left=-180, top=90, right=180, bottom=-90), 18.0)
+        )
         vector = VectorLayer.layer_from_file_like(path, raster)
 
-        rounded_area = Area(left=-90, top=54, right=90, bottom=-54)
+        rounded_area = Area(
+            left=-90,
+            top=54,
+            right=90,
+            bottom=-54,
+            projection=MapProjection("epsg:4326", 18.0, -18.0),
+        )
         assert vector.area == rounded_area
 
         layers = [raster, vector]
@@ -119,15 +150,19 @@ def test_find_intersection_with_vector_awkward_rounding() -> None:
         for layer in layers:
             layer.set_window_for_intersection(intersection)
 
+
 def test_find_intersection_different_pixel_pitch() -> None:
     layers = [
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
-        RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.01))
+        RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.01)),
     ]
     with pytest.raises(ValueError):
         _ = RasterLayer.find_intersection(layers)
 
-@pytest.mark.parametrize("scale", [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09])
+
+@pytest.mark.parametrize(
+    "scale", [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09]
+)
 def test_set_intersection_self(scale) -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), scale))
     old_window = layer.window
@@ -140,6 +175,7 @@ def test_set_intersection_self(scale) -> None:
     # reset should not do much here
     layer.reset_window()
     assert layer.window == old_window
+
 
 def test_set_intersection_subset() -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
@@ -160,11 +196,13 @@ def test_set_intersection_subset() -> None:
     layer.reset_window()
     assert layer.window == Window(0, 0, 1000, 1000)
 
+
 def test_set_intersection_distinct() -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     intersection = Area(-101.0, 1.0, -100.0, -1.0)
     with pytest.raises(ValueError):
         layer.set_window_for_intersection(intersection)
+
 
 def test_find_intersection_nearly_same() -> None:
     # This testcase is based on a real instance we hit whereby
@@ -180,22 +218,50 @@ def test_find_intersection_nearly_same() -> None:
     # when doing a comparison (thanks to layers.py::almost_equal(a,b)), but
     # when you then multiplied this up by the area it rounded poorly.
     layers = [
-        RasterLayer(gdal_empty_dataset_of_region(
-            Area(left=-180.00082337073326, top=90.00041168536663, right=180.00082337073326, bottom=-90.00041168536663),
-            0.0008983152841195215
-        )),
-        RasterLayer(gdal_empty_dataset_of_region(
-            Area(left=-180.00082337073326, top=90.00041168536661, right=180.00082337073326, bottom=-90.00041168536664),
-            0.0008983152841195216
-        )),
-        RasterLayer(gdal_empty_dataset_of_region(
-            Area(left=-180, top=90.00041168536661, right=180, bottom=-90.00041168536664),
-            0.0008983152841195215
-        )),
-        RasterLayer(gdal_empty_dataset_of_region(
-            Area(left=-3.6372785853999425, top=47.767016917771436, right=3.578888091932174, bottom=42.068104755317194),
-            0.0008983152841195215
-        ))
+        RasterLayer(
+            gdal_empty_dataset_of_region(
+                Area(
+                    left=-180.00082337073326,
+                    top=90.00041168536663,
+                    right=180.00082337073326,
+                    bottom=-90.00041168536663,
+                ),
+                0.0008983152841195215,
+            )
+        ),
+        RasterLayer(
+            gdal_empty_dataset_of_region(
+                Area(
+                    left=-180.00082337073326,
+                    top=90.00041168536661,
+                    right=180.00082337073326,
+                    bottom=-90.00041168536664,
+                ),
+                0.0008983152841195216,
+            )
+        ),
+        RasterLayer(
+            gdal_empty_dataset_of_region(
+                Area(
+                    left=-180,
+                    top=90.00041168536661,
+                    right=180,
+                    bottom=-90.00041168536664,
+                ),
+                0.0008983152841195215,
+            )
+        ),
+        RasterLayer(
+            gdal_empty_dataset_of_region(
+                Area(
+                    left=-3.6372785853999425,
+                    top=47.767016917771436,
+                    right=3.578888091932174,
+                    bottom=42.068104755317194,
+                ),
+                0.0008983152841195215,
+            )
+        ),
     ]
 
     intersection = RasterLayer.find_intersection(layers)
@@ -206,25 +272,34 @@ def test_find_intersection_nearly_same() -> None:
         assert layers[0].window.xsize == other.window.xsize
         assert layers[0].window.ysize == other.window.ysize
 
+
 def test_intersection_stability() -> None:
     # This test uses h3 tiles as a lazy way to get some bounded regions,
     # but the bug this test exercises is not h3 specific. This was another case of
     # a rounding error that causes set_window_for_* methods to wobble depending on how far
     # away from the top left thing where. adding round_down_pixels fixed this.
-    cells = ["874b93aaeffffff", "874b93a85ffffff", "874b93aa3ffffff", "874b93a84ffffff", "874b93a80ffffff"]
-    projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120,-0.000898315284120)
+    cells = [
+        "874b93aaeffffff",
+        "874b93a85ffffff",
+        "874b93aa3ffffff",
+        "874b93a84ffffff",
+        "874b93a80ffffff",
+    ]
+    projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120)
 
-    tiles = [
-        H3CellLayer(cell_id, projection)
-    for cell_id in cells]
+    tiles = [H3CellLayer(cell_id, projection) for cell_id in cells]
 
     # composing the same tiles within different areas should not cause them to
     # wobble around
     union = RasterLayer.find_union(tiles)
     superunion = union.grow(0.02)
 
-    scratch1 = RasterLayer.empty_raster_layer(union, projection.scale, gdal.GDT_Float64, name='s1')
-    scratch2 = RasterLayer.empty_raster_layer(superunion, projection.scale, gdal.GDT_Float64, name='s2')
+    scratch1 = RasterLayer.empty_raster_layer(
+        union, projection.scale, gdal.GDT_Float64, name="s1"
+    )
+    scratch2 = RasterLayer.empty_raster_layer(
+        superunion, projection.scale, gdal.GDT_Float64, name="s2"
+    )
 
     relative_offsets = {}
 
@@ -246,7 +321,10 @@ def test_intersection_stability() -> None:
             if first is None:
                 first = scratch.window
             else:
-                offset = scratch.window.xoff - first.xoff, scratch.window.yoff - first.yoff
+                offset = (
+                    scratch.window.xoff - first.xoff,
+                    scratch.window.yoff - first.yoff,
+                )
                 offsets.append(offset)
         relative_offsets[scratch.name] = offsets
 
