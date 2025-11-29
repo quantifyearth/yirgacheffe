@@ -208,6 +208,11 @@ class Area:
         xoff = self.left % abs_xstep
         yoff = self.top % abs_ystep
 
+        # We need to be consistent about what happens when
+        # layers align by half a cell, and so we always nudge
+        # things by a fractional pixel area to ensure this.
+        # Otherwise the usual >= 0.5 wobbles due to rounding
+        # errors (ask me how I know...).
         epsilon_x = abs_xstep * 1e-6
         epsilon_y = abs_ystep * 1e-6
 
