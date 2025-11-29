@@ -1,3 +1,4 @@
+import math
 import os
 import tempfile
 
@@ -138,7 +139,9 @@ def test_empty_layer_from_raster_with_new_smaller_area():
     assert empty.map_projection == source.map_projection
     assert empty.window == Window(0, 0, 100, 100)
     assert empty.datatype == source.datatype
-    assert empty.geo_transform == (-1.0, 0.02, 0.0, 1.0, 0.0, -0.02)
+    expected_geotransform = (-1.0, 0.02, 0.0, 1.0, 0.0, -0.02)
+    for i in range(6):
+        assert math.isclose(empty.geo_transform[i], expected_geotransform[i])
 
 
 def test_empty_layer_from_raster_new_datatype():

@@ -59,10 +59,7 @@ class H3CellLayer(YirgacheffeLayer):
                 projection=projection
             )
 
-        width, height = projection.round_up_pixels(
-            (area.right - area.left) / projection.xstep,
-            (area.bottom - area.top) / projection.ystep,
-        )
+        width, height = area.pixel_dimensions
 
         super().__init__(area)
         self._window = Window(
