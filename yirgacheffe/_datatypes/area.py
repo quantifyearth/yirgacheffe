@@ -339,3 +339,40 @@ class Area:
             bottom=(math.floor(self.bottom / abs_ystep) * abs_ystep) + y_off,
             projection=other.projection
         )
+
+    @property
+    def pixel_dimensions(self) -> tuple[int,int]:
+        """Returns the size in pixels for this area in its given projection.
+
+        Attempts to call this on an area with no projection will raise a ValueError.
+
+        Returns:
+            A tuple of the width and height.
+        """
+        if self.projection is None:
+            raise ValueError("No dimensions for unprojected area")
+        abs_xstep, abs_ystep = abs(self.projection.xstep), abs(self.projection.ystep)
+        return self.projection.round_up_pixels(
+            (self.right - self.left) / abs_xstep,
+            (self.top - self.bottom) / abs_ystep,
+        )
+
+    @property
+    def geo_transform(self) -> tuple[float,float,float,float,float,float]:
+        """Returns the GDAL geo transform for the area.__and__()
+
+        Attempts to call this on an area with no projection will raise a ValueError.
+
+        Returns:
+            A tuple of floats for the GDAL geo transform record.
+        """
+        if self.projection is None:
+            raise ValueError("No geo transform for unprojected area")
+        return (
+            self.left,
+            self.projection.xstep,
+            0.0,
+            self.top,
+            0.0,
+            self.projection.ystep
+        )

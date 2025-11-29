@@ -64,11 +64,7 @@ class RasterLayer(YirgacheffeLayer):
                 projection=map_projection,
             )
 
-        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
-        width, height = map_projection.round_up_pixels(
-            (pixel_friendly_area.right - pixel_friendly_area.left) / abs_xstep,
-            (pixel_friendly_area.top - pixel_friendly_area.bottom) / abs_ystep,
-        )
+        width, height = pixel_friendly_area.pixel_dimensions
 
         if filename:
             driver = gdal.GetDriverByName('GTiff')
@@ -88,9 +84,7 @@ class RasterLayer(YirgacheffeLayer):
             datatype_arg.to_gdal(),
             options
         )
-        dataset.SetGeoTransform([
-            pixel_friendly_area.left, scale.xstep, 0.0, pixel_friendly_area.top, 0.0, scale.ystep
-        ])
+        dataset.SetGeoTransform(pixel_friendly_area.geo_transform)
         dataset.SetProjection(map_projection.name)
         if nodata is not None:
             dataset.GetRasterBand(1).SetNoDataValue(nodata)
@@ -119,14 +113,15 @@ class RasterLayer(YirgacheffeLayer):
         projection = layer.map_projection
         if projection is None:
             raise ValueError("Can not work out area without explicit pixel scale")
-        abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
-        width, height = projection.round_up_pixels(
-            (area.right - area.left) / abs_xstep,
-            (area.top - area.bottom) / abs_ystep,
-        )
-        geo_transform = (
-            area.left, projection.xstep, 0.0, area.top, 0.0, projection.ystep
-        )
+
+        if area.projection is None:
+            area = area.project_like(layer.area)
+        else:
+            if area.projection != layer.area.projection:
+                raise ValueError("Can not use new area with different projection.")
+
+        width, height = area.pixel_dimensions
+        geo_transform = area.geo_transform
 
         if datatype is None:
             datatype_arg = layer.datatype

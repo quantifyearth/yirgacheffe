@@ -161,7 +161,7 @@ class RasteredVectorLayer(RasterLayer):
             raise MemoryError('Failed to create memory mask')
 
         dataset.SetProjection(projection.name)
-        dataset.SetGeoTransform([area.left, projection.xstep, 0.0, area.top, 0.0, projection.ystep])
+        dataset.SetGeoTransform(area.geo_transform)
         if isinstance(burn_value, (int, float)):
             gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[burn_value], options=["ALL_TOUCHED=TRUE"])
         elif isinstance(burn_value, str):
