@@ -468,8 +468,25 @@ class VectorLayer(YirgacheffeLayer):
         width: int,
         height: int,
     ) -> Any:
-        projection = target_projection if target_projection is not None else self.map_projection
-        assert projection is not None
+        if target_projection is not None:
+            if self.map_projection is not None and self.map_projection != target_projection:
+                # This is an internal API, so this should have been caught long before now
+                raise RuntimeError("Inconsistent projection in use in calculation")
+            projection = target_projection
+        else:
+            if self.map_projection is None:
+                raise ValueError("Attempting to rasterize a vector without a map projection")
+            projection = self.map_projection
+
+        # We always need to rasterize on the grid of the reference layer if provided, or 0.0, 0.0 if not
+        grid_offset_for_layer = self._underlying_area._grid_offset
+        if grid_offset_for_layer is None:
+            grid_offset_for_layer = (0.0, 0.0)
+        grid_offset_for_read = target_area._grid_offset
+        if grid_offset_for_read is None:
+            grid_offset_for_read = (0.0, 0.0)
+        rasterize_offset_x = grid_offset_for_layer[0] - grid_offset_for_read[0]
+        rasterize_offset_y = grid_offset_for_layer[1] - grid_offset_for_read[1]
 
         if self._original is None:
             self._unpark()
@@ -491,10 +508,10 @@ class VectorLayer(YirgacheffeLayer):
 
         dataset.SetProjection(projection.name)
         dataset.SetGeoTransform([
-            target_area.left + (x * projection.xstep),
+            target_area.left + (x * projection.xstep) + rasterize_offset_x,
             projection.xstep,
             0.0,
-            target_area.top + (y * projection.ystep),
+            target_area.top + (y * projection.ystep) + rasterize_offset_y,
             0.0,
             projection.ystep
         ])

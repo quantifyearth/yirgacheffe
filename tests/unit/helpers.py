@@ -164,7 +164,10 @@ def gdal_multiband_dataset_with_data(
 
 
 def make_vectors_with_id(
-    identifier: int, areas: set[Area], filename: str | Path
+    identifier: int,
+    areas: set[Area],
+    filename: str | Path,
+    srs_name: str | None = None,
 ) -> None:
     poly = ogr.Geometry(ogr.wkbPolygon)
 
@@ -178,7 +181,10 @@ def make_vectors_with_id(
         poly.AddGeometry(geometry)
 
     srs = ogr.osr.SpatialReference()
-    srs.ImportFromEPSG(4326)
+    if srs_name is None:
+        srs.ImportFromEPSG(4326)
+    else:
+        srs.SetFromUserInput(srs_name)
 
     package = ogr.GetDriverByName("GPKG").CreateDataSource(filename)
     layer = package.CreateLayer("onlylayer", srs, geom_type=ogr.wkbPolygon)
