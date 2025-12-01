@@ -3,7 +3,7 @@ import numpy as np
 from yirgacheffe.layers.rasters import RasterLayer
 from yirgacheffe.layers.group import GroupLayer
 
-from tests.helpers import gdal_dataset_with_data
+from tests.unit.helpers import gdal_dataset_with_data
 
 
 def test_raster_without_nodata_value() -> None:

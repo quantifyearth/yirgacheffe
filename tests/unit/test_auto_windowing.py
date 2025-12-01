@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from tests.helpers import gdal_dataset_with_data, make_vectors_with_multiple_ids
+from tests.unit.helpers import gdal_dataset_with_data, make_vectors_with_multiple_ids
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
 from yirgacheffe.window import Area
 

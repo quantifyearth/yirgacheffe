@@ -1,6 +1,6 @@
 import numpy
 
-from tests.helpers import gdal_dataset_with_data
+from tests.unit.helpers import gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer
 
 

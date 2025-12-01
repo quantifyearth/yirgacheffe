@@ -80,5 +80,12 @@ ignore_missing_imports = true
 module = "deprecation.*"
 ignore_missing_imports = true
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: Unit tests (fast, no external data)",
+    "integration: Integration tests (slower, uses test data)",
+]
+
 [tool.setuptools.packages.find]
 exclude = ["site*", "docs*", "tests*"]

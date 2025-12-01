@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from tests.helpers import (
+from tests.unit.helpers import (
     make_vectors_with_id,
     make_vectors_with_multiple_ids,
     gdal_dataset_of_region,

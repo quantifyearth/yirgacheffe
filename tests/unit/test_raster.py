@@ -7,7 +7,7 @@ import pytest
 from osgeo import gdal
 
 import yirgacheffe as yg
-from tests.helpers import (
+from tests.unit.helpers import (
     gdal_dataset_of_region,
     gdal_multiband_dataset_with_data,
     gdal_dataset_with_data,

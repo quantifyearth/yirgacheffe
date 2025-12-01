@@ -1,6 +1,6 @@
 import numpy as np
 
-from tests.helpers import gdal_dataset_of_region, gdal_dataset_with_data
+from tests.unit.helpers import gdal_dataset_of_region, gdal_dataset_with_data
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, RescaledRasterLayer
 from yirgacheffe.window import Area, MapProjection, Window
