@@ -1,3 +1,9 @@
+## v1.11.1 (01/12/2025)
+
+### Fixed
+
+* Fixed a bug whereby the grid to which polygons was rasterized would wobble depending on the context of the reading the array.
+
 ## v1.11.0 (28/11/2025)
 
 ### Changed
