@@ -9,7 +9,7 @@ import yirgacheffe as yg
 from yirgacheffe.layers import YirgacheffeLayer
 from yirgacheffe.window import Area, MapProjection
 
-from tests.helpers import make_vectors_with_id
+from tests.unit.helpers import make_vectors_with_id
 
 
 def test_pixel_to_latlng_no_projection() -> None:

@@ -6,7 +6,7 @@ from yirgacheffe.operators import DataType
 from yirgacheffe._backends import backend, BACKEND
 from yirgacheffe.layers import RasterLayer
 
-from tests.helpers import gdal_dataset_with_data
+from tests.unit.helpers import gdal_dataset_with_data
 
 
 @pytest.mark.parametrize(

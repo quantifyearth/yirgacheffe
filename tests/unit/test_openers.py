@@ -11,7 +11,7 @@ from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import InvalidRasterBand, RasterLayer
 from yirgacheffe.window import Area, MapProjection, Window
 from yirgacheffe.operators import DataType
-from tests.helpers import (
+from tests.unit.helpers import (
     gdal_dataset_of_region,
     gdal_multiband_dataset_with_data,
     make_vectors_with_id,

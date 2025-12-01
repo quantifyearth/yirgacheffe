@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from osgeo import gdal
 
-from tests.helpers import (
+from tests.unit.helpers import (
     gdal_dataset_of_region,
     gdal_empty_dataset_of_region,
     make_vectors_with_id,

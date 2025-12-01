@@ -3,7 +3,7 @@ import tempfile
 
 import pytest
 
-from tests.helpers import (
+from tests.unit.helpers import (
     make_vectors_with_multiple_ids,
     make_vectors_with_id,
     make_vectors_with_empty_feature,

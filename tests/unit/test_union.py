@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers import gdal_dataset_of_region, make_vectors_with_id
+from tests.unit.helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe import Area, MapProjection, Window
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
 

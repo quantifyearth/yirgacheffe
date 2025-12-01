@@ -15,7 +15,7 @@ from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
 from yirgacheffe.operators import DataType
 from yirgacheffe._operators import LayerOperation
 from yirgacheffe._backends import backend
-from tests.helpers import (
+from tests.unit.helpers import (
     gdal_dataset_with_data,
     gdal_dataset_of_region,
     make_vectors_with_id,

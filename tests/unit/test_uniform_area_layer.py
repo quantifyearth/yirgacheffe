@@ -4,7 +4,7 @@ from math import ceil, floor
 
 import pytest
 
-from tests.helpers import gdal_dataset_of_region
+from tests.unit.helpers import gdal_dataset_of_region
 from yirgacheffe.layers import UniformAreaLayer
 from yirgacheffe import Area, MapProjection, Window
 

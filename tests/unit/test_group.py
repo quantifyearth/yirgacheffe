@@ -5,7 +5,7 @@ import tempfile
 import numpy as np
 import pytest
 
-from tests.helpers import (
+from tests.unit.helpers import (
     gdal_dataset_of_region,
     gdal_dataset_with_data,
     make_vectors_with_id,
