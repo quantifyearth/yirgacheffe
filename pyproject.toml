@@ -84,7 +84,6 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 markers = [
     "unit: Unit tests (fast, no external data)",
-    "integration: Integration tests (slower, uses test data)",
 ]
 
 [tool.setuptools.packages.find]
