@@ -1,5 +1,9 @@
 ## v1.11.1 (01/12/2025)
 
+### Changed
+
+* Add `nodata` support to `to_geotiff`.
+
 ### Fixed
 
 * Fixed a bug whereby the grid to which polygons was rasterized would wobble depending on the context of the reading the array.
