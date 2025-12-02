@@ -308,9 +308,17 @@ class LayerMathMixin:
         self,
         filename: Path | str,
         and_sum: bool = False,
-        parallelism: int | bool | None = None
+        parallelism: int | bool | None = None,
+        callback: Callable[[float], None] | None = None,
+        nodata: float | int | None = None,
     ) -> float | None:
-        return LayerOperation(self).to_geotiff(filename, and_sum, parallelism)
+        return LayerOperation(self).to_geotiff(
+            filename=filename,
+            and_sum=and_sum,
+            parallelism=parallelism,
+            callback=callback,
+            nodata=nodata,
+        )
 
     def sum(self):
         return LayerOperation(self).sum()
@@ -1167,6 +1175,7 @@ class LayerOperation(LayerMathMixin):
         and_sum: bool = False,
         parallelism: int | bool | None = None,
         callback: Callable[[float], None] | None = None,
+        nodata: float | int | None = None,
     ) -> float | None:
         """Saves a calculation to a raster file, optionally also returning the sum of pixels.
 
@@ -1178,6 +1187,7 @@ class LayerOperation(LayerMathMixin):
                 yirgacheffe will pick a sensible value.
             callback: If passed, this callback will be called periodically with a progress update for the saving,
                 with a value between 0.0 and 1.0.
+            nodata: Nominate a value to be stored as nodata in the result
 
         Returns:
             Either returns None, or the sum of the pixels in the resulting raster if `and_sum` was specified.
@@ -1201,7 +1211,11 @@ class LayerOperation(LayerMathMixin):
             # Local import due to circular dependancy
             from yirgacheffe.layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
             inner_filename = tempory_file if is_vsi_based else tempory_file.name
-            with RasterLayer.empty_raster_layer_like(self, filename=inner_filename) as layer: # type: ignore
+            with RasterLayer.empty_raster_layer_like(
+                self,
+                filename=inner_filename, # type: ignore
+                nodata=nodata
+            ) as layer:
                 if parallelism is None:
                     result = self.save(layer, and_sum=and_sum, callback=callback)
                 else:
