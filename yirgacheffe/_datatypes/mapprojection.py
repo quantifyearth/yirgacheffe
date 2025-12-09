@@ -2,7 +2,7 @@ from __future__ import annotations
 import math
 
 import pyproj
-from pyproj import CRS, Transformer
+from pyproj import CRS
 
 from .pixelscale import PixelScale
 
@@ -19,7 +19,6 @@ from .pixelscale import PixelScale
 MINIMAL_DISTANCE_OF_INTEREST_IN_M = 1.0
 DISTANCE_PER_DEGREE_AT_EQUATOR = 40075017 / 360
 MINIMAL_DEGREE_OF_INTEREST = MINIMAL_DISTANCE_OF_INTEREST_IN_M / DISTANCE_PER_DEGREE_AT_EQUATOR
-MINIMAL_DISTANCE_CRS = CRS.from_string("epsg:4326")
 
 class MapProjection:
     """Records the map projection and the size of the pixels in a layer.
@@ -58,11 +57,15 @@ class MapProjection:
         self.xstep = xstep
         self.ystep = ystep
 
-        transformer = Transformer.from_crs(MINIMAL_DISTANCE_CRS, self.crs, always_xy=True)
-        self._min_x_step, self._min_y_step = transformer.transform(
-            MINIMAL_DEGREE_OF_INTEREST,
-            MINIMAL_DEGREE_OF_INTEREST,
-        )
+    @property
+    def _min_step(self) -> float:
+        unit_name = self.crs.axis_info[0].unit_name
+        if unit_name in ('metre', 'meter', 'm'):
+            return MINIMAL_DISTANCE_OF_INTEREST_IN_M
+        elif unit_name in ('degree', 'degrees'):
+            return MINIMAL_DEGREE_OF_INTEREST
+        else:
+            raise NotImplementedError(f"Unsupported unit: {unit_name}")
 
     def __repr__(self) -> str:
         return f"MapProjection({self.crs.to_string()!r}, {self.xstep}, {self.ystep})"
@@ -75,8 +78,8 @@ class MapProjection:
             return False
         if self.crs != other.crs:
             return False
-        return (abs(self.xstep - other.xstep) < self._min_x_step) and \
-            (abs(self.ystep - other.ystep) < self._min_y_step)
+        return (abs(self.xstep - other.xstep) < self._min_step) and \
+            (abs(self.ystep - other.ystep) < self._min_step)
 
     @property
     def name(self) -> str:
@@ -102,8 +105,8 @@ class MapProjection:
         spatial_diff_x = diff_x * abs(self.xstep)
         spatial_diff_y = diff_y * abs(self.ystep)
 
-        final_x = floored_x if (spatial_diff_x < self._min_x_step) else math.ceil(x)
-        final_y = floored_y if (spatial_diff_y < self._min_y_step) else math.ceil(y)
+        final_x = floored_x if (spatial_diff_x < self._min_step) else math.ceil(x)
+        final_y = floored_y if (spatial_diff_y < self._min_step) else math.ceil(y)
 
         return (final_x, final_y)
 
@@ -115,7 +118,7 @@ class MapProjection:
         spatial_diff_x = diff_x * abs(self.xstep)
         spatial_diff_y = diff_y * abs(self.ystep)
 
-        final_x = ceiled_x if (spatial_diff_x < self._min_x_step) else math.floor(x)
-        final_y = ceiled_y if (spatial_diff_y < self._min_y_step) else math.floor(y)
+        final_x = ceiled_x if (spatial_diff_x < self._min_step) else math.floor(x)
+        final_y = ceiled_y if (spatial_diff_y < self._min_step) else math.floor(y)
 
         return (final_x, final_y)

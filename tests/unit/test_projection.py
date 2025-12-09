@@ -10,12 +10,17 @@ from yirgacheffe._datatypes.mapprojection import MINIMAL_DEGREE_OF_INTEREST
     [
         "epsg:4326",
         "esri:54009",
+        "EPSG:5845",
+        "EPSG:32633",
+        "EPSG:27700",
+        "EPSG:2154",
         pyproj.CRS.from_string("epsg:4326").to_wkt(),
         pyproj.CRS.from_string("esri:54009").to_wkt(),
     ],
 )
 def test_scale_from_projection(name) -> None:
     projection = MapProjection(name, 0.1, -0.1)
+    assert projection == MapProjection(name, 0.1, -0.1)
     assert projection.name == pyproj.CRS.from_string(name).to_wkt()
     assert projection.xstep == 0.1
     assert projection.ystep == -0.1

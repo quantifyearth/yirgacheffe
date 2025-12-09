@@ -1,3 +1,9 @@
+## v1.11.2 (09/12/2025)
+
+### Fixed
+
+* Fixed issue with using map projections that don't align origin with EPSG:4326.
+
 ## v1.11.1 (01/12/2025)
 
 ### Changed
