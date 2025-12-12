@@ -329,6 +329,9 @@ class LayerMathMixin:
     def max(self):
         return LayerOperation(self).max()
 
+    def unique(self, return_counts=False):
+        return LayerOperation(self).unique(return_counts)
+
     def astype(self, datatype):
         return LayerOperation(
             self,
@@ -846,6 +849,66 @@ class LayerOperation(LayerMathMixin):
             chunk_max = float(backend.max_op(chunk))
             res = max(res, chunk_max)
         return res
+
+    def unique(self, return_counts:bool=False) -> np.ndarray | tuple[np.ndarray,np.ndarray]:
+        """Returns a list of unique values found in the layer.
+
+        Args:
+            return_counts: If true, the function returns the counts of each item also.
+
+        Returns:
+            Either a list of unique items, or two lists, the first being the unique items
+            and the second list being the corresponding counts.
+        """
+        res : dict[int|float,int] = {}
+        computation_window = self.window
+        projection = self.map_projection
+        if projection is None:
+            raise ValueError("No map projection")
+
+        cse_cache = CSECacheTable(self, computation_window)
+
+        for yoffset in range(0, computation_window.ysize, self.ystep):
+            cse_cache.reset_cache()
+            step=self.ystep
+            if yoffset+step > computation_window.ysize:
+                step = computation_window.ysize - yoffset
+            chunk = self._eval(
+                cse_cache,
+                self._get_operation_area(projection),
+                projection,
+                yoffset,
+                step,
+                computation_window
+            )
+            if return_counts:
+                chunk_uniques, chunk_counts = backend.unique(chunk, return_counts=True)
+            else:
+                chunk_uniques = backend.unique(chunk)
+                chunk_counts = [0] * len(chunk_uniques)
+            for val, count in zip(chunk_uniques, chunk_counts):
+                # Although you can set nan as a key in a dictionary, you can't access it
+                # due to nan == nan being not true :) so we have to fudge it
+                if np.isnan(val):
+                    val = "nan"
+                try:
+                    res[val] = res[val] + count
+                except KeyError:
+                    res[val] = count
+        if return_counts:
+            uniques, counts = [], []
+            for k, v in res.items():
+                if k == "nan":
+                    k = float("nan")
+                uniques.append(k)
+                counts.append(v)
+            np_uniques = np.array(uniques)
+            np_counts = np.array(counts)
+            args = np.argsort(np_uniques)
+            return np_uniques[args], np_counts[args]
+        else:
+            vals = [float("nan") if x == "nan" else x for x in res]
+            return np.sort(np.array(vals))
 
     def save(self, destination_layer, and_sum=False, callback=None, band=1) -> float | None:
         """

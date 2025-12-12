@@ -1,3 +1,10 @@
+## v1.11.3 (12/12/2025)
+
+### Changed
+
+* Allow `Area.project_like` to convert between projections.
+* Provide a version of `unique` similar to that found in numpy.
+
 ## v1.11.2 (09/12/2025)
 
 ### Fixed

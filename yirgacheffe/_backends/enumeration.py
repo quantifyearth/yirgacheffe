@@ -49,6 +49,7 @@ class operators(Enum):
     RFLOORDIV = 41
     RREMAINDER = 42
     RPOW = 43
+    UNIQUE = 44
 
 class dtype(Enum):
     """Represents the type of data returned by a layer.
