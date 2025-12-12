@@ -42,6 +42,7 @@ min_op = np.min
 max_op = np.max
 maximum = np.maximum
 minimum = np.minimum
+unique = np.unique
 zeros = np.zeros
 pad = np.pad
 sum_op = lambda a: np.sum(a.astype(np.float64))
@@ -171,4 +172,5 @@ operator_map: dict[op, Callable] = {
     op.RREMAINDER: np.ndarray.__rmod__,
     op.RPOW: np.ndarray.__rpow__,
     # pylint: enable=no-member
+    op.UNIQUE: np.unique,
 }

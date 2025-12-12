@@ -115,6 +115,10 @@ def isin(a, test_elements):
     mx.eval(a)
     return promote(np.isin(a, test_elements))
 
+def unique(a, return_counts=False):
+    mx.eval(a)
+    return np.unique(a, return_counts=return_counts)
+
 def conv2d_op(data, weights):
     # From numpy.py: torch wants to process dimensions of channels of width of height
     # but mlx wants to process dimensions of width of height of channels, so we end up
@@ -239,4 +243,5 @@ operator_map: dict[op, Callable] = {
     op.RFLOORDIV: mx.array.__rfloordiv__,
     op.RREMAINDER: mx.array.__rmod__,
     op.RPOW: mx.array.__rpow__,
+    op.UNIQUE: unique,
 }

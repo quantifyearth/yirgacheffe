@@ -2057,3 +2057,34 @@ def test_very_slightly_missaligned_layers() -> None:
 
             data = r.read_array(0, 0, 4, 4)
             assert (data == (data1 + data2)).all()
+
+
+@pytest.mark.parametrize("blocksize", [1, 2, 4])
+@pytest.mark.parametrize("data", [
+    np.array([[1, 2, 3, 4], [5, 6, 7, 8], [1, 2, 3, 4]]),
+    np.array([[1.1, 2.1, 1.1, float('nan')], [1.1, float('nan'), 1.0, float('nan')]]),
+])
+def test_simple_unique(monkeypatch, blocksize, data) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yg.constants, "YSTEP", blocksize)
+        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+        with yg.from_array(data, (0.0, 0.0), projection) as layer1:
+            unique_vals = layer1.unique()
+            expected = np.unique(data)
+            assert np.allclose(unique_vals, expected, equal_nan=True)
+
+
+@pytest.mark.parametrize("blocksize", [1, 2, 4])
+@pytest.mark.parametrize("data", [
+    np.array([[1, 2, 3, 4], [5, 6, 7, 8], [1, 2, 3, 4]]),
+    np.array([[1.1, 2.1, 1.1, float('nan')], [1.1, float('nan'), 1.0, float('nan')]]),
+])
+def test_simple_unique_with_counts(monkeypatch, blocksize, data) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yg.constants, "YSTEP", blocksize)
+        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+        with yg.from_array(data, (0.0, 0.0), projection) as layer1:
+            unique_vals, unique_counts = layer1.unique(return_counts=True)
+            expected_vals, expected_counts = np.unique(data, return_counts=True)
+            assert np.allclose(unique_vals, expected_vals, equal_nan=True)
+            assert (unique_counts == expected_counts).all()
