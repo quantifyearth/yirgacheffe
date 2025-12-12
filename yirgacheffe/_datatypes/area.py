@@ -2,6 +2,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from osgeo import gdal
+
 from .mapprojection import MapProjection
 
 @dataclass(frozen=True)
@@ -321,24 +323,54 @@ class Area:
         Returns:
             A new area with the projection map.
         """
-        if self.projection is not None:
-            raise ValueError("Changing projection is not supported currently")
         if other.projection is None:
             raise ValueError("Like area must be have map projection")
+        if self.projection is None:
+            offset = other._grid_offset
+            assert offset # We know this should be true due to the above guard, but pylint does not.
+            x_off, y_off = offset
+            abs_xstep = abs(other.projection.xstep)
+            abs_ystep = abs(other.projection.ystep)
 
-        offset = other._grid_offset
-        assert offset # We know this should be true due to the above guard, but pylint does not.
-        x_off, y_off = offset
-        abs_xstep = abs(other.projection.xstep)
-        abs_ystep = abs(other.projection.ystep)
+            return Area(
+                left=(math.floor(self.left / abs_xstep) * abs_xstep) + x_off,
+                top=(math.ceil(self.top / abs_ystep) * abs_ystep) + y_off,
+                right=(math.ceil(self.right / abs_xstep) * abs_xstep) + x_off,
+                bottom=(math.floor(self.bottom / abs_ystep) * abs_ystep) + y_off,
+                projection=other.projection
+            )
+        else:
+            # Converting between projections is tricky, as some projections either skew or warp as translated
+            # and so to avoid implementing a lot of complex math here, I'll just ask GDAL what it would do
+            # if warping from our projection to the other.
+            width, height = self.pixel_dimensions
 
-        return Area(
-            left=(math.floor(self.left / abs_xstep) * abs_xstep) + x_off,
-            top=(math.ceil(self.top / abs_ystep) * abs_ystep) + y_off,
-            right=(math.ceil(self.right / abs_xstep) * abs_xstep) + x_off,
-            bottom=(math.floor(self.bottom / abs_ystep) * abs_ystep) + y_off,
-            projection=other.projection
-        )
+            # Create a VRT (just XML, no data allocation)
+            vrt_xml = f'''<VRTDataset rasterXSize="{width}" rasterYSize="{height}">
+              <SRS>{self.projection.crs.to_wkt()}</SRS>
+              <GeoTransform>{self.left}, {self.projection.xstep}, 0,
+              {self.top}, 0, {self.projection.ystep}</GeoTransform>
+              <VRTRasterBand dataType="Byte" band="1"/>
+            </VRTDataset>'''
+
+            src_ds = gdal.Open(vrt_xml)
+            vrt_ds = gdal.AutoCreateWarpedVRT(src_ds, None,
+                                              other.projection.crs.to_wkt(),
+                                              gdal.GRA_NearestNeighbour)
+            gt = vrt_ds.GetGeoTransform()
+            min_x = gt[0]
+            max_y = gt[3]
+            max_x = min_x + gt[1] * vrt_ds.RasterXSize
+            min_y = max_y + gt[5] * vrt_ds.RasterYSize
+
+            aligned_bounds = (
+                math.floor(min_x / other.projection.xstep) * other.projection.xstep,
+                math.ceil(max_y / other.projection.ystep) * other.projection.ystep,
+                math.ceil(max_x / other.projection.xstep) * other.projection.xstep,
+                math.floor(min_y / other.projection.ystep) * other.projection.ystep,
+            )
+
+            return Area(*aligned_bounds, other.projection)
 
     @property
     def pixel_dimensions(self) -> tuple[int,int]:

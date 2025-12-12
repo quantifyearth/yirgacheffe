@@ -1,3 +1,9 @@
+## v1.11.3 (12/12/2025)
+
+### Changed
+
+* Allow `Area.project_like` to convert between projections.
+
 ## v1.11.2 (09/12/2025)
 
 ### Fixed
