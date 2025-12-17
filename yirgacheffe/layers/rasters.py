@@ -85,7 +85,7 @@ class RasterLayer(YirgacheffeLayer):
             options
         )
         dataset.SetGeoTransform(pixel_friendly_area.geo_transform)
-        dataset.SetProjection(map_projection.name)
+        dataset.SetProjection(map_projection._gdal_projection)
         if nodata is not None:
             dataset.GetRasterBand(1).SetNoDataValue(nodata)
         return RasterLayer(dataset, name=name)
@@ -156,7 +156,7 @@ class RasterLayer(YirgacheffeLayer):
             options,
         )
         dataset.SetGeoTransform(geo_transform)
-        dataset.SetProjection(projection.name)
+        dataset.SetProjection(projection._gdal_projection)
         if nodata is not None:
             dataset.GetRasterBand(1).SetNoDataValue(nodata)
 

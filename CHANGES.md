@@ -1,9 +1,13 @@
-## v1.11.3 (12/12/2025)
+## v1.11.3 (17/12/2025)
 
 ### Changed
 
 * Allow `Area.project_like` to convert between projections.
 * Provide a version of `unique` similar to that found in numpy.
+
+### Fixed
+
+* Fixed issue where due to GDAL behaviour layers read in with EPSG:5845 would save with an altered projection that didn't maintain quality when reloaded.
 
 ## v1.11.2 (09/12/2025)
 
