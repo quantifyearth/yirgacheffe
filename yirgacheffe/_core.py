@@ -206,7 +206,7 @@ def from_array(
     dataset.SetGeoTransform([
         origin[0], projection.xstep, 0.0, origin[1], 0.0, projection.ystep
     ])
-    dataset.SetProjection(projection.name)
+    dataset.SetProjection(projection._gdal_projection)
     dataset.GetRasterBand(1).WriteArray(values, 0, 0)
 
     return RasterLayer(dataset)

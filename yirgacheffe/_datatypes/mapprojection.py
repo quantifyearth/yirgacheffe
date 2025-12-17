@@ -1,5 +1,6 @@
 from __future__ import annotations
 import math
+from functools import lru_cache
 
 import pyproj
 from pyproj import CRS
@@ -19,6 +20,18 @@ from .pixelscale import PixelScale
 MINIMAL_DISTANCE_OF_INTEREST_IN_M = 1.0
 DISTANCE_PER_DEGREE_AT_EQUATOR = 40075017 / 360
 MINIMAL_DEGREE_OF_INTEREST = MINIMAL_DISTANCE_OF_INTEREST_IN_M / DISTANCE_PER_DEGREE_AT_EQUATOR
+
+# It turns out that calls to CRS.to_epsg are quite slow - not a problem as a one
+# of call, but in our unit tests we make and destroy thousands of rasters, each of
+# which has to do a to_epsg call to get the projection for saving. We saw one test
+# that makes 1600 rasters take 72 seconds without this fix, and 2 seconds with it.
+@lru_cache(maxsize=128)
+def _get_projection_string(provided_name: str) -> str:
+    crs = CRS.from_string(provided_name)
+    epsg = crs.to_epsg()
+    if epsg is not None:
+        return f"EPSG:{epsg}"
+    return crs.to_wkt()
 
 class MapProjection:
     """Records the map projection and the size of the pixels in a layer.
@@ -56,6 +69,7 @@ class MapProjection:
             raise ValueError(f"Invalid projection: {projection_string}") from exc
         self.xstep = xstep
         self.ystep = ystep
+        self._gdal_projection = _get_projection_string(projection_string)
 
     @property
     def _min_step(self) -> float:
