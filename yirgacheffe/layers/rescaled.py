@@ -37,6 +37,8 @@ class RescaledRasterLayer(YirgacheffeLayer):
         nearest_neighbour: bool = True,
         name: str | None = None,
     ):
+        if src.map_projection is None:
+            raise ValueError("Source layer must have a projection")
         if src.map_projection.name != target_projection.name:
             raise ValueError("Rescaled layer requires target projection is same.")
 
@@ -57,7 +59,6 @@ class RescaledRasterLayer(YirgacheffeLayer):
         self._nearest_neighbour = nearest_neighbour
 
         src_projection = src.map_projection
-        assert src_projection # from raster we should always have one
 
         self._x_scale = src_projection.xstep / target_projection.xstep
         self._y_scale = src_projection.ystep / target_projection.ystep

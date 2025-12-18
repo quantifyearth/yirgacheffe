@@ -261,7 +261,8 @@ class Area:
             left=self.left - offset,
             top=self.top + offset,
             right=self.right + offset,
-            bottom=self.bottom - offset
+            bottom=self.bottom - offset,
+            projection=self.projection,
         )
 
     @property

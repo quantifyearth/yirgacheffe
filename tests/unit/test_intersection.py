@@ -292,7 +292,7 @@ def test_intersection_stability() -> None:
     # composing the same tiles within different areas should not cause them to
     # wobble around
     union = RasterLayer.find_union(tiles)
-    superunion = union.grow(0.02)
+    superunion = union.grow(25 * projection.xstep)
 
     scratch1 = RasterLayer.empty_raster_layer(
         union, projection.scale, gdal.GDT_Float64, name="s1"
