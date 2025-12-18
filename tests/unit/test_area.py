@@ -430,6 +430,55 @@ def test_project_like(lhs: Area, rhs: Area, expected: Area) -> None:
 
 
 @pytest.mark.parametrize(
+    "lhs,target,expected",
+    [
+        (
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 0.1, -0.1)),
+            MapProjection("esri:54009", 10.0, -10.0),
+            Area(
+                -1002230.0,
+                1234040.0,
+                1002460.0,
+                -1229810.0,
+                MapProjection("esri:54009", 10.0, -10.0),
+            ),
+        ),
+        (
+            Area(
+                -1002230.0,
+                1234040.0,
+                1002460.0,
+                -1229810.0,
+                MapProjection("esri:54009", 10.0, -10.0),
+            ),
+            MapProjection("epsg:4326", 0.1, -0.1),
+            Area(-10.1, 9.9, 10.1, -9.9, MapProjection("epsg:4326", 0.1, -0.1)),
+        ),
+    ],
+)
+def test_reproject(lhs: Area, target: MapProjection, expected: Area) -> None:
+    assert lhs.reproject(target) == expected
+
+
+@pytest.mark.parametrize(
+    "lhs,target",
+    [
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            MapProjection("epsg:4326", 0.1, -0.1),
+        ),
+        (
+            Area(-10.0, 10.0, 10.0, -10.0),
+            None,
+        ),
+    ],
+)
+def test_invalid_reproject(lhs: Area, target: MapProjection) -> None:
+    with pytest.raises(ValueError):
+        _ = lhs.reproject(target)
+
+
+@pytest.mark.parametrize(
     "area_args",
     [
         (-5.01, 5.0, 5.0, -5.0, MapProjection("epsg:4326", 0.1, -0.1)),
