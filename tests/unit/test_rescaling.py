@@ -1,5 +1,7 @@
 import numpy as np
+import pytest
 
+import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, gdal_dataset_with_data
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, RescaledRasterLayer
@@ -293,3 +295,11 @@ def test_rescaled_down_with_window_set() -> None:
             expected_raster[1:2, 0:1] = 1
 
             assert (actual_raster == expected_raster).all()
+
+
+def test_rescalled_with_different_projection_fails() -> None:
+    source_projection = MapProjection("ESRI:54009", 1.0, -1.0)
+    target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
+    with yg.from_array(np.zeros((4, 4)), (0, 0), source_projection) as layer:
+        with pytest.raises(ValueError):
+            _ = RescaledRasterLayer(layer, target_projection)
