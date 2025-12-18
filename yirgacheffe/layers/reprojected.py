@@ -79,23 +79,24 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         xoffset = xoffset + window.xoff
         yoffset = yoffset + window.yoff
 
+        underlying_area = self._underlying_area
+        projection = underlying_area.projection
+        assert projection is not None
         read_area = Area(
-            left=self._underlying_area.left + (xoffset * self._underlying_area.projection.xstep),
-            top=self._underlying_area.top + (yoffset * self._underlying_area.projection.ystep),
-            right=self._underlying_area.left + (xoffset * self._underlying_area.projection.xstep) \
-                + (xsize * self.area.projection.xstep),
-            bottom=self._underlying_area.top + (yoffset * self._underlying_area.projection.ystep) \
-                + (ysize * self.area.projection.ystep),
-            projection=self._underlying_area.projection,
+            left=underlying_area.left + (xoffset * projection.xstep),
+            top=underlying_area.top + (yoffset * projection.ystep),
+            right=underlying_area.left + (xoffset * projection.xstep) + (xsize * projection.xstep),
+            bottom=underlying_area.top + (yoffset * projection.ystep) + (ysize * projection.ystep),
+            projection=projection,
         )
 
         expand_buffer = 1 # This should probably be some variable based on the method and direction?
-        expanded_read_area = read_area.grow(expand_buffer * self.area.projection.xstep)
+        expanded_read_area = read_area.grow(expand_buffer * projection.xstep)
 
         # now we want this area in the source projection
-        src_read_area = expanded_read_area.reproject(self._src.map_projection)
-
-
+        src_projection = self._src.map_projection
+        assert src_projection is not None
+        src_read_area = expanded_read_area.reproject(src_projection)
 
         # We need some ID that stops us with other parallel workers potentially in the
         # VSIMEM space, so we use the pid give that Python multiprocessing spawns a
@@ -115,10 +116,10 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                     warped_data_path,
                     src_data_path,
                     options=gdal.WarpOptions(
-                        dstSRS=self.map_projection._gdal_projection,
+                        dstSRS=projection._gdal_projection,
                         outputType=self.datatype.to_gdal(),
-                        xRes=self.area.projection.xstep,
-                        yRes=self.area.projection.ystep,
+                        xRes=projection.xstep,
+                        yRes=projection.ystep,
                         resampleAlg=self._method,
                         targetAlignedPixels=True,
                     )

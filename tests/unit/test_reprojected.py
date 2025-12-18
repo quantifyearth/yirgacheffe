@@ -1,5 +1,11 @@
-import numpy as np
+import json
+import tempfile
+from pathlib import Path
 
+import numpy as np
+from pyproj import Transformer
+
+import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, gdal_dataset_with_data
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, ReprojectedRasterLayer
@@ -294,3 +300,82 @@ def test_reprojected_down_with_window_set() -> None:
             expected_raster[1:2, 0:1] = 1
 
             assert (actual_raster == expected_raster).all()
+
+def test_somewhat_aligned_rastered_polygons() -> None:
+    # This is a test for the ReprojectedRasterLayer - other tests will cover ReprojectedVectorLayer
+
+    points_4326 = [
+        (0.0, 0.0),
+        (10.0, 0.0),
+        (10.0, 10.0),
+        (0.0, 10.0),
+    ]
+
+    def _generate_geojson(projection: str, points: list[tuple[float,float]]) -> dict:
+        return {
+            "type": "FeatureCollection",
+            "crs": {
+                "type": "name",
+                "properties": {"name": projection}
+            },
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            list(pt) for pt in points
+                        ] + [list(points[0])]]  # Close the polygon
+                    },
+                    "properties": {"value": 1}
+                }
+            ]
+        }
+
+    geojson_4326 = _generate_geojson("EPSG:4326", points_4326)
+
+    transformer = Transformer.from_crs("EPSG:4326", "ESRI:54009", always_xy=True)
+    geojson_54009 = _generate_geojson(
+        "ESRI:54009",
+        [transformer.transform(*pt) for pt in points_4326],
+    )
+
+    # Write GeoJSON files
+    with tempfile.TemporaryDirectory() as tmpdirstr:
+        tmpdir = Path(tmpdirstr)
+
+        geojson_4326_path = tmpdir / "points_4326.geojson"
+        with open(geojson_4326_path, 'w', encoding="utf-8") as f:
+            json.dump(geojson_4326, f)
+
+        geojson_54009_path = tmpdir / "points_54009.geojson"
+        with open(geojson_54009_path, 'w', encoding="utf-8") as f:
+            json.dump(geojson_54009, f)
+
+        raster_4326_path = tmpdir / "raster_4326.tif"
+        raster_54009_path = tmpdir / "raster_54009.tif"
+
+        projection_4326 = MapProjection("EPSG:4326", 0.1, -0.1)
+        projection_54009 = MapProjection("ESRI:54009", 10000, -10000)
+        with yg.read_shape(geojson_4326_path, projection_4326) as vector_4326:
+            vector_4326.to_geotiff(raster_4326_path)
+        with yg.read_shape(geojson_54009_path, projection_54009) as vector_54009:
+            vector_54009.to_geotiff(raster_54009_path)
+
+        with (
+            yg.read_raster(raster_4326_path) as raster_4326,
+            yg.read_raster(raster_54009_path) as raster_54009,
+        ):
+            assert raster_4326.map_projection == projection_4326
+            assert raster_54009.map_projection == projection_54009
+
+            with (
+                ReprojectedRasterLayer(raster_54009, projection_4326) as reprojected_54009_to_4326,
+                ReprojectedRasterLayer(raster_4326, projection_54009) as reprojected_4326_to_54009,
+            ):
+                # We do not expect perfect reproduction, so let's sum them pixels and see if they are
+                # within a few percent:
+                diff_4326 = abs(raster_4326.sum() - reprojected_54009_to_4326.sum()) / raster_4326.sum()
+                assert diff_4326 < 0.02
+                diff_54009 = abs(raster_54009.sum() - reprojected_4326_to_54009.sum()) / raster_54009.sum()
+                assert diff_54009 < 0.02
