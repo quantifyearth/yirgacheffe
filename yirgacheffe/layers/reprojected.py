@@ -91,12 +91,12 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         )
 
         expand_buffer = 1 # This should probably be some variable based on the method and direction?
-        expanded_read_area = read_area.grow(expand_buffer * projection.xstep)
 
         # now we want this area in the source projection
         src_projection = self._src.map_projection
         assert src_projection is not None
-        src_read_area = expanded_read_area.reproject(src_projection)
+        src_read_area = read_area.reproject(src_projection)
+        expanded_src_read_area = src_read_area.grow(expand_buffer * src_projection.xstep)
 
         # We need some ID that stops us with other parallel workers potentially in the
         # VSIMEM space, so we use the pid give that Python multiprocessing spawns a
@@ -104,7 +104,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         pid = os.getpid()
         with VsimemFile(f"/vsimem/src_{pid}.tif") as src_data_path:
             # I don't think this is very safe, but for now this is a place to start
-            self._src._set_window(src_read_area)
+            self._src._set_window(expanded_src_read_area)
             self._src.to_geotiff(src_data_path)
             # Yeah, this is broken, as the set window forms part of the CSE hash, and
             # because this object's CSE hash depends on the _src CSE hash, we really do

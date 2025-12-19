@@ -401,7 +401,7 @@ def test_vs_gdal_warp(monkeypatch, blocksize, src_projection, dst_projection) ->
     with monkeypatch.context() as m:
         m.setattr(yg.constants, "YSTEP", blocksize)
         with tempfile.TemporaryDirectory() as tmpdirstr:
-            tmpdir = Path("/tmp")
+            tmpdir = Path(tmpdirstr)
 
             with yg.from_array(data, (0, 0), src_projection) as original:
                 og_raster_path = tmpdir /  "original.tif"
@@ -426,11 +426,13 @@ def test_vs_gdal_warp(monkeypatch, blocksize, src_projection, dst_projection) ->
                     yg.read_raster(warped_raster_path) as warped,
                     ReprojectedRasterLayer(original, dst_projection) as reprojected,
                 ):
-                    reprojected.to_geotiff(tmpdir / "reprojected.tif")
                     assert reprojected.map_projection == dst_projection
                     assert warped.map_projection == dst_projection
-                    assert warped.area == reprojected.area
-                    assert warped.window == reprojected.window
-                    warped_data = warped.read_array(0, 0, warped.window.xsize, warped.window.ysize)
-                    reprojected_data = reprojected.read_array(0, 0, reprojected.window.xsize, reprojected.window.ysize)
-                    assert (warped_data == reprojected_data).all()
+
+                    # Due to rounding errors on floats and how Yirgacheffe is quite
+                    # paranoid about ensuring no data is lost on the edges, the
+                    # reprojected layers sometimes have an empty edge, but gdalwarp
+                    # does not. As a result we can't test area or window properties
+                    # for equality, just the pixels
+                    disagree = (warped != reprojected)
+                    assert disagree.sum() == 0
