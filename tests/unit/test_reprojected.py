@@ -3,6 +3,8 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+import pytest
+from osgeo import gdal
 from pyproj import Transformer
 
 import yirgacheffe as yg
@@ -340,7 +342,6 @@ def test_somewhat_aligned_rastered_polygons() -> None:
         [transformer.transform(*pt) for pt in points_4326],
     )
 
-    # Write GeoJSON files
     with tempfile.TemporaryDirectory() as tmpdirstr:
         tmpdir = Path(tmpdirstr)
 
@@ -379,3 +380,57 @@ def test_somewhat_aligned_rastered_polygons() -> None:
                 assert diff_4326 < 0.02
                 diff_54009 = abs(raster_54009.sum() - reprojected_4326_to_54009.sum()) / raster_54009.sum()
                 assert diff_54009 < 0.02
+
+@pytest.mark.parametrize("blocksize", [1, 2, 4, 8, 16])
+@pytest.mark.parametrize("src_projection,dst_projection", [
+    (
+        MapProjection("EPSG:4326", 0.1, -0.1),
+        MapProjection("ESRI:54009", 10000, -10000),
+    ),
+    (
+        MapProjection("ESRI:54009", 10000, -10000),
+        MapProjection("EPSG:4326", 0.1, -0.1),
+    ),
+])
+def test_vs_gdal_warp(monkeypatch, blocksize, src_projection, dst_projection) -> None:
+    # This test is mostly to just check we've not done anything odd with chunking
+    data = np.zeros((8, 8))
+    data[0:4, 4:8] = 1
+    data[4:8, 0:4] = 1
+
+    with monkeypatch.context() as m:
+        m.setattr(yg.constants, "YSTEP", blocksize)
+        with tempfile.TemporaryDirectory() as tmpdirstr:
+            tmpdir = Path("/tmp")
+
+            with yg.from_array(data, (0, 0), src_projection) as original:
+                og_raster_path = tmpdir /  "original.tif"
+                warped_raster_path = tmpdir / "warped.tif"
+
+                original.to_geotiff(og_raster_path)
+
+                gdal.Warp(
+                    warped_raster_path,
+                    og_raster_path,
+                    options=gdal.WarpOptions(
+                        dstSRS=dst_projection._gdal_projection,
+                        outputType=original.datatype.to_gdal(),
+                        xRes=dst_projection.xstep,
+                        yRes=dst_projection.ystep,
+                        resampleAlg="nearest",
+                        targetAlignedPixels=True,
+                    )
+                )
+
+                with (
+                    yg.read_raster(warped_raster_path) as warped,
+                    ReprojectedRasterLayer(original, dst_projection) as reprojected,
+                ):
+                    reprojected.to_geotiff(tmpdir / "reprojected.tif")
+                    assert reprojected.map_projection == dst_projection
+                    assert warped.map_projection == dst_projection
+                    assert warped.area == reprojected.area
+                    assert warped.window == reprojected.window
+                    warped_data = warped.read_array(0, 0, warped.window.xsize, warped.window.ysize)
+                    reprojected_data = reprojected.read_array(0, 0, reprojected.window.xsize, reprojected.window.ysize)
+                    assert (warped_data == reprojected_data).all()
