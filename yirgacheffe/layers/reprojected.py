@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+from enum import Enum
 from typing import Any
 
 from osgeo import gdal
@@ -22,6 +23,22 @@ class VsimemFile:
         except RuntimeError:
             pass
 
+class ResamplingMethod(Enum):
+    Average = "average"
+    Bilinear = "bilinear"
+    Cubic = "cubic"
+    CubicSpline = "cubicspline"
+    Lanczos = "lanczos"
+    Max = "max"
+    Med = "med"
+    Min = "min"
+    Mode = "mode"
+    Nearest = "nearest"
+    Q1 = "q1"
+    Q3 = "q3"
+    RootMeanSquare = "rms"
+    Sum = "sum"
+
 class ReprojectedRasterLayer(YirgacheffeLayer):
     """ReprojectedRasterLayer dynamically reprojects a layer."""
 
@@ -29,7 +46,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         self,
         src: RasterLayer,
         target_projection: MapProjection,
-        method: str = "nearest",
+        method: ResamplingMethod = ResamplingMethod.Nearest,
         name: str | None = None,
     ):
         reprojected_area = src.area.reproject(target_projection)
@@ -120,7 +137,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                         outputType=self.datatype.to_gdal(),
                         xRes=projection.xstep,
                         yRes=projection.ystep,
-                        resampleAlg=self._method,
+                        resampleAlg=self._method.value,
                         targetAlignedPixels=True,
                     )
                 )

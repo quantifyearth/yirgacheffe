@@ -10,7 +10,7 @@ from pyproj import Transformer
 import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, gdal_dataset_with_data
 from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.layers import RasterLayer, ReprojectedRasterLayer
+from yirgacheffe.layers import RasterLayer, ReprojectedRasterLayer, ResamplingMethod
 from yirgacheffe.window import Area, MapProjection, Window
 
 
@@ -392,7 +392,14 @@ def test_somewhat_aligned_rastered_polygons() -> None:
         MapProjection("EPSG:4326", 0.1, -0.1),
     ),
 ])
-def test_vs_gdal_warp(monkeypatch, blocksize, src_projection, dst_projection) -> None:
+@pytest.mark.parametrize("method", list(ResamplingMethod))
+def test_vs_gdal_warp(
+    monkeypatch,
+    blocksize: int,
+    src_projection: MapProjection,
+    dst_projection: MapProjection,
+    method: ResamplingMethod
+) -> None:
     # This test is mostly to just check we've not done anything odd with chunking
     data = np.zeros((8, 8))
     data[0:4, 4:8] = 1
