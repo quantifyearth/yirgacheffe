@@ -392,7 +392,11 @@ def test_somewhat_aligned_rastered_polygons() -> None:
         MapProjection("EPSG:4326", 0.1, -0.1),
     ),
 ])
-@pytest.mark.parametrize("method", list(ResamplingMethod))
+@pytest.mark.parametrize("method", [
+    ResamplingMethod.Nearest,
+    ResamplingMethod.Min,
+    ResamplingMethod.Max,
+])
 def test_vs_gdal_warp(
     monkeypatch,
     blocksize: int,
@@ -424,14 +428,14 @@ def test_vs_gdal_warp(
                         outputType=original.datatype.to_gdal(),
                         xRes=dst_projection.xstep,
                         yRes=dst_projection.ystep,
-                        resampleAlg="nearest",
-                        targetAlignedPixels=True,
+                        resampleAlg=method.value,
+                        targetAlignedPixels=False,
                     )
                 )
 
                 with (
                     yg.read_raster(warped_raster_path) as warped,
-                    ReprojectedRasterLayer(original, dst_projection) as reprojected,
+                    ReprojectedRasterLayer(original, dst_projection, method=method) as reprojected,
                 ):
                     assert reprojected.map_projection == dst_projection
                     assert warped.map_projection == dst_projection
@@ -441,5 +445,5 @@ def test_vs_gdal_warp(
                     # reprojected layers sometimes have an empty edge, but gdalwarp
                     # does not. As a result we can't test area or window properties
                     # for equality, just the pixels
-                    disagree = (warped != reprojected)
+                    disagree = warped != reprojected
                     assert disagree.sum() == 0

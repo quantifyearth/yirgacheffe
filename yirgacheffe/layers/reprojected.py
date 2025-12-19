@@ -7,7 +7,7 @@ from osgeo import gdal
 
 from .._datatypes import Area, MapProjection, Window
 from .._core import read_raster
-from .rasters import YirgacheffeLayer, RasterLayer
+from .rasters import YirgacheffeLayer
 from .._backends.enumeration import dtype as DataType
 
 class VsimemFile:
@@ -44,7 +44,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
 
     def __init__(
         self,
-        src: RasterLayer,
+        src: YirgacheffeLayer,
         target_projection: MapProjection,
         method: ResamplingMethod = ResamplingMethod.Nearest,
         name: str | None = None,
@@ -113,7 +113,12 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         src_projection = self._src.map_projection
         assert src_projection is not None
         src_read_area = read_area.reproject(src_projection)
-        expanded_src_read_area = src_read_area.grow(expand_buffer * src_projection.xstep)
+        # Note we should never go over the edge of the original
+        # source material, as different resampling methods react differently to
+        # the synthesized zeros that this will admit (e.g., one of min and max
+        # would likely get confused).
+        expanded_src_read_area = \
+            src_read_area.grow(expand_buffer * src_projection.xstep) & self._src.area
 
         # We need some ID that stops us with other parallel workers potentially in the
         # VSIMEM space, so we use the pid give that Python multiprocessing spawns a
@@ -137,11 +142,16 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                         outputType=self.datatype.to_gdal(),
                         xRes=projection.xstep,
                         yRes=projection.ystep,
+                        width=xsize,
+                        height=ysize,
                         resampleAlg=self._method.value,
-                        targetAlignedPixels=True,
+                        targetAlignedPixels=False,
+                        outputBounds=(read_area.left, read_area.bottom, read_area.right, read_area.top)
                     )
                 )
 
                 with read_raster(warped_data_path) as warped:
-                    warped.set_window_for_intersection(read_area)
+                    if (warped.window.xsize != xsize) or \
+                        (warped.window.ysize != ysize):
+                        raise RuntimeError("gdal warp violated request constraints")
                     return warped._read_array(0, 0, xsize, ysize)
