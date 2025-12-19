@@ -396,6 +396,7 @@ def test_somewhat_aligned_rastered_polygons() -> None:
     ResamplingMethod.Nearest,
     ResamplingMethod.Min,
     ResamplingMethod.Max,
+    ResamplingMethod.Mode,
 ])
 def test_vs_gdal_warp(
     monkeypatch,

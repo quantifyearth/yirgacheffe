@@ -107,7 +107,11 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
             projection=projection,
         )
 
-        expand_buffer = 1 # This should probably be some variable based on the method and direction?
+        # This should probably be some variable based on the method and direction?
+        if self._method in {ResamplingMethod.Mode}:
+            expand_buffer = 3
+        else:
+            expand_buffer = 1
 
         # now we want this area in the source projection
         src_projection = self._src.map_projection
