@@ -127,4 +127,4 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
 
                 with read_raster(warped_data_path) as warped:
                     warped.set_window_for_intersection(read_area)
-                    return warped.read_array(0, 0, xsize, ysize)
+                    return warped._read_array(0, 0, xsize, ysize)
