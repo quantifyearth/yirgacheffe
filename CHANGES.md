@@ -1,3 +1,9 @@
+## v1.12.0
+
+### Changed
+
+* Added internal working for an on-demand reprojection feature.
+
 ## v1.11.3 (17/12/2025)
 
 ### Changed

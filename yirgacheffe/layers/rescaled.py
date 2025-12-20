@@ -12,7 +12,7 @@ from .._backends.enumeration import dtype as DataType
 
 
 class RescaledRasterLayer(YirgacheffeLayer):
-    """RescaledRaster dynamically rescales a raster, so to you to work with multiple layers at
+    """RescaledRasterLayer dynamically rescales a raster, so to you to work with multiple layers at
     different scales without having to store unnecessary data. """
 
     @classmethod
@@ -37,6 +37,11 @@ class RescaledRasterLayer(YirgacheffeLayer):
         nearest_neighbour: bool = True,
         name: str | None = None,
     ):
+        if src.map_projection is None:
+            raise ValueError("Source layer must have a projection")
+        if src.map_projection.name != target_projection.name:
+            raise ValueError("Rescaled layer requires target projection is same.")
+
         target_area = Area(
             src.area.left,
             src.area.top,
@@ -54,7 +59,6 @@ class RescaledRasterLayer(YirgacheffeLayer):
         self._nearest_neighbour = nearest_neighbour
 
         src_projection = src.map_projection
-        assert src_projection # from raster we should always have one
 
         self._x_scale = src_projection.xstep / target_projection.xstep
         self._y_scale = src_projection.ystep / target_projection.ystep

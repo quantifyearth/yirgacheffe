@@ -278,7 +278,7 @@ def test_h3_layer_overlapped():
     tiles = [H3CellLayer(cell_id, projection) for cell_id in cells]
 
     union = RasterLayer.find_union(tiles)
-    union = union.grow(0.02)
+    union = union.grow(projection.xstep * 25)
 
     scratch = RasterLayer.empty_raster_layer(union, projection.scale, gdal.GDT_Float64)
 
