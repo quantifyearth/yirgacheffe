@@ -24,18 +24,22 @@ class VsimemFile:
             pass
 
 class ResamplingMethod(Enum):
+    # The commented out ones fail tests due to Yirgacheffe's chunking
+    # behaviour and require more work.
     Average = "average"
-    Bilinear = "bilinear"
-    Cubic = "cubic"
-    CubicSpline = "cubicspline"
-    Lanczos = "lanczos"
+    # Bilinear = "bilinear"
+    # Cubic = "cubic"
+    # CubicSpline = "cubicspline"
+    # Lanczos = "lanczos"
     Max = "max"
     Med = "med"
     Min = "min"
     Mode = "mode"
     Nearest = "nearest"
     RootMeanSquare = "rms"
-    Sum = "sum"
+    # Q1 = "q1"
+    # Q2 = "q2"
+    # Sum = "sum"
 
 class ReprojectedRasterLayer(YirgacheffeLayer):
     """ReprojectedRasterLayer dynamically reprojects a layer."""

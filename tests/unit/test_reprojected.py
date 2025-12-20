@@ -398,6 +398,7 @@ def test_somewhat_aligned_rastered_polygons() -> None:
     (ResamplingMethod.Max, "binary"),
     (ResamplingMethod.Mode, "binary"),
     (ResamplingMethod.Average, "fractional"),
+    (ResamplingMethod.RootMeanSquare, "fractional"),
 ])
 def test_vs_gdal_warp(
     monkeypatch,
