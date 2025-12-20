@@ -34,8 +34,6 @@ class ResamplingMethod(Enum):
     Min = "min"
     Mode = "mode"
     Nearest = "nearest"
-    Q1 = "q1"
-    Q3 = "q3"
     RootMeanSquare = "rms"
     Sum = "sum"
 

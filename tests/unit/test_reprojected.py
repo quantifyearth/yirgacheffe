@@ -392,18 +392,20 @@ def test_somewhat_aligned_rastered_polygons() -> None:
         MapProjection("EPSG:4326", 0.1, -0.1),
     ),
 ])
-@pytest.mark.parametrize("method", [
-    ResamplingMethod.Nearest,
-    ResamplingMethod.Min,
-    ResamplingMethod.Max,
-    ResamplingMethod.Mode,
+@pytest.mark.parametrize("method,assessment_style", [
+    (ResamplingMethod.Nearest, "binary"),
+    (ResamplingMethod.Min, "binary"),
+    (ResamplingMethod.Max, "binary"),
+    (ResamplingMethod.Mode, "binary"),
+    (ResamplingMethod.Average, "fractional"),
 ])
 def test_vs_gdal_warp(
     monkeypatch,
     blocksize: int,
     src_projection: MapProjection,
     dst_projection: MapProjection,
-    method: ResamplingMethod
+    method: ResamplingMethod,
+    assessment_style: str,
 ) -> None:
     # This test is mostly to just check we've not done anything odd with chunking
     data = np.zeros((8, 8))
@@ -446,5 +448,9 @@ def test_vs_gdal_warp(
                     # reprojected layers sometimes have an empty edge, but gdalwarp
                     # does not. As a result we can't test area or window properties
                     # for equality, just the pixels
-                    disagree = warped != reprojected
-                    assert disagree.sum() == 0
+                    if assessment_style == "binary":
+                        disagree = warped != reprojected
+                        assert disagree.sum() == 0
+                    else:
+                        disagree = yg.abs(warped - reprojected) > 1e-12
+                        assert disagree.sum() == 0
