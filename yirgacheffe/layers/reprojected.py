@@ -6,8 +6,7 @@ from typing import Any
 from osgeo import gdal
 
 from .._datatypes import Area, MapProjection, Window
-from .._core import read_raster
-from .rasters import YirgacheffeLayer
+from .rasters import YirgacheffeLayer, RasterLayer
 from .._backends.enumeration import dtype as DataType
 
 class VsimemFile:
@@ -48,7 +47,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         self,
         src: YirgacheffeLayer,
         target_projection: MapProjection,
-        method: ResamplingMethod = ResamplingMethod.Nearest,
+        method: ResamplingMethod,
         name: str | None = None,
     ):
         reprojected_area = src.area.reproject(target_projection)
@@ -156,7 +155,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                     )
                 )
 
-                with read_raster(warped_data_path) as warped:
+                with RasterLayer.layer_from_file(warped_data_path) as warped:
                     if (warped.window.xsize != xsize) or \
                         (warped.window.ysize != ysize):
                         raise RuntimeError("gdal warp violated request constraints")

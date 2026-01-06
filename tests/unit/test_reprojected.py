@@ -19,7 +19,7 @@ def test_simple_scale_down() -> None:
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
         target_projection = MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
-        with ReprojectedRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
@@ -32,7 +32,7 @@ def test_simple_scale_up() -> None:
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
         target_projection = MapProjection(WGS_84_PROJECTION, 0.04, -0.04)
-        with ReprojectedRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
@@ -50,7 +50,7 @@ def test_scaling_up_pixels() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
-        with ReprojectedRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0, 0, 4, -4, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
@@ -118,7 +118,7 @@ def test_scaling_down_pixels() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
-        with ReprojectedRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0, 0, 8, -8, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
@@ -190,7 +190,7 @@ def test_reprojected_up_in_operation() -> None:
     dataset2 = gdal_dataset_with_data((0, 0), 2.0, data2)
     raster2 = RasterLayer(dataset2)
 
-    rescaled = ReprojectedRasterLayer(raster2, raster1.map_projection)
+    rescaled = ReprojectedRasterLayer(raster2, raster1.map_projection, ResamplingMethod.Nearest)
 
     assert raster1.window == rescaled.window
     assert raster1.area == rescaled.area
@@ -214,7 +214,7 @@ def test_reprojected_down_in_operation() -> None:
     raster2 = RasterLayer(dataset2)
     assert raster2.map_projection
 
-    rescaled = ReprojectedRasterLayer(raster1, raster2.map_projection)
+    rescaled = ReprojectedRasterLayer(raster1, raster2.map_projection, ResamplingMethod.Nearest)
 
     assert raster2.window == rescaled.window
     assert raster2.area == rescaled.area
@@ -234,7 +234,7 @@ def test_reprojected_up_with_window_set() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
-        with ReprojectedRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
             assert layer.window == Window(0, 0, 8, 8)
 
@@ -260,7 +260,7 @@ def test_reprojected_up_with_window_set_2() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
-        with ReprojectedRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
 
             expected_raster = np.zeros((6, 6))
@@ -289,7 +289,7 @@ def test_reprojected_down_with_window_set() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
-        with ReprojectedRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 8.0, -8.0, target_projection)
 
             layer.set_window_for_intersection(Area(2.0, -2.0, 6.0, -6.0))
@@ -371,8 +371,16 @@ def test_somewhat_aligned_rastered_polygons() -> None:
             assert raster_54009.map_projection == projection_54009
 
             with (
-                ReprojectedRasterLayer(raster_54009, projection_4326) as reprojected_54009_to_4326,
-                ReprojectedRasterLayer(raster_4326, projection_54009) as reprojected_4326_to_54009,
+                ReprojectedRasterLayer(
+                    raster_54009,
+                    projection_4326,
+                    ResamplingMethod.Nearest
+                ) as reprojected_54009_to_4326,
+                ReprojectedRasterLayer(
+                    raster_4326,
+                    projection_54009,
+                    ResamplingMethod.Nearest
+                ) as reprojected_4326_to_54009,
             ):
                 # We do not expect perfect reproduction, so let's sum them pixels and see if they are
                 # within a few percent:

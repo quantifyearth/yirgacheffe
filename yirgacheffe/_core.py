@@ -6,12 +6,13 @@ from typing import Sequence
 import numpy as np
 from osgeo import gdal
 
-from .layers.area import UniformAreaLayer
-from .layers.base import YirgacheffeLayer
-from .layers.constant import ConstantLayer
-from .layers.group import GroupLayer, TiledGroupLayer
-from .layers.rasters import RasterLayer
-from .layers.vectors import VectorLayer
+from .layers import UniformAreaLayer
+from .layers import YirgacheffeLayer
+from .layers import ReprojectedRasterLayer, ResamplingMethod
+from .layers import ConstantLayer
+from .layers import GroupLayer, TiledGroupLayer
+from .layers import RasterLayer
+from .layers import VectorLayer
 from .window import MapProjection
 from ._backends.enumeration import dtype as DataType
 
@@ -36,6 +37,45 @@ def read_raster(
         ...     total = layer.sum()
     """
     return RasterLayer.layer_from_file(filename, band, ignore_nodata)
+
+def read_raster_like(
+    filename: Path | str,
+    like: YirgacheffeLayer,
+    method: ResamplingMethod,
+    band: int = 1,
+    ignore_nodata: bool = False,
+) -> YirgacheffeLayer:
+    """Open a raster file but reproject it to match another layer.
+
+    This method can be used to reproject a raster in one map projection to match another open layer.
+
+    The reprojection will be only done when the data is actually used in a calculation, so unused data will
+    not be reprojected.
+
+    Args:
+        filename: Path of raster file to open.
+        like: Another layer that has a projection and pixel scale set. This layer will
+            use the same projection and pixel scale as that one.
+        method: The resampling method that will be used during the reprojection.
+        band: For multi-band rasters, which band to use (defaults to first if not specified).
+        ignore_nodata: If the GeoTIFF has a NODATA value, don't substitute that value for NaN.
+
+    Returns:
+        An layer representing the raster data in the new projection.
+
+    Examples:
+        >>> import yirgacheffe as yg
+        >>> with (
+        ...     yg.read_raster('map_in_esri_54009.tif') as layer1,
+        ...     yg.read_raster_like('map_in_wgs84.tif', layer1, yg.Nearest) as layer2
+        ... ):
+        ...     res = layer1 * layer2
+        ...     res.to_geotiff('result_in_esri_54009.tif')
+    """
+    if like.map_projection is None:
+        raise ValueError("Reference layer must have a map projection.")
+    original = RasterLayer.layer_from_file(filename, band, ignore_nodata)
+    return ReprojectedRasterLayer(original, like.map_projection, method, original.name)
 
 def read_narrow_raster(
     filename: Path | str,
