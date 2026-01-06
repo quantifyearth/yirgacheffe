@@ -54,6 +54,7 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def datatype(self) -> DataType:
+        """Returns the [`DataType`][yirgacheffe.DataType] of the pixels within a layer."""
         raise NotImplementedError("Must be overridden by subclass")
 
     @property
@@ -84,12 +85,12 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def map_projection(self) -> MapProjection | None:
-        """Returns the map projection (projection name and pixel size) of the layer."""
+        """Returns the [`MapProjection`][yirgacheffe.MapProjection] (projection name and pixel size) of the layer."""
         return self._underlying_area.projection
 
     @property
     def area(self) -> Area:
-        """Returns the geospatial bounds of the layer."""
+        """Returns the geospatial [`Area`][yirgacheffe.Area] of the layer."""
         if self._active_area is not None:
             return self._active_area
         else:

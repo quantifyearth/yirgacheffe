@@ -14,7 +14,13 @@ extra_css:
 
 plugins:
 - search
-- mkdocstrings
+- mkdocstrings:
+    handlers:
+      python:
+        options:
+          inherited_members: true
+          show_docstring_attributes: true
+          show_docstring_functions: true
 - gen-files:
     scripts:
     - docs/gen_changelog.py
