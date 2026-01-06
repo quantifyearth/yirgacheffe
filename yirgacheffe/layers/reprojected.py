@@ -23,19 +23,35 @@ class VsimemFile:
             pass
 
 class ResamplingMethod(Enum):
-    # The commented out ones fail tests due to Yirgacheffe's chunking
-    # behaviour and require more work.
+    """Resampling methods used in reprojecting rasters.
+
+    This enumeration defines the resampling methods supported by Yirgacheffe.
+
+    Attributes:
+        Average: Computes the average of all non-NODATA contributing pixels
+        Max: Selects the maximum value among all non-NODATA contributing pixels
+        Med: Computes the median of all non-NODATA contributing pixels
+        Min: Selects the minimum value among all non-NODATA contributing pixels
+        Mode: Selects the most frequently occurring value among contributing pixels
+        Nearest: Uses nearest-neighbor sampling (no interpolation)
+        RootMeanSquare: Computes the root mean square of all non-NODATA contributing pixels
+    """
+
     Average = "average"
-    # Bilinear = "bilinear"
-    # Cubic = "cubic"
-    # CubicSpline = "cubicspline"
-    # Lanczos = "lanczos"
     Max = "max"
     Med = "med"
     Min = "min"
     Mode = "mode"
     Nearest = "nearest"
     RootMeanSquare = "rms"
+
+    # The commented out ones fail tests due to Yirgacheffe's chunking
+    # behaviour and require more work.
+    #
+    # Bilinear = "bilinear"
+    # Cubic = "cubic"
+    # CubicSpline = "cubicspline"
+    # Lanczos = "lanczos"
     # Q1 = "q1"
     # Q2 = "q2"
     # Sum = "sum"

@@ -7,6 +7,7 @@ To get started with yirgacheffe you can import data using the following core met
     options:
         members:
             - read_raster
+            - read_raster_like
             - read_shape
             - read_shape_like
             - read_rasters

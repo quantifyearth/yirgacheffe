@@ -44,5 +44,6 @@ nav:
       - Window: api/classes/window.md
     - Enums:
       - DataType: api/enums/datatype.md
+      - ResamplingMethod: api/enums/resamplingmethods.md
   - Code of conduct: CODE_OF_CONDUCT.md
   - Changelog: changelog.md
