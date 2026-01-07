@@ -1,5 +1,5 @@
 from __future__ import annotations
-import os
+import uuid
 from enum import Enum
 from typing import Any
 
@@ -142,10 +142,10 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
             src_read_area.grow(expand_buffer * src_projection.xstep) & self._src.area
 
         # We need some ID that stops us with other parallel workers potentially in the
-        # VSIMEM space, so we use the pid give that Python multiprocessing spawns a
-        # process for each worker.
-        pid = os.getpid()
-        with VsimemFile(f"/vsimem/src_{pid}.tif") as src_data_path:
+        # VSIMEM space, so we use a uuid4 that should be close enough to collision free
+        # without relying on things like pids.
+        fid = uuid.uuid4()
+        with VsimemFile(f"/vsimem/src_{fid}.tif") as src_data_path:
             # I don't think this is very safe, but for now this is a place to start
             self._src._set_window(expanded_src_read_area)
             self._src.to_geotiff(src_data_path)
@@ -154,7 +154,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
             # break things with this with the _set_window, hence this reset_window.
             self._src.reset_window()
 
-            with VsimemFile(f"/vsimem/warped_{pid}.tif") as warped_data_path:
+            with VsimemFile(f"/vsimem/warped_{fid}.tif") as warped_data_path:
                 gdal.Warp(
                     warped_data_path,
                     src_data_path,
