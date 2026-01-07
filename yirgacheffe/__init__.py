@@ -12,8 +12,9 @@ except ModuleNotFoundError:
         pyproject_data = tomllib.load(f)
     __version__ = pyproject_data["project"]["version"]
 
-from .layers import YirgacheffeLayer
-from ._core import read_raster, read_rasters, read_shape, read_shape_like, constant, read_narrow_raster, from_array
+from .layers import YirgacheffeLayer, ResamplingMethod
+from ._core import read_raster, read_rasters, read_shape, read_raster_like, read_shape_like, constant, \
+    read_narrow_raster, from_array
 from .constants import WGS_84_PROJECTION
 from ._datatypes.area import Area
 from ._datatypes.mapprojection import MapProjection

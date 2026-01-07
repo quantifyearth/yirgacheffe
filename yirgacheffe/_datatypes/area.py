@@ -261,7 +261,8 @@ class Area:
             left=self.left - offset,
             top=self.top + offset,
             right=self.right + offset,
-            bottom=self.bottom - offset
+            bottom=self.bottom - offset,
+            projection=self.projection,
         )
 
     @property
@@ -309,6 +310,47 @@ class Area:
             (rhs.top >= lhs.bottom >= rhs.bottom)
         )
 
+    def reproject(self, target_projection: MapProjection) -> Area:
+        """Takes an area and projects it."""
+        if target_projection is None:
+            raise ValueError("Target projection can not be None")
+        if self.projection is None:
+            # This is because if you're going from a unprojected area, which will be a VectorLayer at the
+            # time of writing this comment, the target needs to be a raster with a grid offset to align to
+            # so needs an Area and not a MapProjection input.
+            raise ValueError("Can only reproject already projected areas. Use `project_like` instead.")
+
+        # Converting between projections is tricky, as some projections either skew or warp as translated
+        # and so to avoid implementing a lot of complex math here, I'll just ask GDAL what it would do
+        # if warping from our projection to the other.
+        width, height = self.pixel_dimensions
+
+        # Create a VRT (just XML, no data allocation)
+        vrt_xml = f'''<VRTDataset rasterXSize="{width}" rasterYSize="{height}">
+          <SRS>{self.projection.crs.to_wkt()}</SRS>
+          <GeoTransform>{self.left}, {self.projection.xstep}, 0,
+          {self.top}, 0, {self.projection.ystep}</GeoTransform>
+          <VRTRasterBand dataType="Byte" band="1"/>
+        </VRTDataset>'''
+
+        src_ds = gdal.Open(vrt_xml)
+        vrt_ds = gdal.AutoCreateWarpedVRT(src_ds, None,
+                                          target_projection._gdal_projection,
+                                          gdal.GRA_NearestNeighbour)
+        gt = vrt_ds.GetGeoTransform()
+        min_x = gt[0]
+        max_y = gt[3]
+        max_x = min_x + gt[1] * vrt_ds.RasterXSize
+        min_y = max_y + gt[5] * vrt_ds.RasterYSize
+
+        return Area(
+            math.floor(min_x / target_projection.xstep) * target_projection.xstep,
+            math.ceil(max_y / target_projection.ystep) * target_projection.ystep,
+            math.ceil(max_x / target_projection.xstep) * target_projection.xstep,
+            math.floor(min_y / target_projection.ystep) * target_projection.ystep,
+            target_projection,
+        )
+
     def project_like(self, other: Area) -> Area:
         """Takes a projectionless area and maps it onto a map projection based on an existing area.
 
@@ -340,37 +382,10 @@ class Area:
                 projection=other.projection
             )
         else:
-            # Converting between projections is tricky, as some projections either skew or warp as translated
-            # and so to avoid implementing a lot of complex math here, I'll just ask GDAL what it would do
-            # if warping from our projection to the other.
-            width, height = self.pixel_dimensions
-
-            # Create a VRT (just XML, no data allocation)
-            vrt_xml = f'''<VRTDataset rasterXSize="{width}" rasterYSize="{height}">
-              <SRS>{self.projection.crs.to_wkt()}</SRS>
-              <GeoTransform>{self.left}, {self.projection.xstep}, 0,
-              {self.top}, 0, {self.projection.ystep}</GeoTransform>
-              <VRTRasterBand dataType="Byte" band="1"/>
-            </VRTDataset>'''
-
-            src_ds = gdal.Open(vrt_xml)
-            vrt_ds = gdal.AutoCreateWarpedVRT(src_ds, None,
-                                              other.projection.crs.to_wkt(),
-                                              gdal.GRA_NearestNeighbour)
-            gt = vrt_ds.GetGeoTransform()
-            min_x = gt[0]
-            max_y = gt[3]
-            max_x = min_x + gt[1] * vrt_ds.RasterXSize
-            min_y = max_y + gt[5] * vrt_ds.RasterYSize
-
-            aligned_bounds = (
-                math.floor(min_x / other.projection.xstep) * other.projection.xstep,
-                math.ceil(max_y / other.projection.ystep) * other.projection.ystep,
-                math.ceil(max_x / other.projection.xstep) * other.projection.xstep,
-                math.floor(min_y / other.projection.ystep) * other.projection.ystep,
-            )
-
-            return Area(*aligned_bounds, other.projection)
+            # This is because I should have always had two entry points, but briefly
+            # in 1.11.3 I didn't foresee that. This should be tidied up in the 2.0 API
+            # clean up.
+            return self.reproject(other.projection)
 
     @property
     def pixel_dimensions(self) -> tuple[int,int]:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import operator
 import uuid
+from collections.abc import Callable
 from functools import reduce
 from typing import Any, Sequence
 
@@ -53,6 +54,7 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def datatype(self) -> DataType:
+        """Returns the [`DataType`][yirgacheffe.DataType] of the pixels within a layer."""
         raise NotImplementedError("Must be overridden by subclass")
 
     @property
@@ -83,12 +85,12 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def map_projection(self) -> MapProjection | None:
-        """Returns the map projection (projection name and pixel size) of the layer."""
+        """Returns the [`MapProjection`][yirgacheffe.MapProjection] (projection name and pixel size) of the layer."""
         return self._underlying_area.projection
 
     @property
     def area(self) -> Area:
-        """Returns the geospatial bounds of the layer."""
+        """Returns the geospatial [`Area`][yirgacheffe.Area] of the layer."""
         if self._active_area is not None:
             return self._active_area
         else:
@@ -152,7 +154,7 @@ class YirgacheffeLayer(LayerMathMixin):
             self.area.top, 0.0, self.map_projection.ystep
         )
 
-    def set_window_for_intersection(self, new_area: Area) -> None:
+    def _set_window(self, new_area: Area, validation_callable: Callable[[Window],None] | None = None) -> None:
         if self.map_projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
 
@@ -173,54 +175,42 @@ class YirgacheffeLayer(LayerMathMixin):
         )
         new_window = Window(xoff, yoff, xsize, ysize)
 
-        if (new_window.xoff < 0) or (new_window.yoff < 0):
-            raise ValueError('Window has negative offset')
-        # If there is an underlying raster for this layer, do a sanity check
-        try:
-            raster_xsize, raster_ysize = self._raster_dimensions
-            if ((new_window.xoff + new_window.xsize) > raster_xsize) or \
-                ((new_window.yoff + new_window.ysize) > raster_ysize):
-                raise ValueError(f'Window is bigger than dataset: raster is {raster_xsize}x{raster_ysize}'\
-                    f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
-        except AttributeError:
-            pass
+        if validation_callable is not None:
+            # This should raise an exception if it fails
+            validation_callable(new_window)
+
         self._window = new_window
         self._active_area = new_area
+
+    def set_window_for_intersection(self, new_area: Area) -> None:
+        def _intersection_validation(new_window: Window) -> None:
+            if (new_window.xoff < 0) or (new_window.yoff < 0):
+                raise ValueError('Window has negative offset')
+            # If there is an underlying raster for this layer, do a sanity check
+            try:
+                raster_xsize, raster_ysize = self._raster_dimensions
+                if ((new_window.xoff + new_window.xsize) > raster_xsize) or \
+                    ((new_window.yoff + new_window.ysize) > raster_ysize):
+                    raise ValueError(f'Window is bigger than dataset: raster is {raster_xsize}x{raster_ysize}'\
+                        f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
+            except AttributeError:
+                pass
+        self._set_window(new_area, _intersection_validation)
 
     def set_window_for_union(self, new_area: Area) -> None:
-        if self.map_projection is None:
-            raise ValueError("Can not set Window without explicit pixel scale")
-
-        if new_area.projection is None:
-            new_area = new_area.project_like(self._underlying_area)
-
-        # We force everything onto a grid aligned basis for calculating the window to avoid rounding issues
-        new_area = new_area._grid_aligned
-        underlying_area = self._underlying_area._grid_aligned
-
-        xoff, yoff = self.map_projection.round_down_pixels(
-            (new_area.left - underlying_area.left) / abs(self.map_projection.xstep),
-            (underlying_area.top - new_area.top) / abs(self.map_projection.ystep),
-        )
-        xsize, ysize = self.map_projection.round_up_pixels(
-            (new_area.right - new_area.left) / abs(self.map_projection.xstep),
-            (new_area.top - new_area.bottom) / abs(self.map_projection.ystep),
-        )
-        new_window = Window(xoff, yoff, xsize, ysize)
-
-        if (new_window.xoff > 0) or (new_window.yoff > 0):
-            raise ValueError('Window has positive offset')
-        # If there is an underlying raster for this layer, do a sanity check
-        try:
-            raster_xsize, raster_ysize = self._raster_dimensions
-            if ((new_window.xsize - new_window.xoff) < raster_xsize) or \
-                ((new_window.ysize - new_window.yoff) <raster_ysize):
-                raise ValueError(f'Window is smaller than dataset: raster is {raster_xsize}x{raster_ysize}'\
-                    f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
-        except AttributeError:
-            pass
-        self._window = new_window
-        self._active_area = new_area
+        def _union_validation(new_window: Window) -> None:
+            if (new_window.xoff > 0) or (new_window.yoff > 0):
+                raise ValueError('Window has positive offset')
+            # If there is an underlying raster for this layer, do a sanity check
+            try:
+                raster_xsize, raster_ysize = self._raster_dimensions
+                if ((new_window.xsize - new_window.xoff) < raster_xsize) or \
+                    ((new_window.ysize - new_window.yoff) <raster_ysize):
+                    raise ValueError(f'Window is smaller than dataset: raster is {raster_xsize}x{raster_ysize}'\
+                        f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
+            except AttributeError:
+                pass
+        self._set_window(new_area, _union_validation)
 
     def reset_window(self) -> None:
         self._active_area = None

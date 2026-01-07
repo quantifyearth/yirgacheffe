@@ -312,6 +312,21 @@ class LayerMathMixin:
         callback: Callable[[float], None] | None = None,
         nodata: float | int | None = None,
     ) -> float | None:
+        """Saves a calculation to a raster file, optionally also returning the sum of pixels.
+
+        Args:
+            filename: Path of the raster to save the result to.
+            and_sum: If true then the function will also calculate the sum of the raster as it goes and return
+                that value.
+            parallelism: If passed, attempt to use multiple CPU cores up to the number provided, or if set to True,
+                yirgacheffe will pick a sensible value.
+            callback: If passed, this callback will be called periodically with a progress update for the saving,
+                with a value between 0.0 and 1.0.
+            nodata: Nominate a value to be stored as nodata in the result
+
+        Returns:
+            Either returns None, or the sum of the pixels in the resulting raster if `and_sum` was specified.
+        """
         return LayerOperation(self).to_geotiff(
             filename=filename,
             and_sum=and_sum,
@@ -399,6 +414,18 @@ class LayerMathMixin:
         raise NotImplementedError("Must be overridden by subclass")
 
     def read_array(self, _x, _y, _w, _h):
+        """Read an area of pixles from the specified area of a calculated raster.
+
+        Args:
+            x: X axis offset for reading
+            y: Y axis offset for reading
+            width: Width of data to read
+            height: Height of data to read
+
+        Returns:
+            A numpy array containing the requested data. If the region of data read goes
+            beyond the bounds of the calculation that area will be filled with zeros.
+        """
         raise NotImplementedError("Must be overridden by subclass")
 
     def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
@@ -1240,21 +1267,6 @@ class LayerOperation(LayerMathMixin):
         callback: Callable[[float], None] | None = None,
         nodata: float | int | None = None,
     ) -> float | None:
-        """Saves a calculation to a raster file, optionally also returning the sum of pixels.
-
-        Args:
-            filename: Path of the raster to save the result to.
-            and_sum: If true then the function will also calculate the sum of the raster as it goes and return
-                that value.
-            parallelism: If passed, attempt to use multiple CPU cores up to the number provided, or if set to True,
-                yirgacheffe will pick a sensible value.
-            callback: If passed, this callback will be called periodically with a progress update for the saving,
-                with a value between 0.0 and 1.0.
-            nodata: Nominate a value to be stored as nodata in the result
-
-        Returns:
-            Either returns None, or the sum of the pixels in the resulting raster if `and_sum` was specified.
-        """
 
         # We want to write to a tempfile before we move the result into place, but we can't use
         # the actual $TMPDIR as that might be on a different device, and so we use a file next to where
@@ -1294,18 +1306,6 @@ class LayerOperation(LayerMathMixin):
         return result
 
     def read_array(self, x: int, y: int, width: int, height: int) -> np.ndarray:
-        """Read an area of pixles from the specified area of a calculated raster.
-
-        Args:
-            x: X axis offset for reading
-            y: Y axis offset for reading
-            width: Width of data to read
-            height: Height of data to read
-
-        Returns:
-            A numpy array containing the requested data. If the region of data read goes
-            beyond the bounds of the calculation that area will be filled with zeros.
-        """
         projection = self.map_projection
         if projection is None:
             raise ValueError("No map projection specified for layers in expression")

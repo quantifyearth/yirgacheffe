@@ -1,10 +1,16 @@
+import json
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import pytest
+from osgeo import gdal
+from pyproj import Transformer
 
 import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, gdal_dataset_with_data
 from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.layers import RasterLayer, RescaledRasterLayer
+from yirgacheffe.layers import RasterLayer, ReprojectedRasterLayer, ResamplingMethod
 from yirgacheffe.window import Area, MapProjection, Window
 
 
@@ -13,7 +19,7 @@ def test_simple_scale_down() -> None:
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
         target_projection = MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
-        with RescaledRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
@@ -26,7 +32,7 @@ def test_simple_scale_up() -> None:
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
         target_projection = MapProjection(WGS_84_PROJECTION, 0.04, -0.04)
-        with RescaledRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
@@ -44,7 +50,7 @@ def test_scaling_up_pixels() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
-        with RescaledRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0, 0, 4, -4, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
@@ -112,7 +118,7 @@ def test_scaling_down_pixels() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
-        with RescaledRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0, 0, 8, -8, target_projection)
             assert layer.map_projection == target_projection
             assert layer.pixel_scale == target_projection.scale
@@ -170,7 +176,7 @@ def test_scaling_down_pixels() -> None:
                 assert (exepected_sub_raster == actual_raster).all()
 
 
-def test_rescaled_up_in_operation() -> None:
+def test_reprojected_up_in_operation() -> None:
     data1 = np.zeros((8, 8))
     data1[0:4, 4:8] = 1
     data1[4:8, 0:4] = 1
@@ -184,7 +190,7 @@ def test_rescaled_up_in_operation() -> None:
     dataset2 = gdal_dataset_with_data((0, 0), 2.0, data2)
     raster2 = RasterLayer(dataset2)
 
-    rescaled = RescaledRasterLayer(raster2, raster1.map_projection)
+    rescaled = ReprojectedRasterLayer(raster2, raster1.map_projection, ResamplingMethod.Nearest)
 
     assert raster1.window == rescaled.window
     assert raster1.area == rescaled.area
@@ -194,7 +200,7 @@ def test_rescaled_up_in_operation() -> None:
     assert calc.sum() == (8 * 8)
 
 
-def test_rescaled_down_in_operation() -> None:
+def test_reprojected_down_in_operation() -> None:
     data1 = np.zeros((8, 8))
     data1[0:4, 4:8] = 1
     data1[4:8, 0:4] = 1
@@ -208,7 +214,7 @@ def test_rescaled_down_in_operation() -> None:
     raster2 = RasterLayer(dataset2)
     assert raster2.map_projection
 
-    rescaled = RescaledRasterLayer(raster1, raster2.map_projection)
+    rescaled = ReprojectedRasterLayer(raster1, raster2.map_projection, ResamplingMethod.Nearest)
 
     assert raster2.window == rescaled.window
     assert raster2.area == rescaled.area
@@ -218,7 +224,7 @@ def test_rescaled_down_in_operation() -> None:
     assert calc.sum() == (4 * 4)
 
 
-def test_rescaled_up_with_window_set() -> None:
+def test_reprojected_up_with_window_set() -> None:
     # data has top left and bottom right quarters as 0
     # and the remaining quarters as 1
     data = np.zeros((4, 4))
@@ -228,8 +234,9 @@ def test_rescaled_up_with_window_set() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
-        with RescaledRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
+            assert layer.window == Window(0, 0, 8, 8)
 
             layer.set_window_for_intersection(Area(1.0, -1.0, 3.0, -3.0))
             assert layer.area == Area(1.0, -1.0, 3.0, -3.0, target_projection)
@@ -243,7 +250,7 @@ def test_rescaled_up_with_window_set() -> None:
             assert (actual_raster == expected_raster).all()
 
 
-def test_rescaled_up_with_window_set_2() -> None:
+def test_reprojected_up_with_window_set_2() -> None:
     # data has top left and bottom right quarters as 0
     # and the remaining quarters as 1
     data = np.zeros((4, 4))
@@ -253,7 +260,7 @@ def test_rescaled_up_with_window_set_2() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
-        with RescaledRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
 
             expected_raster = np.zeros((6, 6))
@@ -272,7 +279,7 @@ def test_rescaled_up_with_window_set_2() -> None:
             assert (actual_raster == expected_raster).all()
 
 
-def test_rescaled_down_with_window_set() -> None:
+def test_reprojected_down_with_window_set() -> None:
     # data has top left and bottom right quarters as 0
     # and the remaining quarters as 1
     data = np.zeros((8, 8))
@@ -282,7 +289,7 @@ def test_rescaled_down_with_window_set() -> None:
     with RasterLayer(dataset) as raster:
 
         target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
-        with RescaledRasterLayer(raster, target_projection) as layer:
+        with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 8.0, -8.0, target_projection)
 
             layer.set_window_for_intersection(Area(2.0, -2.0, 6.0, -6.0))
@@ -296,10 +303,163 @@ def test_rescaled_down_with_window_set() -> None:
 
             assert (actual_raster == expected_raster).all()
 
+def test_somewhat_aligned_rastered_polygons() -> None:
+    # This is a test for the ReprojectedRasterLayer - other tests will cover ReprojectedVectorLayer
 
-def test_rescalled_with_different_projection_fails() -> None:
-    source_projection = MapProjection("ESRI:54009", 1.0, -1.0)
-    target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
-    with yg.from_array(np.zeros((4, 4)), (0, 0), source_projection) as layer:
-        with pytest.raises(ValueError):
-            _ = RescaledRasterLayer(layer, target_projection)
+    points_4326 = [
+        (0.0, 0.0),
+        (10.0, 0.0),
+        (10.0, 10.0),
+        (0.0, 10.0),
+    ]
+
+    def _generate_geojson(projection: str, points: list[tuple[float,float]]) -> dict:
+        return {
+            "type": "FeatureCollection",
+            "crs": {
+                "type": "name",
+                "properties": {"name": projection}
+            },
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            list(pt) for pt in points
+                        ] + [list(points[0])]]  # Close the polygon
+                    },
+                    "properties": {"value": 1}
+                }
+            ]
+        }
+
+    geojson_4326 = _generate_geojson("EPSG:4326", points_4326)
+
+    transformer = Transformer.from_crs("EPSG:4326", "ESRI:54009", always_xy=True)
+    geojson_54009 = _generate_geojson(
+        "ESRI:54009",
+        [transformer.transform(*pt) for pt in points_4326],
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdirstr:
+        tmpdir = Path(tmpdirstr)
+
+        geojson_4326_path = tmpdir / "points_4326.geojson"
+        with open(geojson_4326_path, 'w', encoding="utf-8") as f:
+            json.dump(geojson_4326, f)
+
+        geojson_54009_path = tmpdir / "points_54009.geojson"
+        with open(geojson_54009_path, 'w', encoding="utf-8") as f:
+            json.dump(geojson_54009, f)
+
+        raster_4326_path = tmpdir / "raster_4326.tif"
+        raster_54009_path = tmpdir / "raster_54009.tif"
+
+        projection_4326 = MapProjection("EPSG:4326", 0.1, -0.1)
+        projection_54009 = MapProjection("ESRI:54009", 10000, -10000)
+        with yg.read_shape(geojson_4326_path, projection_4326) as vector_4326:
+            vector_4326.to_geotiff(raster_4326_path)
+        with yg.read_shape(geojson_54009_path, projection_54009) as vector_54009:
+            vector_54009.to_geotiff(raster_54009_path)
+
+        with (
+            yg.read_raster(raster_4326_path) as raster_4326,
+            yg.read_raster(raster_54009_path) as raster_54009,
+        ):
+            assert raster_4326.map_projection == projection_4326
+            assert raster_54009.map_projection == projection_54009
+
+            with (
+                ReprojectedRasterLayer(
+                    raster_54009,
+                    projection_4326,
+                    ResamplingMethod.Nearest
+                ) as reprojected_54009_to_4326,
+                ReprojectedRasterLayer(
+                    raster_4326,
+                    projection_54009,
+                    ResamplingMethod.Nearest
+                ) as reprojected_4326_to_54009,
+            ):
+                # We do not expect perfect reproduction, so let's sum them pixels and see if they are
+                # within a few percent:
+                diff_4326 = abs(raster_4326.sum() - reprojected_54009_to_4326.sum()) / raster_4326.sum()
+                assert diff_4326 < 0.02
+                diff_54009 = abs(raster_54009.sum() - reprojected_4326_to_54009.sum()) / raster_54009.sum()
+                assert diff_54009 < 0.02
+
+@pytest.mark.parametrize("blocksize", [1, 2, 4, 8, 16])
+@pytest.mark.parametrize("src_projection,dst_projection", [
+    (
+        MapProjection("EPSG:4326", 0.1, -0.1),
+        MapProjection("ESRI:54009", 10000, -10000),
+    ),
+    (
+        MapProjection("ESRI:54009", 10000, -10000),
+        MapProjection("EPSG:4326", 0.1, -0.1),
+    ),
+])
+@pytest.mark.parametrize("method,assessment_style", [
+    (ResamplingMethod.Nearest, "binary"),
+    (ResamplingMethod.Min, "binary"),
+    (ResamplingMethod.Max, "binary"),
+    (ResamplingMethod.Mode, "binary"),
+    (ResamplingMethod.Average, "fractional"),
+    (ResamplingMethod.RootMeanSquare, "fractional"),
+])
+def test_vs_gdal_warp(
+    monkeypatch,
+    blocksize: int,
+    src_projection: MapProjection,
+    dst_projection: MapProjection,
+    method: ResamplingMethod,
+    assessment_style: str,
+) -> None:
+    # This test is mostly to just check we've not done anything odd with chunking
+    data = np.zeros((8, 8))
+    data[0:4, 4:8] = 1
+    data[4:8, 0:4] = 1
+
+    with monkeypatch.context() as m:
+        m.setattr(yg.constants, "YSTEP", blocksize)
+        with tempfile.TemporaryDirectory() as tmpdirstr:
+            tmpdir = Path(tmpdirstr)
+
+            with yg.from_array(data, (0, 0), src_projection) as original:
+                og_raster_path = tmpdir /  "original.tif"
+                warped_raster_path = tmpdir / "warped.tif"
+
+                original.to_geotiff(og_raster_path)
+
+                gdal.Warp(
+                    warped_raster_path,
+                    og_raster_path,
+                    options=gdal.WarpOptions(
+                        dstSRS=dst_projection._gdal_projection,
+                        outputType=original.datatype.to_gdal(),
+                        xRes=dst_projection.xstep,
+                        yRes=dst_projection.ystep,
+                        resampleAlg=method.value,
+                        targetAlignedPixels=False,
+                    )
+                )
+
+                with (
+                    yg.read_raster(warped_raster_path) as warped,
+                    ReprojectedRasterLayer(original, dst_projection, method=method) as reprojected,
+                ):
+                    assert reprojected.map_projection == dst_projection
+                    assert warped.map_projection == dst_projection
+
+                    # Due to rounding errors on floats and how Yirgacheffe is quite
+                    # paranoid about ensuring no data is lost on the edges, the
+                    # reprojected layers sometimes have an empty edge, but gdalwarp
+                    # does not. As a result we can't test area or window properties
+                    # for equality, just the pixels
+                    if assessment_style == "binary":
+                        disagree = warped != reprojected
+                        assert disagree.sum() == 0
+                    else:
+                        disagree = yg.abs(warped - reprojected) > 1e-12
+                        assert disagree.sum() == 0

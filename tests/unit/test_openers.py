@@ -334,3 +334,29 @@ def test_rounding_errors() -> None:
     with yg.from_array(data1, (-180.0, 90.0), projection) as layer1:
         assert layer1.window.xsize == 4
         assert layer1.window.ysize == 4
+
+
+def test_simple_scale_down() -> None:
+    with tempfile.TemporaryDirectory() as tempdirstr:
+        tmpdir = Path(tempdirstr)
+
+        path = tmpdir / "test_src.tif"
+        area = Area(-10, 10, 10, -10)
+        _ = gdal_dataset_of_region(area, 0.02, filename=path)
+        with yg.read_raster(path) as src:
+            src_area = src.area
+
+
+        data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+        target_projection = yg.MapProjection("esri:54009", 100.0, -100.0)
+
+        expected_area = src_area.reproject(target_projection)
+
+        with (
+            yg.from_array(data1, (0, 0), target_projection) as reference,
+            yg.read_raster_like(path, reference, yg.ResamplingMethod.Nearest) as layer
+        ):
+            assert layer.area == expected_area
+            assert layer.map_projection == target_projection
+            assert layer.pixel_scale == target_projection.scale
+            assert layer.map_projection == reference.map_projection
