@@ -63,11 +63,15 @@ def read_raster_like(
     Returns:
         An layer representing the raster data in the new projection.
 
+    Note:
+        For parallel processing, use Python's multiprocessing module. This layer is safe when used
+        with multiprocessing, but calls to `read_array` on an object are not thread safe.
+
     Examples:
         >>> import yirgacheffe as yg
         >>> with (
         ...     yg.read_raster('map_in_esri_54009.tif') as layer1,
-        ...     yg.read_raster_like('map_in_wgs84.tif', layer1, yg.Nearest) as layer2
+        ...     yg.read_raster_like('map_in_wgs84.tif', layer1, yg.ResamplingMethod.Nearest) as layer2
         ... ):
         ...     res = layer1 * layer2
         ...     res.to_geotiff('result_in_esri_54009.tif')

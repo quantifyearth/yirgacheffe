@@ -57,7 +57,17 @@ class ResamplingMethod(Enum):
     # Sum = "sum"
 
 class ReprojectedRasterLayer(YirgacheffeLayer):
-    """ReprojectedRasterLayer dynamically reprojects a layer."""
+    """ReprojectedRasterLayer dynamically reprojects a layer.
+
+    This layer wraps another layer and dynamically reprojects it to a different map projection
+    and pixel scale. The reprojection is performed lazily - only when data is actually read.
+
+    Thread Safety:
+        Individual ReprojectedRasterLayer instances should not be accessed from multiple
+        threads simultaneously. For parallel processing, use Python's multiprocessing module
+        where each process creates its own layer instances. This is the recommended approach
+        for raster processing as it avoids GIL limitations and ensures proper isolation.
+    """
 
     def __init__(
         self,
@@ -130,7 +140,10 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
             projection=projection,
         )
 
-        # This should probably be some variable based on the method and direction?
+        # Resampling will generally require pixels outside the target area so we can say average correctly.
+        # Mode resampling requires a larger buffer (3 pixels) to gather sufficient samples for determining
+        # the most frequent value, whereas other methods just need a single pixel. Hopefully testing will
+        # have sufficient coverage that we catch these as we expand the methods list.
         if self._method in {ResamplingMethod.Mode}:
             expand_buffer = 3
         else:
@@ -142,7 +155,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         src_read_area = read_area.reproject(src_projection)
         # Note we should never go over the edge of the original
         # source material, as different resampling methods react differently to
-        # the synthesized zeros that this will admit (e.g., one of min and max
+        # the synthesised zeros that this will admit (e.g., one of min and max
         # would likely get confused).
         expanded_src_read_area = \
             src_read_area.grow(expand_buffer * src_projection.xstep) & self._src.area
@@ -181,5 +194,8 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                 with RasterLayer.layer_from_file(warped_data_path) as warped:
                     if (warped.window.xsize != xsize) or \
                         (warped.window.ysize != ysize):
-                        raise RuntimeError("gdal warp violated request constraints")
+                        raise RuntimeError(
+                            f"gdal warp violated request constraints: "
+                            f"expected {xsize}x{ysize}, got {warped.window.xsize}x{warped.window.ysize}"
+                        )
                     return warped._read_array(0, 0, xsize, ysize)

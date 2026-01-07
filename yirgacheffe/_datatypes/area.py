@@ -320,7 +320,7 @@ class Area:
             # so needs an Area and not a MapProjection input.
             raise ValueError("Can only reproject already projected areas. Use `project_like` instead.")
 
-       # Converting between projections is tricky, as some projections either skew or warp as translated
+        # Converting between projections is tricky, as some projections either skew or warp as translated
         # and so to avoid implementing a lot of complex math here, I'll just ask GDAL what it would do
         # if warping from our projection to the other.
         width, height = self.pixel_dimensions
