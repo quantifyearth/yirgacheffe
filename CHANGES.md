@@ -1,8 +1,8 @@
-## v1.12.0
+## v1.12.0 (7/1/2026)
 
 ### Changed
 
-* Added internal working for an on-demand reprojection feature.
+* Added new file opening `read_raster_like` that will dynamically reproject a raster to the map projection of another layer using the specified resampling method.
 
 ## v1.11.3 (17/12/2025)
 
