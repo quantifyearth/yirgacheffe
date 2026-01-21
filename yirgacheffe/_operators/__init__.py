@@ -278,15 +278,14 @@ class LayerMathMixin:
         if weights_width != weights_height:
             raise ValueError("Currently only square matrixes are supported for weights")
         padding = (weights_width - 1) / 2
-        ipadding = int(padding)
-        if padding != ipadding:
+        if not padding.is_integer():
             raise ValueError("Currently weights dimensions must be odd")
 
         return LayerOperation(
             self,
             op.CONV2D,
             window_op=WindowOperation.NONE,
-            buffer_padding=ipadding,
+            buffer_padding=int(padding),
             weights=weights.astype(np.float32),
         )
 

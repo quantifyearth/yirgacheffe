@@ -23,6 +23,20 @@ class Window:
     xsize: int
     ysize: int
 
+    def __post_init__(self):
+        for field in ['xoff', 'yoff', 'xsize', 'ysize']:
+            value = getattr(self, field)
+            if isinstance(value, bool):
+                raise TypeError("Window properties must be whole numbers, not bool")
+            if isinstance(value, float):
+                if not value.is_integer():
+                    raise ValueError("Window properties must be whole numbers, not bools")
+                object.__setattr__(self, field, int(value))
+            elif not isinstance(value, int):
+                raise TypeError(
+                    f"Window properties must be whole numbers, not {type(value).__name__}"
+                )
+
     @property
     def as_array_args(self) -> tuple[int, ...]:
         """A tuple containing xoff, yoff, xsize, and ysize."""
