@@ -4,6 +4,10 @@
 
 * Added some type checking on read_rasters due to people misunderstand the API.
 
+### Fixed
+
+* Issue found where conv2d interacted badly with group layers.
+
 ## v1.12.0 (7/1/2026)
 
 ### Changed

@@ -106,3 +106,21 @@ def test_find_intersection_distinct() -> None:
 def test_grow_window(window, offset, expected) -> None:
     updated = window.grow(offset)
     assert updated == expected
+
+
+@pytest.mark.parametrize("x,y,w,h", [
+    (1, 2, 3, 4),
+    (1.0, 2.0, 3.0, 4.0),
+])
+def test_window_good_types(x, y, w, h) -> None:
+    _ = Window(x, y, w, h)
+
+
+@pytest.mark.parametrize("x,y,w,h,exc_class", [
+    (True, 2, 3, 4, TypeError),
+    (1, 2, 3.2, 4, ValueError),
+    (1, 2, 3, "four", TypeError),
+])
+def test_window_bad_types(x, y, w, h, exc_class) -> None:
+    with pytest.raises(exc_class):
+        _ = Window(x, y, w, h)
