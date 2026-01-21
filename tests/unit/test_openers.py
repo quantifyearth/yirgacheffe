@@ -236,6 +236,12 @@ def test_open_two_raster_by_glob(tiled):
                     assert group.sum() == raster1.sum() + raster2.sum()
 
 
+@pytest.mark.parametrize("path", ["/dir/some/file", Path("/dir/some/file")])
+def test_read_rasters_fails_with_single_file(path) -> None:
+    with pytest.raises(TypeError):
+        _ = yg.read_rasters(path)
+
+
 def test_open_uniform_area_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")

@@ -1,3 +1,9 @@
+## v1.12.1 (21/1/2026)
+
+### Changed
+
+* Added some type checking on read_rasters due to people misunderstand the API.
+
 ## v1.12.0 (7/1/2026)
 
 ### Changed

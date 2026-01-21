@@ -122,6 +122,12 @@ def read_rasters(
         >>> with yg.read_rasters(['tile_N10_E10.tif', 'tile_N20_E10.tif']) as all_tiles:
         ...    ...
     """
+    # Heading off a common error
+    if isinstance(filenames, (str, Path)):
+        raise TypeError(
+            "Expected a sequence of files, not a single file. "
+            f"Got {type(filenames).__name__}. Did you mean to pass [{filenames!r}]?"
+        )
     if not tiled:
         return GroupLayer.layer_from_files(filenames)
     else:
