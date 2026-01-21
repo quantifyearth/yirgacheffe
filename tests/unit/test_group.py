@@ -12,7 +12,7 @@ from tests.unit.helpers import (
     generate_child_tile,
 )
 from yirgacheffe.layers import GroupLayer, RasterLayer, TiledGroupLayer, VectorLayer
-from yirgacheffe import Area, MapProjection, PixelScale, Window
+from yirgacheffe import Area, MapProjection, PixelScale, Window, DataType
 
 
 def test_empty_group():
@@ -698,3 +698,25 @@ def test_multipe_tiles_with_missing_tile_row_slices(klass, dims, remove):
             6,
             group.window.xsize,
         )
+
+
+@pytest.mark.parametrize("klass", [GroupLayer, TiledGroupLayer])
+def test_two_raster_with_conv2d(klass):
+    # This test was added due to the group layers hitting an issue in
+    # numpy's np.zero as conv2d left the operating window as
+    # having float values in it, which were whole numbers, but np.zeros
+    # fails if the dimensions are not integer types.
+    area1 = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
+    area2 = Area(10, 10, 30, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    raster2 = RasterLayer(gdal_dataset_of_region(area2, 0.2))
+
+    group = klass([raster1, raster2])
+
+    kernel = np.array([
+        [0, 1, 0],
+        [1, 10, 1],
+        [0, 1, 0],
+    ], dtype=np.float32)
+    filtered_group = group.astype(DataType.Float32).conv2d(kernel) > 12
+    assert 19800 == filtered_group.sum()
