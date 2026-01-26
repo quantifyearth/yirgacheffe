@@ -115,7 +115,7 @@ def any(layers: list): # pylint: disable=W0622
     """
     if len(layers) == 0:
         raise ValueError("List of layers is empty")
-    return _balanced_reduce(layers, pyoperator.or_)
+    return _balanced_reduce([layer != 0 for layer in layers], pyoperator.or_)
 
 def all(layers: list): # pylint: disable=W0622
     """Combine layers with AND operation.
@@ -133,7 +133,7 @@ def all(layers: list): # pylint: disable=W0622
     """
     if len(layers) == 0:
         raise ValueError("List of layers is empty")
-    return _balanced_reduce(layers, pyoperator.and_)
+    return _balanced_reduce([layer != 0 for layer in layers], pyoperator.and_)
 
 # We provide these module level accessors as it's often nicer to write `log(x/y)` rather than `(x/y).log()`
 clip = LayerOperation.clip
