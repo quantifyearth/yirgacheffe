@@ -1,4 +1,10 @@
-## v1.12.1 (21/1/2026)
+## v1.12.2 (26/1/2026)
+
+### Added
+
+* Added `yg.sum`, `yg.all`, `yg.any` to build layers from lists of layers.
+
+## v1.12.1 (21/1/2026)
 
 ### Changed
 
