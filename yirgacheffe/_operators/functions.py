@@ -99,6 +99,41 @@ def sum(layers: list): # pylint: disable=W0622
         raise ValueError("List of layers is empty")
     return _balanced_reduce(layers, pyoperator.__add__)
 
+def any(layers: list): # pylint: disable=W0622
+    """Combine layers with OR operation.
+
+    Returns a raster where each pixel is 1 if ANY input layers
+    has a non-zero value at that geospatial location.
+
+    Similar to Python's built-in any() but for Yirgacheffe layers.
+
+    Args:
+        layers: List/sequence of layers to OR
+
+    Returns:
+        A new raster layer with pixel-wise sums
+    """
+    if len(layers) == 0:
+        raise ValueError("List of layers is empty")
+    return _balanced_reduce(layers, pyoperator.or_)
+
+def all(layers: list): # pylint: disable=W0622
+    """Combine layers with AND operation.
+
+    Returns a raster where each pixel is 1 only if ALL input layers
+    have non-zero values at that geospatial location.
+
+    Similar to Python's built-in all() but for Yirgacheffe layers.
+
+    Args:
+        layers: List/sequence of layers to AND
+
+    Returns:
+        A new raster layer with pixel-wise sums
+    """
+    if len(layers) == 0:
+        raise ValueError("List of layers is empty")
+    return _balanced_reduce(layers, pyoperator.and_)
 
 # We provide these module level accessors as it's often nicer to write `log(x/y)` rather than `(x/y).log()`
 clip = LayerOperation.clip
