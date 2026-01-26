@@ -45,6 +45,8 @@ You can also call the following methods from `yirgacheffe`:
     options:
         members:
             - abs
+            - all
+            - any
             - ceil
             - exp
             - exp2
@@ -57,6 +59,7 @@ You can also call the following methods from `yirgacheffe`:
             - minimum
             - nan_to_num
             - round
+            - sum
             - where
         show_root_heading: false
         show_source: false

@@ -63,6 +63,8 @@ with yg.read_raster('test1.tif') as layer1:
 The following math operators common to numpy and other libraries are currently supported:
 
 * abs
+* all
+* any
 * ceil
 * clip
 * exp
@@ -76,6 +78,7 @@ The following math operators common to numpy and other libraries are currently s
 * minimum
 * nan_to_num
 * round
+* sum
 
 Typically these can be invoked either on a layer as a method:
 
