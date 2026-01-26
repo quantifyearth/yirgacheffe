@@ -2090,18 +2090,40 @@ def test_simple_unique_with_counts(monkeypatch, blocksize, data) -> None:
             assert (unique_counts == expected_counts).all()
 
 
-def test_sum_empty() -> None:
+@pytest.mark.parametrize("op", [
+    yg.sum,
+    yg.any,
+    yg.all,
+])
+def test_layer_group_op_empty(op) -> None:
     with pytest.raises(ValueError):
-        _ = yg.sum([])
+        _ = op([])
 
 
-def test_sum_layers_single() -> None:
+@pytest.mark.parametrize("op", [
+    yg.sum,
+    yg.any,
+    yg.all,
+])
+def test_layer_group_op_single_layer(op) -> None:
     projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
     data = np.full((2, 2), 42)
     layer = yg.from_array(data, (0, 0), projection)
-    summed_layer = yg.sum([layer])
+    summed_layer = op([layer])
     result = summed_layer.read_array(0, 0, 2, 2)
     assert (data == result).all()
+
+@pytest.mark.parametrize("op", [
+    yg.sum,
+    yg.any,
+    yg.all,
+])
+def test_layer_group_of_direct_layer_fails(op) -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data = np.full((2, 2), 42)
+    layer = yg.from_array(data, (0, 0), projection)
+    with pytest.raises(TypeError):
+        _ = op(layer) # type: ignore
 
 
 def test_sum_layers_multiple() -> None:
@@ -2119,28 +2141,6 @@ def test_sum_layers_multiple() -> None:
     assert (expected == result).all()
 
 
-def test_sum_direct_layer_fails() -> None:
-    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
-    data = np.full((2, 2), 42)
-    layer = yg.from_array(data, (0, 0), projection)
-    with pytest.raises(TypeError):
-        _ = yg.sum(layer) # type: ignore
-
-
-def test_any_empty() -> None:
-    with pytest.raises(ValueError):
-        _ = yg.any([])
-
-
-def test_any_layers_single() -> None:
-    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
-    data = np.full((2, 2), 42)
-    layer = yg.from_array(data, (0, 0), projection)
-    summed_layer = yg.any([layer])
-    result = summed_layer.read_array(0, 0, 2, 2)
-    assert (data == result).all()
-
-
 def test_any_layers_multiple() -> None:
     projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
     layers = []
@@ -2156,28 +2156,6 @@ def test_any_layers_multiple() -> None:
     assert (expected == result).all()
 
 
-def test_any_direct_layer_fails() -> None:
-    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
-    data = np.full((2, 2), 42)
-    layer = yg.from_array(data, (0, 0), projection)
-    with pytest.raises(TypeError):
-        _ = yg.any(layer) # type: ignore
-
-
-def test_all_empty() -> None:
-    with pytest.raises(ValueError):
-        _ = yg.any([])
-
-
-def test_all_layers_single() -> None:
-    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
-    data = np.full((2, 2), 42)
-    layer = yg.from_array(data, (0, 0), projection)
-    summed_layer = yg.all([layer])
-    result = summed_layer.read_array(0, 0, 2, 2)
-    assert (data == result).all()
-
-
 def test_all_layers_multiple() -> None:
     projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
     layers = []
@@ -2191,11 +2169,3 @@ def test_all_layers_multiple() -> None:
     result = summed_layer.read_array(0, 0, 2, 2)
     expected = np.full((2, 2), total)
     assert (expected == result).all()
-
-
-def test_all_direct_layer_fails() -> None:
-    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
-    data = np.full((2, 2), 42)
-    layer = yg.from_array(data, (0, 0), projection)
-    with pytest.raises(TypeError):
-        _ = yg.all(layer) # type: ignore
