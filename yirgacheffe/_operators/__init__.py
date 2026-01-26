@@ -481,7 +481,7 @@ class LayerOperation(LayerMathMixin):
         details="Use from top level module instead."
     )
     def where(cond, a, b):
-        from . import functions
+        from . import functions # type: ignore # pylint: disable=C0415
         return functions.where(cond, a, b)
 
     @staticmethod
@@ -492,7 +492,7 @@ class LayerOperation(LayerMathMixin):
         details="Use from top level module instead."
     )
     def minimum(a, b):
-        from . import functions
+        from . import functions # type: ignore # pylint: disable=C0415
         return functions.minimum(a, b)
 
     @staticmethod
@@ -503,7 +503,7 @@ class LayerOperation(LayerMathMixin):
         details="Use from top level module instead."
     )
     def maximum(a, b):
-        from . import functions
+        from . import functions # type: ignore # pylint: disable=C0415
         return functions.maximum(a, b)
 
     def __init__(

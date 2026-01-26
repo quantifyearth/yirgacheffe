@@ -1,3 +1,5 @@
+import operator as pyoperator
+
 from . import LayerOperation, WindowOperation
 from .._backends.enumeration import operators as op
 
@@ -62,6 +64,40 @@ def minimum(a, b):
         rhs=b,
         window_op=WindowOperation.UNION,
     )
+
+def _balanced_reduce(layers, operator):
+    if len(layers) == 0:
+        raise RuntimeError("Internal precondition violation")
+    if len(layers) == 1:
+        return layers[0]
+    mid = len(layers) // 2
+    left = _balanced_reduce(layers[:mid], operator)
+    right = _balanced_reduce(layers[mid:], operator)
+    return operator(left, right)
+
+def sum(layers: list): # pylint: disable=W0622
+    """Combine multiple layers by summing spatially corresponding pixels.
+
+    Creates a new raster where each pixel is the sum of that pixel's
+    values across all input rasters for the same location.
+
+    Args:
+        layers: List/sequence of layers to sum
+
+    Returns:
+        A new raster layer with pixel-wise sums
+
+    Examples:
+        # Combine 100 species habitat rasters into richness map
+        richness = yg.sum(habitat_layers)
+
+    Note:
+        To sum all pixels within a single raster to get a scalar,
+        use the .sum() method instead: `layer.sum()`
+    """
+    if len(layers) == 0:
+        raise ValueError("List of layers is empty")
+    return _balanced_reduce(layers, pyoperator.__add__)
 
 
 # We provide these module level accessors as it's often nicer to write `log(x/y)` rather than `(x/y).log()`
