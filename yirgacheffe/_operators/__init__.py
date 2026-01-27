@@ -811,6 +811,8 @@ class LayerOperation(LayerMathMixin):
 
         cse_cache = CSECacheTable(self, computation_window)
 
+        backend.init()
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
             cse_cache.reset_cache()
             step=self.ystep
@@ -837,6 +839,8 @@ class LayerOperation(LayerMathMixin):
 
         cse_cache = CSECacheTable(self, computation_window)
 
+        backend.init()
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
             cse_cache.reset_cache()
             step=self.ystep
@@ -862,6 +866,8 @@ class LayerOperation(LayerMathMixin):
             raise ValueError("No map projection")
 
         cse_cache = CSECacheTable(self, computation_window)
+
+        backend.init()
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
             cse_cache.reset_cache()
@@ -897,6 +903,8 @@ class LayerOperation(LayerMathMixin):
             raise ValueError("No map projection")
 
         cse_cache = CSECacheTable(self, computation_window)
+
+        backend.init()
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
             cse_cache.reset_cache()
@@ -984,6 +992,8 @@ class LayerOperation(LayerMathMixin):
 
         cse_cache = CSECacheTable(self, computation_window)
 
+        backend.init()
+
         for yoffset in range(0, computation_window.ysize, self.ystep):
 
             cse_cache.reset_cache()
@@ -1023,6 +1033,8 @@ class LayerOperation(LayerMathMixin):
         # The hashing of python objects isn't stable across processes in general, so we have to do
         # the cache build once per worker
         cse_cache = CSECacheTable(self, computation_window)
+
+        backend.init()
 
         arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf) # type: ignore[var-annotated]
         projection = self.map_projection

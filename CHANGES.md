@@ -1,8 +1,9 @@
-## v1.12.2 (26/1/2026)
+## v1.12.2 (27/1/2026)
 
 ### Added
 
 * Added `yg.sum`, `yg.all`, `yg.any` to build layers from lists of layers.
+* Cache limits applied to GDAL and MLX which tend to assume that they are the only thing using memory. You can override these by adjusting `yg.constants.GDAL_CACHE_LIMIT` and `yg.constants.MLX_CACHE_LIMIT`.
 
 ## v1.12.1 (21/1/2026)
 

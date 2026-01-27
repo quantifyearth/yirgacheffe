@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from typing import Callable
 
+from osgeo import gdal
 import numpy as np
 import mlx.core as mx # type: ignore
 import mlx.nn
 
 from .enumeration import operators as op
 from .enumeration import dtype
+from ..  import constants
 
 array_t = mx.array
 float_t = mx.float32
@@ -52,6 +54,10 @@ abs_op = mx.abs
 floor_op = mx.floor
 round_op = mx.round
 ceil_op = mx.ceil
+
+def init() -> None:
+    gdal.SetCacheMax(constants.GDAL_CACHE_LIMIT)
+    mx.set_cache_limit(constants.MLX_CACHE_LIMIT)
 
 def sum_op(a):
     # By default the type promotion rules for sum in MLX are not the same as with Numpy. E.g.,
