@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Callable
 
+from osgeo import gdal
 import numpy as np
 import torch
 
 from .enumeration import operators as op
 from .enumeration import dtype
+from .. import constants
 
 array_t = np.ndarray
 float_t = np.float64
@@ -56,6 +58,9 @@ abs_op = np.abs
 floor_op = np.floor
 round_op = np.round
 ceil_op = np.ceil
+
+def init() -> None:
+    gdal.SetCacheMax(constants.GDAL_CACHE_LIMIT)
 
 def conv2d_op(data, weights):
     # torch wants to process dimensions of channels of width of height
