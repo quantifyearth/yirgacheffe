@@ -22,7 +22,6 @@ from pathlib import Path
 from typing import Any
 
 import deprecation
-import graphviz
 import numpy as np
 import numpy.typing as npt
 from osgeo import gdal
@@ -756,7 +755,14 @@ class LayerOperation(LayerMathMixin):
                 print(f"{new_prefix}{child_connector}{repr(child)}")
 
     def to_graphviz(self):
-        """Create graphviz visualization showing shared nodes."""
+        """Create graphviz visualization showing shared nodes.
+
+        Requires the graphviz python library is installed.
+
+        Returns:
+            A Graphviz object containing details of the expression.
+        """
+        import graphviz # pylint: disable=C0415
         dot = graphviz.Digraph(comment='Expression Tree')
         visited = set()
         self._add_to_graphviz(dot, visited)

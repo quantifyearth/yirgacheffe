@@ -1,3 +1,9 @@
+## v1.12.3 (02/02/2026)
+
+### Added
+
+* Added a `to_graphviz` call for expressions to help with debugging.
+
 ## v1.12.2 (27/1/2026)
 
 ### Added
