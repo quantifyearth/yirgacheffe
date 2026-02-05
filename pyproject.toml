@@ -55,6 +55,7 @@ dev = [
     "mike",
     "mkdocs-gen-files",
     "black",
+    "tifffile",
 ]
 
 [project.urls]

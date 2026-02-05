@@ -33,7 +33,8 @@ class RasterLayer(YirgacheffeLayer):
         nodata: float | int | None = None,
         nbits: int | None = None,
         threads: int | None = None,
-        bands: int=1
+        bands: int=1,
+        sparse: bool=False,
     ) -> RasterLayer:
         abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
@@ -48,6 +49,8 @@ class RasterLayer(YirgacheffeLayer):
             options.append(f"NUM_THREADS={threads}")
         if nbits is not None:
             options.append(f"NBITS={nbits}")
+        if sparse:
+            options.append("SPARSE_OK=YES")
 
         map_projection = MapProjection(projection, scale.xstep, scale.ystep)
         # If the area is projected, use that, otherwise we need to project it
@@ -100,7 +103,8 @@ class RasterLayer(YirgacheffeLayer):
         nodata: float | int | None = None,
         nbits: int | None = None,
         threads: int | None = None,
-        bands: int=1
+        bands: int=1,
+        sparse: bool=False,
     ) -> RasterLayer:
         if area is None:
             area = layer.area
@@ -135,6 +139,8 @@ class RasterLayer(YirgacheffeLayer):
             options.append(f"NUM_THREADS={threads}")
         if nbits is not None:
             options.append(f"NBITS={nbits}")
+        if sparse:
+            options.append("SPARSE_OK=YES")
 
         if filename:
             driver = gdal.GetDriverByName('GTiff')

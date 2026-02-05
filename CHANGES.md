@@ -3,6 +3,7 @@
 ### Added
 
 * Added a `to_graphviz` call for expressions to help with debugging.
+* Support sparse GeoTIFF creation.
 
 ### Fixed
 
