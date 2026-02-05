@@ -4,6 +4,10 @@
 
 * Added a `to_graphviz` call for expressions to help with debugging.
 
+### Fixed
+
+* Ensure datatype is correctly propegated through `astype` operator.
+
 ## v1.12.2 (27/1/2026)
 
 ### Added
