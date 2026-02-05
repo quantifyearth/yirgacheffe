@@ -696,8 +696,8 @@ class LayerOperation(LayerMathMixin):
         if self.operator == op.ASTYPE:
             try:
                 return self.kwargs["datatype"]
-            except KeyError:
-                raise RuntimeError("Internal inconsistency in astype operator")
+            except KeyError as exc:
+                raise RuntimeError("Internal inconsistency in astype operator") from exc
         # Otherwise we find the argument types and ask numpy to figure out what it would do
         internal_types: list[DataType] = [
             self.lhs.datatype
