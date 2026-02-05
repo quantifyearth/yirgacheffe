@@ -1,7 +1,11 @@
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import pytest
 from osgeo import gdal
 
+import yirgacheffe as yg
 from yirgacheffe.operators import DataType
 from yirgacheffe._backends import backend, BACKEND
 from yirgacheffe.layers import RasterLayer
@@ -144,3 +148,47 @@ def test_float_to_int() -> None:
 def test_of_Array(array: np.ndarray, expected_type: DataType) -> None:
     ytype = DataType.of_array(array)
     assert ytype == expected_type
+
+
+@pytest.mark.parametrize("nptype,ygtype", [
+    (np.int8, DataType.Int8),
+    (np.int16, DataType.Int16),
+    (np.float32, DataType.Float32),
+])
+def test_from_array_datatype(nptype: type, ygtype: DataType) -> None:
+    data = np.array([[1, 2, 3, 4], [5, 6, 5, 8]]).astype(nptype) # type: ignore
+    with yg.from_array(data, (0, 0), yg.MapProjection("ESRI:54009", 1, -1)) as layer:
+        assert layer.datatype == ygtype
+
+
+@pytest.mark.parametrize("ygtype", [
+    DataType.Int8,
+    DataType.Int16,
+    DataType.UInt32,
+    DataType.Float32,
+    DataType.Float64,
+])
+def test_astype_datatype(ygtype: DataType) -> None:
+    data = np.array([[1, 2, 3, 4], [5, 6, 5, 8]])
+    with yg.from_array(data, (0, 0), yg.MapProjection("ESRI:54009", 1, -1)) as layer:
+        assert layer.datatype == DataType.Int64
+        cast_layer = layer.astype(ygtype)
+        assert cast_layer.datatype == ygtype
+
+
+@pytest.mark.parametrize("ygtype", [
+    DataType.Int8,
+    DataType.Int16,
+    DataType.UInt32,
+    DataType.Float32,
+    DataType.Float64,
+])
+def test_astype_datatype_over_save(ygtype: DataType) -> None:
+    data = np.array([[1, 2, 3, 4], [5, 6, 5, 8]])
+    with tempfile.TemporaryDirectory() as tempdir:
+        filename = Path(tempdir) / "test.tif"
+        with yg.from_array(data, (0, 0), yg.MapProjection("ESRI:54009", 1, -1)) as layer:
+            cast_layer = layer.astype(ygtype)
+            cast_layer.to_geotiff(filename)
+        with yg.read_raster(filename) as layer:
+            assert layer.datatype == ygtype
