@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yirgacheffe"
-version = "1.12.2"
+version = "1.12.3"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
@@ -48,6 +48,7 @@ dev = [
     "pytest-cov",
     "pytest-mock",
     "build",
+    "graphviz",
     "twine",
     "mkdocs-material",
     "mkdocstrings-python",
@@ -70,6 +71,10 @@ yirgacheffe = ["py.typed"]
 
 [[tool.mypy.overrides]]
 module = "osgeo.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "graphviz.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
