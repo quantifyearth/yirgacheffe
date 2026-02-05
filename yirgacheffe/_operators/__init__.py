@@ -312,6 +312,7 @@ class LayerMathMixin:
         parallelism: int | bool | None = None,
         callback: Callable[[float], None] | None = None,
         nodata: float | int | None = None,
+        sparse: bool = False,
     ) -> float | None:
         """Saves a calculation to a raster file, optionally also returning the sum of pixels.
 
@@ -323,7 +324,8 @@ class LayerMathMixin:
                 yirgacheffe will pick a sensible value.
             callback: If passed, this callback will be called periodically with a progress update for the saving,
                 with a value between 0.0 and 1.0.
-            nodata: Nominate a value to be stored as nodata in the result
+            nodata: Nominate a value to be stored as nodata in the result.
+            sparse: If True then save a sparse GeoTIFF as per GDAL's extension to the GeoTIFF standard.
 
         Returns:
             Either returns None, or the sum of the pixels in the resulting raster if `and_sum` was specified.
@@ -334,6 +336,7 @@ class LayerMathMixin:
             parallelism=parallelism,
             callback=callback,
             nodata=nodata,
+            sparse=sparse,
         )
 
     def sum(self):
@@ -1328,7 +1331,11 @@ class LayerOperation(LayerMathMixin):
         parallelism: int | bool | None = None,
         callback: Callable[[float], None] | None = None,
         nodata: float | int | None = None,
+        sparse: bool = False,
     ) -> float | None:
+
+        if sparse and nodata is None:
+            raise ValueError("Nodata value must be provided for sparse GeoTIFFs")
 
         # We want to write to a tempfile before we move the result into place, but we can't use
         # the actual $TMPDIR as that might be on a different device, and so we use a file next to where
@@ -1351,7 +1358,8 @@ class LayerOperation(LayerMathMixin):
             with RasterLayer.empty_raster_layer_like(
                 self,
                 filename=inner_filename, # type: ignore
-                nodata=nodata
+                nodata=nodata,
+                sparse=sparse,
             ) as layer:
                 if parallelism is None:
                     result = self.save(layer, and_sum=and_sum, callback=callback)
