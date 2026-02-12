@@ -14,7 +14,7 @@ except ModuleNotFoundError:
 
 from .layers import YirgacheffeLayer, ResamplingMethod
 from ._core import read_raster, read_rasters, read_shape, read_raster_like, read_shape_like, constant, \
-    read_narrow_raster, from_array
+    read_narrow_raster, from_array, area_raster
 from .constants import WGS_84_PROJECTION
 from ._datatypes.area import Area
 from ._datatypes.mapprojection import MapProjection
