@@ -42,12 +42,15 @@ class AreaPerPixelLayer(YirgacheffeLayer):
 
         west, south, east, north = projection.crs.area_of_use.bounds
 
+        x_scale = abs(projection.xstep)
+        y_scale = abs(projection.ystep)
+
         if projection.crs.is_geographic:
             area = Area(
-                left=west,
-                top=north,
-                right=east,
-                bottom=south,
+                left=math.floor(west / x_scale) * x_scale,
+                top=math.ceil(north / y_scale) * y_scale,
+                right=math.ceil(east / x_scale) * x_scale,
+                bottom=math.floor(south / y_scale) * y_scale,
                 projection=projection,
             )
         else:
@@ -62,9 +65,6 @@ class AreaPerPixelLayer(YirgacheffeLayer):
 
             transformer = Transformer.from_crs("epsg:4326", projection.crs, always_xy=True)
             xs, ys = transformer.transform(*zip(*points)) # type: ignore
-
-            x_scale = abs(projection.xstep)
-            y_scale = abs(projection.ystep)
 
             left = math.floor(min(xs) / x_scale) * x_scale
             right = math.ceil(max(xs) / x_scale) * x_scale
