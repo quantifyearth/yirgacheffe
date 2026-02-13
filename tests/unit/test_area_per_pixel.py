@@ -95,10 +95,11 @@ def test_windowed_mollweide_layer() -> None:
                 assert val[0][0] == 100_000_000
 
 
-def test_non_global_area():
+def test_non_global_area() -> None:
     # EPSG:32633 - UTM Zone 33N (covers Sweden, Norway)
     # Valid: 12°E to 18°E, 0°N to 84°N
     projection = yg.MapProjection("epsg:32633", 1000.0, -1000.0)
+    assert projection.crs.area_of_use
     west, south, east, north = projection.crs.area_of_use.bounds
     assert west == 12.0 and east == 18.0
     assert south == 0.0 and north == 84.0
@@ -115,3 +116,18 @@ def test_non_global_area():
         # whilst we're here, check the areas are okay
         result = area_raster.read_array(0, 0, 100, 100)
         assert (result == 1_000_000).all()
+
+
+def test_with_no_bounds_in_tiff() -> None:
+    # This is based on using real GeoTIFFs that come with no BBOX in their projection
+    # description, which caused our original implementation as PYPROJ reports
+    # the bounds as None.
+    failing_wkt = 'GEOGCRS["WGS 84",DATUM["World Geodetic System 1984",ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]]],PRIMEM["Greenwich",0,ANGLEUNIT["degree",0.0174532925199433]],CS[ellipsoidal,2],AXIS["geodetic latitude (Lat)",north,ORDER[1],ANGLEUNIT["degree",0.0174532925199433]],AXIS["geodetic longitude (Lon)",east,ORDER[2],ANGLEUNIT["degree",0.0174532925199433]],ID["EPSG",4326]]' # pylint: disable=C0301
+    projection = yg.MapProjection(failing_wkt, 10.0, -10.0)
+    assert projection.crs.area_of_use is None
+
+    # But this is a geographic CRS, so we can assume it is global
+    with yg.area_raster(projection) as area_raster:
+        assert area_raster.map_projection == projection
+        assert area_raster.window == yg.Window(0, 0, 36, 18)
+        assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
