@@ -37,10 +37,16 @@ class AreaPerPixelLayer(YirgacheffeLayer):
             raise ValueError("projection should not be None")
         if not isinstance(projection, MapProjection):
             raise TypeError("projection should be of type MapProjection")
-        if projection.crs.area_of_use is None:
-            raise ValueError("CRS for this map projection has no bounds")
 
-        west, south, east, north = projection.crs.area_of_use.bounds
+        if projection.crs.area_of_use is not None:
+            west, south, east, north = projection.crs.area_of_use.bounds
+            name = projection.crs.area_of_use.name
+        elif projection.crs.is_geographic:
+            # assume a global bounds
+            west, south, east, north = -180.0, -90.0, 180.0, 90.0
+            name = projection.crs.name
+        else:
+            raise ValueError("CRS for this map projection has no bounds")
 
         x_scale = abs(projection.xstep)
         y_scale = abs(projection.ystep)
@@ -72,7 +78,7 @@ class AreaPerPixelLayer(YirgacheffeLayer):
             top = math.floor(max(ys) / y_scale) * y_scale
             area = Area(left=left, top=top, right=right, bottom=bottom, projection=projection)
 
-        super().__init__(area, projection.crs.area_of_use.name)
+        super().__init__(area, name)
 
         self._hash = hash(projection._gdal_projection)
 
@@ -108,7 +114,7 @@ class AreaPerPixelLayer(YirgacheffeLayer):
             y_scale = projection.ystep
 
             area_values = np.array([
-                area_of_pixel(a, b, (x_scale, y_scale), self.area.top + ((offset + i + 0.5) * y_scale))
+                area_of_pixel(a, b, (x_scale, y_scale), self._underlying_area.top + ((offset + i + 0.5) * y_scale))
                 for i in range(ysize)
             ])
             area_array = np.broadcast_to(area_values[:, np.newaxis], (ysize, xsize))
