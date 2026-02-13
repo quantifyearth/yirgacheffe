@@ -1,3 +1,9 @@
+## v1.12.4 (12/02/2026)
+
+### Added
+
+* Added a new area-per-pixel layer, which when given a map projection with pixel scale generates a new raster layer where the value in each pixel is the square metre area of that pixel.
+
 ## v1.12.3 (02/02/2026)
 
 ### Added

@@ -9,6 +9,7 @@ from .vectors import RasteredVectorLayer, VectorLayer
 from .area import UniformAreaLayer
 from .constant import ConstantLayer
 from .group import GroupLayer, TiledGroupLayer
+from .area_per_pixel import AreaPerPixelLayer
 try:
     from .h3layer import H3CellLayer
 except ModuleNotFoundError:

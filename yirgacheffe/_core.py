@@ -13,6 +13,7 @@ from .layers import ConstantLayer
 from .layers import GroupLayer, TiledGroupLayer
 from .layers import RasterLayer
 from .layers import VectorLayer
+from .layers import AreaPerPixelLayer
 from .window import MapProjection
 from ._backends.enumeration import dtype as DataType
 
@@ -260,3 +261,25 @@ def from_array(
     dataset.GetRasterBand(1).WriteArray(values, 0, 0)
 
     return RasterLayer(dataset)
+
+def area_raster(
+    projection: MapProjection | tuple[str, tuple[float, float]],
+) -> YirgacheffeLayer:
+    """Create a raster where the value of each pixel is the area in metres^2 of that pixel in the
+    provided map projection and pixel scale.
+
+    Args:
+        projection: the map projection and pixel scale to use.
+
+    Returns:
+        A geospatial layer that where every pixel value is the geospatial area of that pixel.
+    """
+
+    if projection is None:
+        raise ValueError("Projection must not be none")
+
+    if not isinstance(projection, MapProjection):
+        projection_name, scale_tuple = projection
+        projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
+
+    return AreaPerPixelLayer(projection)
