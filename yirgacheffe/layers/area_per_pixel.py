@@ -41,12 +41,10 @@ class AreaPerPixelLayer(YirgacheffeLayer):
         if projection.crs.area_of_use is not None:
             west, south, east, north = projection.crs.area_of_use.bounds
             name = projection.crs.area_of_use.name
-        elif projection.crs.is_geographic:
+        else:
             # assume a global bounds
             west, south, east, north = -180.0, -90.0, 180.0, 90.0
             name = projection.crs.name
-        else:
-            raise ValueError("CRS for this map projection has no bounds")
 
         x_scale = abs(projection.xstep)
         y_scale = abs(projection.ystep)
