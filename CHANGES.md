@@ -1,3 +1,9 @@
+## v1.12.5 (18/02/2026)
+
+### Changed
+
+* Reduce initial import time.
+
 ## v1.12.4 (12/02/2026)
 
 ### Added
