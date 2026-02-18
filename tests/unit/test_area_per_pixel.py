@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import yirgacheffe as yg
 
@@ -118,7 +120,7 @@ def test_non_global_area() -> None:
         assert (result == 1_000_000).all()
 
 
-def test_with_no_bounds_in_tiff() -> None:
+def test_with_no_bounds_in_tiff_geographic() -> None:
     # This is based on using real GeoTIFFs that come with no BBOX in their projection
     # description, which caused our original implementation as PYPROJ reports
     # the bounds as None.
@@ -131,3 +133,41 @@ def test_with_no_bounds_in_tiff() -> None:
         assert area_raster.map_projection == projection
         assert area_raster.window == yg.Window(0, 0, 36, 18)
         assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
+
+
+def test_with_no_bounds_in_tiff_nongeographic() -> None:
+    # This is based on using real GeoTIFFs that come with no BBOX in their projection
+    # description, which caused our original implementation as PYPROJ reports
+    # the bounds as None.
+    failing_wkt = 'PROJCRS["World_Mollweide",BASEGEOGCRS["WGS 84",DATUM["World Geodetic System 1984",ELLIPSOID["WGS 84",6378137,298.257223563,LENGTHUNIT["metre",1]],ID["EPSG",6326]],PRIMEM["Greenwich",0,ANGLEUNIT["Degree",0.0174532925199433]]],CONVERSION["unnamed",METHOD["Mollweide"],PARAMETER["Longitude of natural origin",0,ANGLEUNIT["Degree",0.0174532925199433],ID["EPSG",8802]],PARAMETER["False easting",0,LENGTHUNIT["metre",1],ID["EPSG",8806]],PARAMETER["False northing",0,LENGTHUNIT["metre",1],ID["EPSG",8807]]],CS[Cartesian,2],AXIS["easting",east,ORDER[1],LENGTHUNIT["metre",1,ID["EPSG",9001]]],AXIS["northing",north,ORDER[2],LENGTHUNIT["metre",1,ID["EPSG",9001]]]]' # pylint: disable=C0301
+    projection = yg.MapProjection(failing_wkt, 10.0, -10.0)
+    assert projection.crs.area_of_use is None
+
+    # from https://epsg.io/54009 we know:
+    west = -18040095.7
+    south = -9020047.85
+    east = 18040095.7
+    north = 9020047.85
+
+    # The rounding is a little off here as the hard numbers above
+    # don't quite match the version we programatically generate with
+    # pyproj in the AreaPerPixelLayer constructor. Really Area and Window
+    # need an "is_close" type method.
+    expected_window = yg.Window(
+        0, 0,
+        math.ceil((east - west) / 10),
+        math.floor((north - south) / 10),
+    )
+    expected_area = yg.Area(
+        left=math.floor(west / 10) * 10,
+        top=math.floor(north / 10) * 10,
+        right=math.ceil(east / 10) * 10,
+        bottom=math.floor(south / 10) * 10,
+        projection=projection,
+    )
+
+    # But this is a geographic CRS, so we can assume it is global
+    with yg.area_raster(projection) as area_raster:
+        assert area_raster.map_projection == projection
+        assert area_raster.window == expected_window
+        assert area_raster.area == expected_area

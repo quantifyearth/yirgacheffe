@@ -4,6 +4,10 @@
 
 * Reduce initial import time.
 
+### Fixed
+
+* Make area per pixel layer work with GeoTiffs with non-geographic projections that lack bounds in the projection description.
+
 ## v1.12.4 (12/02/2026)
 
 ### Added
