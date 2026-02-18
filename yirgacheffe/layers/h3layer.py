@@ -3,13 +3,17 @@ from __future__ import annotations
 from math import ceil, floor
 from typing import Any
 
-import h3
+import lazy_loader as lazy # type: ignore
 import numpy as np
 
 from .._datatypes import Area, MapProjection, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
+
+# H3 is relatively slow to import, which was adding reasonably to
+# the import time for yirgacheffe, so make it lazy
+h3 = lazy.load('h3')
 
 class H3CellLayer(YirgacheffeLayer):
 

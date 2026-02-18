@@ -2,10 +2,13 @@ from __future__ import annotations
 import math
 from functools import lru_cache
 
-import pyproj
-from pyproj import CRS
+import lazy_loader as lazy # type: ignore
 
 from .pixelscale import PixelScale
+
+# Pyproj is relatively slow to import, which was adding reasonably to
+# the import time for yirgacheffe, so make it lazy
+pyproj = lazy.load('pyproj')
 
 # As per https://xkcd.com/2170/, we need to stop caring about floating point
 # accuracy at some point as it becomes problematic.
@@ -27,7 +30,7 @@ MINIMAL_DEGREE_OF_INTEREST = MINIMAL_DISTANCE_OF_INTEREST_IN_M / DISTANCE_PER_DE
 # that makes 1600 rasters take 72 seconds without this fix, and 2 seconds with it.
 @lru_cache(maxsize=128)
 def _get_projection_string(provided_name: str) -> str:
-    crs = CRS.from_string(provided_name)
+    crs = pyproj.CRS.from_string(provided_name)
     epsg = crs.to_epsg()
     if epsg is not None:
         return f"EPSG:{epsg}"
@@ -64,7 +67,7 @@ class MapProjection:
 
     def __init__(self, projection_string: str, xstep: float, ystep: float) -> None:
         try:
-            self.crs = CRS.from_string(projection_string)
+            self.crs = pyproj.CRS.from_string(projection_string)
         except pyproj.exceptions.CRSError as exc:
             raise ValueError(f"Invalid projection: {projection_string}") from exc
         self.xstep = xstep
