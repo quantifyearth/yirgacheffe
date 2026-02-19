@@ -1,3 +1,9 @@
+## v1.12.6 (19/02/2026)
+
+### Changed
+
+* If the indicates parallelism should be used, tell GDAL to use multiple threads also, significantly improving LZW compression performance.
+
 ## v1.12.5 (18/02/2026)
 
 ### Changed

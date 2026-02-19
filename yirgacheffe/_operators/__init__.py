@@ -15,7 +15,7 @@ from collections.abc import Callable
 from contextlib import ExitStack, nullcontext
 from enum import Enum
 from functools import reduce
-from multiprocessing import Process, Semaphore
+from multiprocessing import Process, Semaphore, cpu_count
 from multiprocessing.synchronize import Semaphore as SemaphoreType
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
@@ -1350,6 +1350,17 @@ class LayerOperation(LayerMathMixin):
             'vsistdout', 'vsisubfile', 'vsiparse', 'vsicached', 'vsicrypt',
         ]
 
+        # GDAL TIFF compression is a significant bottleneck, and threading really helps. Yirgacheffe otherwise
+        # will parallel compute a block of data, and then wait as a single thread does the GDAL TIFF compression
+        # which is very, very slow without multithreading. Because they operate in turn, we can give all the cores
+        # to GDAL as when it's active we're not using them and vice versa.
+        gdal_tiff_threads = None
+        if parallelism:
+            if isinstance(parallelism, bool):
+                gdal_tiff_threads = cpu_count()
+            else:
+                gdal_tiff_threads = parallelism
+
         context = nullcontext(filename) if is_vsi_based else tempfile.NamedTemporaryFile(dir=target_dir, delete=False) # pylint: disable=R1732
         with context as tempory_file:
             # Local import due to circular dependancy
@@ -1360,6 +1371,7 @@ class LayerOperation(LayerMathMixin):
                 filename=inner_filename, # type: ignore
                 nodata=nodata,
                 sparse=sparse,
+                threads=gdal_tiff_threads
             ) as layer:
                 if parallelism is None:
                     result = self.save(layer, and_sum=and_sum, callback=callback)
