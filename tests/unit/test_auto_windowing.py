@@ -399,3 +399,7 @@ def test_parallel_save_windows() -> None:
         )
         actual = result.read_array(0, 0, 4, 4)
         assert (expected == actual).all()
+
+
+def test_mult_by_constant() -> None:
+    pass
