@@ -69,7 +69,7 @@ class LayerConstant:
     def area(self) -> Area:
         return Area.world()
 
-    def _get_operation_area(self, _projection) -> Area:
+    def _get_operation_area(self, _projection, _force_union, top_level) -> Area:
         return Area.world()
 
 class LayerMathMixin:
@@ -637,30 +637,38 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def area(self) -> Area:
-        return self._get_operation_area(self.map_projection)
+        return self._get_operation_area(self.map_projection, top_level=True)
 
-    def _get_operation_area(self, projection: MapProjection | None) -> Area:
-        lhs_area = self.lhs._get_operation_area(projection)
+    def _get_operation_area(self, projection: MapProjection | None, force_union: bool = False, top_level=True) -> Area:
+        lhs_area = self.lhs._get_operation_area(projection, force_union, top_level=False)
         try:
-            rhs_area = self.rhs._get_operation_area(projection)
+            rhs_area = self.rhs._get_operation_area(projection, force_union, top_level=False)
         except AttributeError:
             rhs_area = None
         try:
-            other_area = self.other._get_operation_area(projection)
+            other_area = self.other._get_operation_area(projection, force_union, top_level=False)
         except AttributeError:
             other_area = None
 
-        all_areas = [x for x in [lhs_area, rhs_area, other_area] if (x is not None) and (not x.is_world)]
+        all_areas = [x for x in [lhs_area, rhs_area, other_area] if (x is not None)]
+        if force_union:
+            all_areas = [x for x in all_areas if not x.is_world]
 
-        match self.window_op:
+        window_op = WindowOperation.UNION if force_union else self.window_op
+        match window_op:
             case WindowOperation.NONE:
-                return all_areas[0]
+                area = all_areas[0]
             case WindowOperation.INTERSECTION:
-                return reduce(pyoperator.and_, all_areas)
+                area = reduce(pyoperator.and_, all_areas)
             case WindowOperation.UNION:
-                return reduce(pyoperator.or_, all_areas)
+                area = reduce(pyoperator.or_, all_areas)
             case _:
                 raise RuntimeError("Should not be reached")
+
+        if top_level and area.is_world:
+            return self._get_operation_area(projection, True)
+        else:
+            return area
 
     @property
     @deprecation.deprecated(
@@ -689,6 +697,7 @@ class LayerOperation(LayerMathMixin):
             raise AttributeError("No window without projection")
         area = self._get_operation_area(projection)
         assert area is not None
+        assert not area.is_world
 
         xoff, yoff = projection.round_down_pixels(
             area.left / projection.xstep,
