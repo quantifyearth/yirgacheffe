@@ -44,8 +44,6 @@ class WindowOperation(Enum):
     NONE = 1
     UNION = 2
     INTERSECTION = 3
-    LEFT = 4
-    RIGHT = 5
 
 class LayerConstant:
     def __init__(self, val):
@@ -643,11 +641,6 @@ class LayerOperation(LayerMathMixin):
         match self.window_op:
             case WindowOperation.NONE:
                 return all_areas[0]
-            case WindowOperation.LEFT:
-                return lhs_area
-            case WindowOperation.RIGHT:
-                assert rhs_area is not None
-                return rhs_area
             case WindowOperation.INTERSECTION:
                 return reduce(pyoperator.and_, all_areas)
             case WindowOperation.UNION:
