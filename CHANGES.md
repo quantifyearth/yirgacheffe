@@ -1,3 +1,9 @@
+## v1.12.7 (25/02/2026)
+
+### Added
+
+* Added unary negative and positive operator.
+
 ## v1.12.6 (19/02/2026)
 
 ### Changed

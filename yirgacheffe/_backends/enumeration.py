@@ -50,6 +50,8 @@ class operators(Enum):
     RREMAINDER = 42
     RPOW = 43
     UNIQUE = 44
+    NEG = 45
+    POS = 46
 
 class dtype(Enum):
     """Represents the type of data returned by a layer.
