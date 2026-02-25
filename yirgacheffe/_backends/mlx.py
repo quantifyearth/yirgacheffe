@@ -250,4 +250,6 @@ operator_map: dict[op, Callable] = {
     op.RREMAINDER: mx.array.__rmod__,
     op.RPOW: mx.array.__rpow__,
     op.UNIQUE: unique,
+    op.NEG: mx.array.__neg__,
+    op.POS: lambda x: x,
 }

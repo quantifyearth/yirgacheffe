@@ -204,6 +204,20 @@ class LayerMathMixin:
             window_op=WindowOperation.NONE,
         )
 
+    def __neg__(self):
+        return LayerOperation(
+            self,
+            op.NEG,
+            window_op=WindowOperation.NONE,
+        )
+
+    def __pos__(self):
+        return LayerOperation(
+            self,
+            op.POS,
+            window_op=WindowOperation.NONE,
+        )
+
     def floor(self):
         return LayerOperation(
             self,

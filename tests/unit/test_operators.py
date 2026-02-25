@@ -2180,3 +2180,23 @@ def test_all_layers_multiple() -> None:
     result = calculated_layer.read_array(0, 0, 2, 2)
     expected = np.array([[True, False], [False, False]])
     assert (expected == result).all()
+
+
+def test_unary_negative() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data, (0, 0), projection) as layer:
+        calc = -layer
+        result = calc.read_array(0, 0, 4, 2)
+        expected = -data
+        assert (expected == result).all()
+
+
+def test_unary_positive() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data, (0, 0), projection) as layer:
+        calc = +layer
+        result = calc.read_array(0, 0, 4, 2)
+        expected = +data
+        assert (expected == result).all()

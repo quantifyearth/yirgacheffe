@@ -180,4 +180,6 @@ operator_map: dict[op, Callable] = {
     op.RPOW: np.ndarray.__rpow__,
     # pylint: enable=no-member
     op.UNIQUE: np.unique,
+    op.NEG: np.ndarray.__neg__,
+    op.POS: np.ndarray.__pos__,
 }
