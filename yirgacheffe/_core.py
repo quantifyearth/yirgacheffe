@@ -1,5 +1,7 @@
 from __future__ import annotations
-
+import os
+import tempfile
+from multiprocessing import cpu_count
 from pathlib import Path
 from typing import Sequence
 
@@ -283,3 +285,100 @@ def area_raster(
         projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
 
     return AreaPerPixelLayer(projection)
+
+def to_geotiff(
+    filename: Path | str,
+    bands: Sequence[YirgacheffeLayer],
+    labels: list[str] | None = None,
+    parallelism: int | bool | None = None,
+    nodata: float | int | None = None,
+    sparse: bool = False,
+) -> None:
+    """Save one or more results to a GeoTIFF file.
+
+    Multiple results will be written as multiple bands in order. If labels are provided those will be
+    assigned to the bands in the same order.
+
+    All layers provided must be of the same map projection, pixel size, and data type. If necessary
+    you can cast your layers using `astype` before passing them to this function.
+
+    Args:
+        filename: The name of the file to create.
+        bands: A list of layers to store.
+        labels: An optional list of band labels.
+        parallelism: If passed, attempt to use multiple CPU cores up to the number provided, or if set to True,
+            yirgacheffe will pick a sensible value.
+        nodata: Nominate a value to be stored as nodata in the result.
+        sparse: If True then save a sparse GeoTIFF as per GDAL's extension to the GeoTIFF standard.
+    """
+    if not bands:
+        raise ValueError("Expected one or more layers to be written")
+
+    if sparse and nodata is None:
+        raise ValueError("Nodata value must be provided for sparse GeoTIFFs")
+
+    layer_list = list(bands)
+    first_layer = layer_list[0]
+    for layer in layer_list[1:]:
+        if layer.map_projection != first_layer.map_projection:
+            raise ValueError("All layers must have the same map projection")
+        if layer.datatype != first_layer.datatype:
+            raise TypeError("All layers must have same data type. Use astype to explicitly cast layers.")
+
+    if labels is not None and len(layer_list) != len(labels):
+        raise ValueError("If labels are provided there must be the same number as there are layers")
+
+    typed_filename = Path(filename)
+
+    # We want to write to a tempfile before we move the result into place, but we can't use
+    # the actual $TMPDIR as that might be on a different device, and so we use a file next to where
+    # the final file will be, so we just need to rename the file at the end, not move it. But for special cases,
+    # like GDAL's vsimem system we should not do this at all.
+    target_dir = typed_filename.parent
+    target_dir_parts = target_dir.parts
+    is_vsi_based = len(target_dir_parts) == 2 and target_dir_parts[0] =='/' and target_dir_parts[1] in [
+        'vsimem', 'vsizip', 'vsigzip', 'vsi7z', 'vsirar', 'vsitar', 'vsistdin',
+        'vsistdout', 'vsisubfile', 'vsiparse', 'vsicached', 'vsicrypt',
+    ]
+
+    # This is a bit icky whilst set_window_for... is a public API, but it shouldn't really be in use
+    union_area = YirgacheffeLayer.find_union(layer_list)
+    for layer in layer_list:
+        layer.set_window_for_union(union_area)
+
+    # GDAL TIFF compression is a significant bottleneck, and threading really helps. Yirgacheffe otherwise
+    # will parallel compute a block of data, and then wait as a single thread does the GDAL TIFF compression
+    # which is very, very slow without multithreading. Because they operate in turn, we can give all the cores
+    # to GDAL as when it's active we're not using them and vice versa.
+    gdal_tiff_threads = None
+    if parallelism:
+        if isinstance(parallelism, bool):
+            gdal_tiff_threads = cpu_count()
+        else:
+            gdal_tiff_threads = parallelism
+
+    if not is_vsi_based:
+        os.makedirs(target_dir, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(dir=target_dir, delete=False) as tempory_file:
+        with RasterLayer.empty_raster_layer_like(
+            first_layer,
+            filename=tempory_file.name,
+            nodata=nodata,
+            sparse=sparse,
+            threads=gdal_tiff_threads,
+            bands=len(layer_list),
+        ) as output:
+            for index, layer in enumerate(layer_list):
+                if parallelism is None:
+                    _ = layer.save(output, band=index + 1)
+                else:
+                    if isinstance(parallelism, bool):
+                        # Parallel save treats None as "work it out"
+                        parallelism = None
+                    _ = layer.parallel_save(output, parallelism=parallelism, band=index + 1)
+                if labels:
+                    output._dataset.GetRasterBand(index + 1).SetDescription(labels[index])
+
+        if not is_vsi_based:
+            os.rename(src=tempory_file.name, dst=typed_filename)

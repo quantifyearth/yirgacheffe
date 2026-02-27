@@ -1,3 +1,9 @@
+## v1.13.0 (27/02/2026)
+
+### Added
+
+* Added module level `to_geotiff` which allows creation of multiband geotiffs.
+
 ## v1.12.7 (25/02/2026)
 
 ### Added
