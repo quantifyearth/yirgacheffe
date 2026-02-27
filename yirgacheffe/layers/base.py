@@ -125,7 +125,7 @@ class YirgacheffeLayer(LayerMathMixin):
         if not all(projections[0] == x for x in projections[1:]):
             raise ValueError("Not all layers are at the same projection or pixel scale")
 
-        layer_areas = [x._get_operation_area() for x in layers]
+        layer_areas = [x._get_operation_area(projections[0]) for x in layers]
         return reduce(operator.and_, layer_areas)
 
     @staticmethod
@@ -141,7 +141,7 @@ class YirgacheffeLayer(LayerMathMixin):
         if not all(projections[0] == x for x in projections[1:]):
             raise ValueError("Not all layers are at the same projectin or pixel scale")
 
-        layer_areas = [x._get_operation_area() for x in layers]
+        layer_areas = [x._get_operation_area(projections[0]) for x in layers]
         # This removal of global layers is to stop constant layers forcing everything to be global
         return reduce(operator.or_, [x for x in layer_areas if not x.is_world])
 

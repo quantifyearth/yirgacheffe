@@ -1048,9 +1048,8 @@ class LayerOperation(LayerMathMixin):
 
         if (computation_window.xsize != destination_window.xsize) \
                 or (computation_window.ysize != destination_window.ysize):
-            raise ValueError((f"Destination raster window size does not match input raster window size: "
-                f"{(destination_window.xsize, destination_window.ysize)} vs "
-                f"{(computation_window.xsize, computation_window.ysize)}"))
+            computation_window = destination_window
+            computation_area = destination_layer.area
 
         total = None
 

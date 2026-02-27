@@ -4,6 +4,10 @@
 
 * Added module level `to_geotiff` which allows creation of multiband geotiffs.
 
+### Changed
+
+* If you provide a calculation to an output layer that is a different size, don't error, but use the output size. This in theory should not be a change if you've only ever used newer APIs (1.7 and up).
+
 ## v1.12.7 (25/02/2026)
 
 ### Added

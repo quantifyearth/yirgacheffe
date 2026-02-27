@@ -341,10 +341,7 @@ def to_geotiff(
         'vsistdout', 'vsisubfile', 'vsiparse', 'vsicached', 'vsicrypt',
     ]
 
-    # This is a bit icky whilst set_window_for... is a public API, but it shouldn't really be in use
     union_area = YirgacheffeLayer.find_union(layer_list)
-    for layer in layer_list:
-        layer.set_window_for_union(union_area)
 
     # GDAL TIFF compression is a significant bottleneck, and threading really helps. Yirgacheffe otherwise
     # will parallel compute a block of data, and then wait as a single thread does the GDAL TIFF compression
@@ -360,10 +357,17 @@ def to_geotiff(
     if not is_vsi_based:
         os.makedirs(target_dir, exist_ok=True)
 
+    projection = first_layer.map_projection
+    if projection is None:
+        raise ValueError("Can't save layours without projection")
+
     with tempfile.NamedTemporaryFile(dir=target_dir, delete=False) as tempory_file:
-        with RasterLayer.empty_raster_layer_like(
-            first_layer,
-            filename=tempory_file.name,
+        with RasterLayer.empty_raster_layer(
+            union_area,
+            projection.scale,
+            first_layer.datatype,
+            tempory_file.name,
+            projection.name,
             nodata=nodata,
             sparse=sparse,
             threads=gdal_tiff_threads,
