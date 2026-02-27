@@ -240,10 +240,14 @@ class RasterLayer(YirgacheffeLayer):
             # With exceptions on GDAL now returns the wrong (IMHO) exception
             raise FileNotFoundError(filename) from exc
         try:
-            _ = dataset.GetRasterBand(band)
+            band_name = dataset.GetRasterBand(band).GetDescription()
         except RuntimeError as exc:
             raise InvalidRasterBand(band) from exc
-        return cls(dataset, str(filename), band, ignore_nodata)
+
+        if not band_name:
+            band_name = str(filename)
+
+        return cls(dataset, band_name, band, ignore_nodata)
 
     def __init__(
         self,
