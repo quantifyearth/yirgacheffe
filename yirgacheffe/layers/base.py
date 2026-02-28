@@ -96,7 +96,12 @@ class YirgacheffeLayer(LayerMathMixin):
         else:
             return self._underlying_area
 
-    def _get_operation_area(self, projection: MapProjection | None = None) -> Area:
+    def _get_operation_area(
+        self,
+        projection: MapProjection | None = None,
+        _force_union: bool = False,
+        top_level: bool = False, # pylint: disable=W0613
+    ) -> Area:
         self_projection = self.map_projection
         if self_projection is not None and projection is not None and self_projection != projection:
             raise ValueError("Calculation projection does not match layer projection")
