@@ -420,6 +420,11 @@ def test_multiple_subexpressions_by_constant() -> None:
 
         # But now if we modify the two areas by a global constant
         # we expect this to work
-        expected_win = (layer1 + 1) * (layer2 + 1)
-        result = expected_win.sum()
-        assert result == 42
+        expected_success = (layer1 + 1) * (layer2 + 1)
+
+        expected_window = yg.Window(0, 10, 14, 14)
+        assert expected_success.window == expected_window
+
+        result = expected_success.sum()
+        expected = (14 * 14) + (16 * 2)
+        assert result == expected
