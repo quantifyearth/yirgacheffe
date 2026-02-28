@@ -368,7 +368,12 @@ class VectorLayer(YirgacheffeLayer):
         super().__init__(area, name=name)
 
 
-    def _get_operation_area(self, projection: MapProjection | None = None, _force_union: bool = False, top_level: bool = False) -> Area:
+    def _get_operation_area(
+        self,
+        projection: MapProjection | None = None,
+        _force_union: bool = False,
+        top_level: bool = False, # pylint:disable = W0613
+    ) -> Area:
         if self.map_projection is not None and projection is not None and self.map_projection != projection:
             raise ValueError("Calculation projection does not match layer projection")
 

@@ -69,7 +69,7 @@ class LayerConstant:
     def area(self) -> Area:
         return Area.world()
 
-    def _get_operation_area(self, _projection, _force_union, top_level) -> Area:
+    def _get_operation_area(self, _projection, _force_union, top_level) -> Area: # pylint: disable=W0613
         return Area.world()
 
 class LayerMathMixin:
@@ -650,7 +650,7 @@ class LayerOperation(LayerMathMixin):
         except AttributeError:
             other_area = None
 
-        all_areas = [x for x in [lhs_area, rhs_area, other_area] if (x is not None)]
+        all_areas = [x for x in [lhs_area, rhs_area, other_area] if x is not None]
         if force_union:
             all_areas = [x for x in all_areas if not x.is_world]
 
