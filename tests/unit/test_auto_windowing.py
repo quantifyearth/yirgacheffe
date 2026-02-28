@@ -399,3 +399,27 @@ def test_parallel_save_windows() -> None:
         )
         actual = result.read_array(0, 0, 4, 4)
         assert (expected == actual).all()
+
+
+def test_multiple_subexpressions_by_constant() -> None:
+    # This mimics an issue I hit with the LIFE pipeline whereby you had
+    # two disjoint areas added to a global constant and then subtracted. In the
+    # old code that would complain as the area of the global constants was clipped
+    # to the subexpressions before the addition, whereas we should keep the global
+    # nature of the constant layers in this case.
+    projection = yg.MapProjection("esri:54009", 1.0, -1.0)
+    data = np.full((4, 4), 1)
+    with (
+        yg.from_array(data, (0, 0), projection) as layer1,
+        yg.from_array(data, (10, 10), projection) as layer2,
+    ):
+        # if we just add these layers it should fail
+        expected_fail = layer1 * layer2
+        with pytest.raises(ValueError):
+            _ = expected_fail.sum()
+
+        # But now if we modify the two areas by a global constant
+        # we expect this to work
+        expected_win = (layer1 + 1) * (layer2 + 1)
+        result = expected_win.sum()
+        assert result == 42
