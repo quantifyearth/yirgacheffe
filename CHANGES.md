@@ -3,6 +3,7 @@
 ### Added
 
 * Added module level `to_geotiff` which allows creation of multiband geotiffs.
+* Support for "sum" resampling method on reprojected layers.
 
 ### Changed
 

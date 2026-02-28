@@ -44,6 +44,7 @@ class ResamplingMethod(Enum):
     Mode = "mode"
     Nearest = "nearest"
     RootMeanSquare = "rms"
+    Sum = "sum"
 
     # The commented out ones fail tests due to Yirgacheffe's chunking
     # behaviour and require more work.
@@ -54,7 +55,6 @@ class ResamplingMethod(Enum):
     # Lanczos = "lanczos"
     # Q1 = "q1"
     # Q2 = "q2"
-    # Sum = "sum"
 
 class ReprojectedRasterLayer(YirgacheffeLayer):
     """ReprojectedRasterLayer dynamically reprojects a layer.
@@ -144,7 +144,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         # Mode resampling requires a larger buffer (3 pixels) to gather sufficient samples for determining
         # the most frequent value, whereas other methods just need a single pixel. Hopefully testing will
         # have sufficient coverage that we catch these as we expand the methods list.
-        if self._method in {ResamplingMethod.Mode}:
+        if self._method in {ResamplingMethod.Mode, ResamplingMethod.Sum}:
             expand_buffer = 3
         else:
             expand_buffer = 1
@@ -153,12 +153,15 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         src_projection = self._src.map_projection
         assert src_projection is not None
         src_read_area = read_area.reproject(src_projection)
-        # Note we should never go over the edge of the original
+
+        # Note we should typically never go over the edge of the original
         # source material, as different resampling methods react differently to
         # the synthesised zeros that this will admit (e.g., one of min and max
         # would likely get confused).
         expanded_src_read_area = \
-            src_read_area.grow(expand_buffer * src_projection.xstep) & self._src.area
+            src_read_area.grow(expand_buffer * src_projection.xstep)
+        if self._method not in {ResamplingMethod.Sum}:
+            expanded_src_read_area = expanded_src_read_area & self._src.area
 
         # We need some ID that stops us with other parallel workers potentially in the
         # VSIMEM space, so we use a uuid4 that should be close enough to collision free

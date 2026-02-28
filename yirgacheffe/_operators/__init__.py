@@ -872,8 +872,8 @@ class LayerOperation(LayerMathMixin):
 
         for yoffset in range(0, computation_window.ysize, self.ystep):
             cse_cache.reset_cache()
-            step=self.ystep
-            if yoffset+step > computation_window.ysize:
+            step = self.ystep
+            if yoffset + step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
             chunk = self._eval(
                 cse_cache,
