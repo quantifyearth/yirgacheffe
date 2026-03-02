@@ -11,6 +11,10 @@
 * If you provide a calculation to an output layer that is a different size, don't error, but use the output size. This in theory should not be a change if you've only ever used newer APIs (1.7 and up).
 * If you have a global constant layer on an operator that has union composition (addition) keep with the global layer until the top of the expression, then crop to real data.
 
+### Fixed
+
+* If an expression throws a runtime error in the calculation during `to_geotiff`, it now cleans up the temporary file that was being written.
+
 ## v1.12.7 (25/02/2026)
 
 ### Added
