@@ -12,7 +12,7 @@ import tempfile
 import time
 import types
 from collections.abc import Callable
-from contextlib import ExitStack, nullcontext
+from contextlib import ExitStack, nullcontext, suppress
 from enum import Enum
 from functools import reduce
 from multiprocessing import Process, Semaphore, cpu_count
@@ -139,6 +139,12 @@ class LayerMathMixin:
 
     def __or__(self, other):
         return LayerOperation(self, op.OR, other, window_op=WindowOperation.UNION)
+
+    def __lshift__(self, other):
+        return LayerOperation(self, op.LSHIFT, other, window_op=WindowOperation.INTERSECTION)
+
+    def __rshift__(self, other):
+        return LayerOperation(self, op.RSHIFT, other, window_op=WindowOperation.INTERSECTION)
 
     def _eval(
         self,
@@ -1381,24 +1387,29 @@ class LayerOperation(LayerMathMixin):
             # Local import due to circular dependancy
             from yirgacheffe.layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
             inner_filename = tempory_file if is_vsi_based else tempory_file.name
-            with RasterLayer.empty_raster_layer_like(
-                self,
-                filename=inner_filename, # type: ignore
-                nodata=nodata,
-                sparse=sparse,
-                threads=gdal_tiff_threads
-            ) as layer:
-                if parallelism is None:
-                    result = self.save(layer, and_sum=and_sum, callback=callback)
-                else:
-                    if isinstance(parallelism, bool):
-                        # Parallel save treats None as "work it out"
-                        parallelism = None
-                    result = self.parallel_save(layer, and_sum=and_sum, callback=callback, parallelism=parallelism)
+            try:
+                with RasterLayer.empty_raster_layer_like(
+                    self,
+                    filename=inner_filename, # type: ignore
+                    nodata=nodata,
+                    sparse=sparse,
+                    threads=gdal_tiff_threads
+                ) as layer:
+                    if parallelism is None:
+                        result = self.save(layer, and_sum=and_sum, callback=callback)
+                    else:
+                        if isinstance(parallelism, bool):
+                            # Parallel save treats None as "work it out"
+                            parallelism = None
+                        result = self.parallel_save(layer, and_sum=and_sum, callback=callback, parallelism=parallelism)
 
-            if not is_vsi_based:
-                os.makedirs(target_dir, exist_ok=True)
-                os.rename(src=tempory_file.name, dst=filename)
+                if not is_vsi_based:
+                    os.makedirs(target_dir, exist_ok=True)
+                    os.rename(src=tempory_file.name, dst=filename)
+            except:
+                with suppress(OSError):
+                    os.unlink(tempory_file.name)
+                raise
 
         return result
 

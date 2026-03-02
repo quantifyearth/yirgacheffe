@@ -52,6 +52,8 @@ class operators(Enum):
     UNIQUE = 44
     NEG = 45
     POS = 46
+    LSHIFT = 47
+    RSHIFT = 48
 
 class dtype(Enum):
     """Represents the type of data returned by a layer.

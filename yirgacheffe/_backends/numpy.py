@@ -182,4 +182,6 @@ operator_map: dict[op, Callable] = {
     op.UNIQUE: np.unique,
     op.NEG: np.ndarray.__neg__,
     op.POS: np.ndarray.__pos__,
+    op.LSHIFT: np.ndarray.__lshift__,
+    op.RSHIFT: np.ndarray.__rshift__,
 }
