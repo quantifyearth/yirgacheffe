@@ -1,4 +1,5 @@
 from __future__ import annotations
+import contextlib
 import os
 import tempfile
 from multiprocessing import cpu_count
@@ -362,27 +363,32 @@ def to_geotiff(
         raise ValueError("Can't save layours without projection")
 
     with tempfile.NamedTemporaryFile(dir=target_dir, delete=False) as tempory_file:
-        with RasterLayer.empty_raster_layer(
-            union_area,
-            projection.scale,
-            first_layer.datatype,
-            tempory_file.name,
-            projection.name,
-            nodata=nodata,
-            sparse=sparse,
-            threads=gdal_tiff_threads,
-            bands=len(layer_list),
-        ) as output:
-            for index, layer in enumerate(layer_list):
-                if parallelism is None:
-                    _ = layer.save(output, band=index + 1)
-                else:
-                    if isinstance(parallelism, bool):
-                        # Parallel save treats None as "work it out"
-                        parallelism = None
-                    _ = layer.parallel_save(output, parallelism=parallelism, band=index + 1)
-                if labels:
-                    output._dataset.GetRasterBand(index + 1).SetDescription(labels[index])
+        try:
+            with RasterLayer.empty_raster_layer(
+                union_area,
+                projection.scale,
+                first_layer.datatype,
+                tempory_file.name,
+                projection.name,
+                nodata=nodata,
+                sparse=sparse,
+                threads=gdal_tiff_threads,
+                bands=len(layer_list),
+            ) as output:
+                for index, layer in enumerate(layer_list):
+                    if parallelism is None:
+                        _ = layer.save(output, band=index + 1)
+                    else:
+                        if isinstance(parallelism, bool):
+                            # Parallel save treats None as "work it out"
+                            parallelism = None
+                        _ = layer.parallel_save(output, parallelism=parallelism, band=index + 1)
+                    if labels:
+                        output._dataset.GetRasterBand(index + 1).SetDescription(labels[index])
 
-        if not is_vsi_based:
-            os.rename(src=tempory_file.name, dst=typed_filename)
+            if not is_vsi_based:
+                os.rename(src=tempory_file.name, dst=typed_filename)
+        except:
+            with contextlib.suppress(OSError):
+                os.unlink(tempory_file.name)
+            raise
