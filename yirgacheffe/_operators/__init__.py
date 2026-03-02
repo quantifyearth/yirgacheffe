@@ -140,6 +140,12 @@ class LayerMathMixin:
     def __or__(self, other):
         return LayerOperation(self, op.OR, other, window_op=WindowOperation.UNION)
 
+    def __lshift__(self, other):
+        return LayerOperation(self, op.LSHIFT, other, window_op=WindowOperation.INTERSECTION)
+
+    def __rshift__(self, other):
+        return LayerOperation(self, op.RSHIFT, other, window_op=WindowOperation.INTERSECTION)
+
     def _eval(
         self,
         cse_cache: CSECacheTable,

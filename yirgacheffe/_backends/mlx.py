@@ -252,4 +252,6 @@ operator_map: dict[op, Callable] = {
     op.UNIQUE: unique,
     op.NEG: mx.array.__neg__,
     op.POS: lambda x: x,
+    op.LSHIFT: mx.array.__lshift__,
+    op.RSHIFT: mx.array.__rshift__,
 }

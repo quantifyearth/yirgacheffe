@@ -2200,3 +2200,51 @@ def test_unary_positive() -> None:
         result = calc.read_array(0, 0, 4, 2)
         expected = +data
         assert (expected == result).all()
+
+
+def test_lshift_by_layer() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    data2 = np.array([[2, 1, 2, 1], [2, 1, 2, 1]])
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (0, 0), projection) as layer2,
+    ):
+        calc = layer1 << layer2
+        result = calc.read_array(0, 0, 4, 2)
+        expected = data1 << data2
+        assert (expected == result).all()
+
+
+def test_rshift_by_layer() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    data2 = np.array([[2, 1, 2, 1], [2, 1, 2, 1]])
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (0, 0), projection) as layer2,
+    ):
+        calc = layer1 >> layer2
+        result = calc.read_array(0, 0, 4, 2)
+        expected = data1 >> data2
+        assert (expected == result).all()
+
+
+def test_lshift_by_const() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data, (0, 0), projection) as layer:
+        calc = layer << 2
+        result = calc.read_array(0, 0, 4, 2)
+        expected = data << 2
+        assert (expected == result).all()
+
+
+def test_rshift_by_const() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data, (0, 0), projection) as layer:
+        calc = layer >> 2
+        result = calc.read_array(0, 0, 4, 2)
+        expected = data >> 2
+        assert (expected == result).all()
