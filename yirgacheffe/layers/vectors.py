@@ -1,4 +1,6 @@
 from __future__ import annotations
+import errno
+import os
 from math import ceil, floor
 from pathlib import Path
 from typing import Any
@@ -260,8 +262,23 @@ class VectorLayer(YirgacheffeLayer):
         try:
             vectors = ogr.Open(filename)
         except RuntimeError as exc:
-            # With exceptions on GDAL now returns the wrong (IMHO) exception
-            raise FileNotFoundError(filename) from exc
+            # With exceptions on GDAL now returns the wrong (IMHO) exception. Note that
+            # other errors, also fall under this class. I try to make the error more
+            # Pythonic here, but I need to check what the error type is
+            #
+            # Examples I have seen:
+            # * RuntimeError('/tmp/asdwqe.tif: No such file or directory') - convert to FileNotFoundError
+            # * RuntimeError('/tmp/asdwqe.tif: Too many open files') - convert to OSError
+            msg = exc.args[0]
+            if msg.endswith(os.strerror(errno.ENOENT)):
+                raise FileNotFoundError(filename) from exc
+            if msg.endswith(os.strerror(errno.EMFILE)):
+                raise OSError(
+                    errno.EMFILE,
+                    os.strerror(errno.EMFILE),
+                    str(filename),
+                ) from exc
+            raise
         layer = vectors.GetLayer()
         if where_filter is not None:
             layer.SetAttributeFilter(where_filter)
