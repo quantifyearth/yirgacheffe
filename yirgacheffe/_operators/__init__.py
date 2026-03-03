@@ -1358,18 +1358,19 @@ class LayerOperation(LayerMathMixin):
         if sparse and nodata is None:
             raise ValueError("Nodata value must be provided for sparse GeoTIFFs")
 
+        typed_filename = Path(filename)
+
         # We want to write to a tempfile before we move the result into place, but we can't use
         # the actual $TMPDIR as that might be on a different device, and so we use a file next to where
         # the final file will be, so we just need to rename the file at the end, not move it. But for special cases,
         # like GDAL's vsimem system we should not do this at all.
-        if isinstance(filename, str):
-            filename = Path(filename)
-        target_dir = filename.parent
-        target_dir_parts = target_dir.parts
+        target_dir_parts = typed_filename.parent.parts
         is_vsi_based = len(target_dir_parts) == 2 and target_dir_parts[0] =='/' and target_dir_parts[1] in [
             'vsimem', 'vsizip', 'vsigzip', 'vsi7z', 'vsirar', 'vsitar', 'vsistdin',
             'vsistdout', 'vsisubfile', 'vsiparse', 'vsicached', 'vsicrypt',
         ]
+        if not is_vsi_based:
+            typed_filename.parent.mkdir(parents=True, exist_ok=True)
 
         # GDAL TIFF compression is a significant bottleneck, and threading really helps. Yirgacheffe otherwise
         # will parallel compute a block of data, and then wait as a single thread does the GDAL TIFF compression
@@ -1382,7 +1383,10 @@ class LayerOperation(LayerMathMixin):
             else:
                 gdal_tiff_threads = parallelism
 
-        context = nullcontext(filename) if is_vsi_based else tempfile.NamedTemporaryFile(dir=target_dir, delete=False) # pylint: disable=R1732
+        context = (
+            nullcontext(typed_filename) if is_vsi_based else
+            tempfile.NamedTemporaryFile(dir=typed_filename.parent, delete=False)  # pylint: disable=R1732
+        )
         with context as tempory_file:
             # Local import due to circular dependancy
             from yirgacheffe.layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
@@ -1404,7 +1408,6 @@ class LayerOperation(LayerMathMixin):
                         result = self.parallel_save(layer, and_sum=and_sum, callback=callback, parallelism=parallelism)
 
                 if not is_vsi_based:
-                    os.makedirs(target_dir, exist_ok=True)
                     os.rename(src=tempory_file.name, dst=filename)
             except:
                 with suppress(OSError):

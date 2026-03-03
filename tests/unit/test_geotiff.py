@@ -25,6 +25,25 @@ def test_save_and_read_simple_geotiff() -> None:
             result = layer.read_array(0, 0, 4, 2)
             assert (result == data).all()
 
+def test_save_and_read_simple_geotiff_no_parent() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filename = Path(tmpdir) / "test" / "test.tif"
+        projection = yg.MapProjection("esri:54009", 100.0, -100.0)
+
+        data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+        with yg.from_array(data, (0, 0), projection) as layer:
+            assert layer.datatype == yg.DataType.Int64
+            layer.to_geotiff(filename)
+
+        with yg.read_raster(filename) as layer:
+            assert layer.area == yg.Area(0, 0, 400.0, -200.0, projection)
+            assert layer.window == yg.Window(0, 0, 4, 2)
+            assert layer.nodata is None
+            assert layer.datatype == yg.DataType.Int64
+
+            result = layer.read_array(0, 0, 4, 2)
+            assert (result == data).all()
+
 def test_save_and_read_nodata_geotiff() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         filename = Path(tmpdir) / "test.tif"
@@ -48,6 +67,24 @@ def test_save_and_read_nodata_geotiff() -> None:
 def test_save_multiband_simple() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         filename = Path(tmpdir) / "test.tif"
+        projection = yg.MapProjection("esri:54009", 100.0, -100.0)
+
+        data = [np.full((4, 4), idx + 1) for idx in range(5)]
+        layers = [yg.from_array(datum, (0, 0), projection) for datum in data]
+        labels = [f"label {idx}" for idx in range(5)]
+
+        yg.to_geotiff(filename, layers, labels)
+
+        for idx in range(5):
+            with yg.read_raster(filename, band=idx + 1) as layer:
+                assert layer.area == layers[idx].area
+                assert layer.name == labels[idx]
+                result = layer.read_array(0, 0, 4, 4)
+                assert (result == data[idx]).all()
+
+def test_save_multiband_simple_no_parent() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filename = Path(tmpdir) / "test" / "test.tif"
         projection = yg.MapProjection("esri:54009", 100.0, -100.0)
 
         data = [np.full((4, 4), idx + 1) for idx in range(5)]

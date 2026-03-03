@@ -1,4 +1,4 @@
-## v1.13.0 (27/02/2026)
+## v1.13.0 (03/03/2026)
 
 ### Added
 
@@ -15,6 +15,7 @@
 ### Fixed
 
 * If an expression throws a runtime error in the calculation during `to_geotiff`, it now cleans up the temporary file that was being written.
+* If creating a file in a directory that doesn't exist, create that directory first. In theory this was already happening but the check was in the wrong place.
 
 ## v1.12.7 (25/02/2026)
 

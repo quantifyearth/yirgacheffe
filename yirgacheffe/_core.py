@@ -335,12 +335,13 @@ def to_geotiff(
     # the actual $TMPDIR as that might be on a different device, and so we use a file next to where
     # the final file will be, so we just need to rename the file at the end, not move it. But for special cases,
     # like GDAL's vsimem system we should not do this at all.
-    target_dir = typed_filename.parent
-    target_dir_parts = target_dir.parts
+    target_dir_parts = typed_filename.parent.parts
     is_vsi_based = len(target_dir_parts) == 2 and target_dir_parts[0] =='/' and target_dir_parts[1] in [
         'vsimem', 'vsizip', 'vsigzip', 'vsi7z', 'vsirar', 'vsitar', 'vsistdin',
         'vsistdout', 'vsisubfile', 'vsiparse', 'vsicached', 'vsicrypt',
     ]
+    if not is_vsi_based:
+        typed_filename.parent.mkdir(parents=True, exist_ok=True)
 
     union_area = YirgacheffeLayer.find_union(layer_list)
 
@@ -355,14 +356,11 @@ def to_geotiff(
         else:
             gdal_tiff_threads = parallelism
 
-    if not is_vsi_based:
-        os.makedirs(target_dir, exist_ok=True)
-
     projection = first_layer.map_projection
     if projection is None:
         raise ValueError("Can't save layours without projection")
 
-    with tempfile.NamedTemporaryFile(dir=target_dir, delete=False) as tempory_file:
+    with tempfile.NamedTemporaryFile(dir=typed_filename.parent, delete=False) as tempory_file:
         try:
             with RasterLayer.empty_raster_layer(
                 union_area,
