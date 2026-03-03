@@ -1,4 +1,5 @@
 import os
+import resource
 import tempfile
 from math import ceil, floor
 from pathlib import Path
@@ -23,6 +24,27 @@ def test_raster_from_nonexistent_file() -> None:
     with pytest.raises(FileNotFoundError):
         _ = yg.read_raster("this_file_does_not_exist.tif")
 
+
+def test_too_many_files() -> None:
+    """This test exists because we have to convert the generic RuntimeError that
+    GDAL throws to the correct for Python OSError"""
+    fd_limit, _ = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.tif"
+        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
+        dataset = gdal_dataset_of_region(area, 0.02, filename=path)
+        dataset.Close()
+        assert os.path.exists(path)
+
+        x = []
+        with pytest.raises(OSError):
+            for _ in range(fd_limit + 1):
+                f = yg.read_raster(path)
+                x.append(f)
+        # Not sure why, but other tests fail if I don't explicitly call this
+        for layer in x:
+            layer.close()
 
 def test_open_raster_file() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
