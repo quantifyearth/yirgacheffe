@@ -1,3 +1,9 @@
+## v1.13.1 (18/03/2026)
+
+### Fixed
+
+* Don't attempt to use float64 for GPU path.
+
 ## v1.13.0 (03/03/2026)
 
 ### Added
