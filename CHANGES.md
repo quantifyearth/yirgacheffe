@@ -1,3 +1,10 @@
+## v1.13.1 (18/03/2026)
+
+### Fixed
+
+* Fix for an issue with GDAL 3.10.1 on Linux whereby we hit deadlock in GDAL when using parallel save in Yirgacheffe. All workers seemed to deadlock in GDAL, which was stopped by disabling GDAL from using multiple threads when invoked by the workers.
+* Don't attempt to use float64 for GPU path.
+
 ## v1.13.0 (03/03/2026)
 
 ### Added

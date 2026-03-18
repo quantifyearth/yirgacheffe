@@ -6,16 +6,19 @@ import math
 import multiprocessing
 import operator as pyoperator
 import os
+import queue
 import resource
+import signal
 import sys
 import tempfile
 import time
+import traceback
 import types
 from collections.abc import Callable
 from contextlib import ExitStack, nullcontext, suppress
 from enum import Enum
 from functools import reduce
-from multiprocessing import Process, Semaphore, cpu_count
+from multiprocessing import Process, Queue, Semaphore, cpu_count
 from multiprocessing.synchronize import Semaphore as SemaphoreType
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
@@ -1101,17 +1104,38 @@ class LayerOperation(LayerMathMixin):
         output_queue : multiprocessing.Queue,
         computation_window : Window,
     ):
-        # The hashing of python objects isn't stable across processes in general, so we have to do
-        # the cache build once per worker
-        cse_cache = CSECacheTable(self, computation_window)
+        # This line tells GDAL not to use any threads when we're in the
+        # child process context (https://gdal.org/en/stable/user/configoptions.html).
+        # We hit an issue whereby we were deadlocking within GDAL for workers without
+        # this option being set on Linux with GDAL 3.10.1. Looking at docs for rasterio
+        # it looks like they've had trouble with GDAL and threading also
+        # https://rasterio.readthedocs.io/en/latest/topics/concurrency.html
+        gdal.SetConfigOption('GDAL_NUM_THREADS', '1')
 
-        backend.init()
+        def crash_handler(signum, frame):
+            logger.critical(
+                "Worker %d (pid %d) caught signal %d:\n%s",
+                index, os.getpid(), signum, "".join(traceback.format_stack(frame))
+            )
+            output_queue.put(None)
+            sys.exit(signum)
 
-        arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf) # type: ignore[var-annotated]
-        projection = self.map_projection
-        # TODO: the `save` method does more sanity checking that parallel save!
-        assert projection is not None
+        signal.signal(signal.SIGSEGV, crash_handler)
+        signal.signal(signal.SIGBUS, crash_handler)
+        signal.signal(signal.SIGABRT, crash_handler)
+
         try:
+            # The hashing of python objects isn't stable across processes in general, so we have to do
+            # the cache build once per worker
+            cse_cache = CSECacheTable(self, computation_window)
+
+            backend.init()
+
+            arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf) # type: ignore[var-annotated]
+            projection = self.map_projection
+            # TODO: the `save` method does more sanity checking that parallel save!
+            assert projection is not None
+
             while True:
                 cse_cache.reset_cache()
 
@@ -1249,84 +1273,96 @@ class LayerOperation(LayerMathMixin):
             resource.setrlimit(resource.RLIMIT_NOFILE, (max_fd_limit, max_fd_limit))
             stack.callback(resource.setrlimit, resource.RLIMIT_NOFILE, (previous_fd_limit, max_fd_limit))
 
-            with multiprocessing.Manager() as manager:
-                with SharedMemoryManager() as smm:
+            with SharedMemoryManager() as smm:
 
-                    mem_sem_cast = []
-                    for _ in range(worker_count):
-                        shared_buf = smm.SharedMemory(size=np_dtype.itemsize * self.ystep * computation_window.xsize)
-                        cast_buf : npt.NDArray = np.ndarray(
-                            (self.ystep, computation_window.xsize),
-                            dtype=np_dtype,
-                            buffer=shared_buf.buf
+                mem_sem_cast = []
+                for _ in range(worker_count):
+                    seg_size = np_dtype.itemsize * self.ystep * computation_window.xsize
+                    shared_buf = smm.SharedMemory(size=seg_size)
+                    cast_buf : npt.NDArray = np.ndarray(
+                        (self.ystep, computation_window.xsize),
+                        dtype=np_dtype,
+                        buffer=shared_buf.buf
+                    )
+                    cast_buf[:] = np.zeros((self.ystep, computation_window.xsize), np_dtype)
+                    mem_sem_cast.append((shared_buf, Semaphore(), cast_buf))
+
+                source_queue: multiprocessing.queues.Queue[tuple[int,int] | None] = Queue()
+                result_queue: multiprocessing.queues.Queue[tuple[int,int,int] | None] = Queue()
+
+                for yoffset in range(0, computation_window.ysize, self.ystep):
+                    step = ((computation_window.ysize - yoffset)
+                        if yoffset+self.ystep > computation_window.ysize
+                        else self.ystep)
+                    source_queue.put((
+                        yoffset,
+                        step
+                    ))
+                for _ in range(worker_count):
+                    source_queue.put(None)
+                result_queue.cancel_join_thread()
+                source_queue.cancel_join_thread()
+
+                if callback:
+                    callback(0.0)
+
+                workers = [Process(target=self._parallel_worker, daemon=True, args=(
+                    i,
+                    mem_sem_cast[i][0],
+                    mem_sem_cast[i][1],
+                    np_dtype,
+                    computation_window.xsize,
+                    source_queue,
+                    result_queue,
+                    computation_window,
+                )) for i in range(worker_count)]
+                for worker in workers:
+                    worker.start()
+
+                sentinal_count = len(workers)
+                retired_blocks = 0
+                while sentinal_count > 0:
+                    try:
+                        res = result_queue.get(timeout=10.0)
+                    except queue.Empty as exc:
+                        failed_children = [w for w in workers if not w.is_alive() and w.exitcode != 0]
+                        if failed_children:
+                            for worker in workers:
+                                worker.kill()
+                            codes = {w.pid: w.exitcode for w in failed_children}
+                            raise RuntimeError(f"Worker(s) died unexpectedly: {codes}") from exc
+                        continue
+
+                    if res is None:
+                        sentinal_count -= 1
+                        continue
+                    index, yoffset, step = res
+                    _, sem, arr = mem_sem_cast[index]
+                    if gdal_band:
+                        gdal_band.WriteArray(
+                            arr[0:step],
+                            destination_window.xoff,
+                            yoffset + destination_window.yoff,
                         )
-                        cast_buf[:] = np.zeros((self.ystep, computation_window.xsize), np_dtype)
-                        mem_sem_cast.append((shared_buf, Semaphore(), cast_buf))
-
-                    source_queue = manager.Queue()
-                    result_queue = manager.Queue()
-
-                    for yoffset in range(0, computation_window.ysize, self.ystep):
-                        step = ((computation_window.ysize - yoffset)
-                            if yoffset+self.ystep > computation_window.ysize
-                            else self.ystep)
-                        source_queue.put((
-                            yoffset,
-                            step
-                        ))
-                    for _ in range(worker_count):
-                        source_queue.put(None)
-
+                    if and_sum:
+                        chunk_sum = np.sum(np.array(arr[0:step]).astype(np.float64))
+                        total = chunk_sum if total is None else total + chunk_sum
+                    sem.release()
+                    retired_blocks += 1
                     if callback:
-                        callback(0.0)
+                        callback(retired_blocks / work_blocks)
 
-                    workers = [Process(target=self._parallel_worker, args=(
-                        i,
-                        mem_sem_cast[i][0],
-                        mem_sem_cast[i][1],
-                        np_dtype,
-                        computation_window.xsize,
-                        source_queue,
-                        result_queue,
-                        computation_window,
-                    )) for i in range(worker_count)]
-                    for worker in workers:
-                        worker.start()
-
-                    sentinal_count = len(workers)
-                    retired_blocks = 0
-                    while sentinal_count > 0:
-                        res = result_queue.get()
-                        if res is None:
-                            sentinal_count -= 1
-                            continue
-                        index, yoffset, step = res
-                        _, sem, arr = mem_sem_cast[index]
-                        if gdal_band:
-                            gdal_band.WriteArray(
-                                arr[0:step],
-                                destination_window.xoff,
-                                yoffset + destination_window.yoff,
-                            )
-                        if and_sum:
-                            chunk_sum = np.sum(np.array(arr[0:step]).astype(np.float64))
-                            total = chunk_sum if total is None else total + chunk_sum
-                        sem.release()
-                        retired_blocks += 1
-                        if callback:
-                            callback(retired_blocks / work_blocks)
-
-                    processes = workers
-                    while processes:
-                        candidates = [x for x in processes if not x.is_alive()]
-                        for candidate in candidates:
-                            candidate.join()
-                            if candidate.exitcode:
-                                for victim in processes:
-                                    victim.kill()
-                                sys.exit(candidate.exitcode)
-                            processes.remove(candidate)
-                        time.sleep(0.01)
+                processes = workers
+                while processes:
+                    candidates = [x for x in processes if not x.is_alive()]
+                    for candidate in candidates:
+                        candidate.join()
+                        if candidate.exitcode:
+                            for victim in processes:
+                                victim.kill()
+                            sys.exit(candidate.exitcode)
+                        processes.remove(candidate)
+                    time.sleep(0.01)
 
         return backend.demote_scalar(total) if and_sum else None
 

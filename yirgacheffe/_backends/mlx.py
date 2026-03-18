@@ -103,7 +103,11 @@ def mul_op(a, b):
             case mx.int8 | mx.int32 | mx.uint8 | mx.uint32:
                 a = a.astype(mx.float32)
             case mx.int64 | mx.uint64:
-                a = a.astype(mx.float64)
+                if mx.default_device().type == mx.DeviceType.gpu:
+                    t = mx.float32
+                else:
+                    t = mx.float64
+                a = a.astype(t)
             case _:
                 pass
     return mx.multiply(a, b)
