@@ -4,7 +4,7 @@ import pytest
 
 import yirgacheffe as yg
 from yirgacheffe.layers import RasterLayer, H3CellLayer
-from yirgacheffe.window import Area, MapProjection
+from yirgacheffe import Area, MapProjection
 from yirgacheffe._backends import backend
 
 

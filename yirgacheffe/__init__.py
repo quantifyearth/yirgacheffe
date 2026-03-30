@@ -18,7 +18,6 @@ from ._core import read_raster, read_rasters, read_shape, read_raster_like, read
 from ._datatypes.area import Area
 from ._datatypes.mapprojection import MapProjection
 from ._datatypes.pixelscale import PixelScale
-from ._datatypes.window import Window
 from ._backends.enumeration import dtype as DataType
 
 from ._operators.functions import where, minimum, maximum, clip, log, log2, log10, exp, exp2, nan_to_num, isin, \

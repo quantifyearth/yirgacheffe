@@ -7,7 +7,7 @@ from typing import Any
 import numpy
 from osgeo import gdal
 
-from ..window import Area, Window
+from .._datatypes import Area, Window
 from .rasters import RasterLayer
 from .._backends import backend
 

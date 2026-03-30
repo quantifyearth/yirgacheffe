@@ -4,8 +4,9 @@ from pathlib import Path
 import pytest
 
 from tests.unit.helpers import gdal_dataset_of_region, make_vectors_with_id
-from yirgacheffe import Area, MapProjection, Window
+from yirgacheffe import Area, MapProjection
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
+from yirgacheffe._datatypes import Window
 
 
 def test_find_union_empty_list() -> None:

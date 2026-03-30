@@ -4,7 +4,7 @@ import pytest
 import yirgacheffe as yg
 from yirgacheffe.layers import RasterLayer, ConstantLayer
 from yirgacheffe import DataType
-from yirgacheffe.window import Area, PixelScale
+from yirgacheffe import Area, PixelScale
 
 
 def test_constant_save() -> None:

@@ -7,7 +7,8 @@ import pytest
 import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_with_data, make_vectors_with_multiple_ids
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
-from yirgacheffe.window import Area
+from yirgacheffe import Area
+from yirgacheffe._datatypes import Window
 
 
 def test_add_windows() -> None:
@@ -422,7 +423,7 @@ def test_multiple_subexpressions_by_constant() -> None:
         # we expect this to work
         expected_success = (layer1 + 1) * (layer2 + 1)
 
-        expected_window = yg.Window(0, 10, 14, 14)
+        expected_window = Window(0, 10, 14, 14)
         assert expected_success.window == expected_window
 
         result = expected_success.sum()

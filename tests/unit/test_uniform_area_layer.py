@@ -6,7 +6,8 @@ import pytest
 
 from tests.unit.helpers import gdal_dataset_of_region
 from yirgacheffe.layers import UniformAreaLayer
-from yirgacheffe import Area, MapProjection, Window
+from yirgacheffe import Area, MapProjection
+from yirgacheffe._datatypes import Window
 
 # A UniformAreaLayer is a hack for the fact that we have these raster layers
 # that represent the area of each pixel in WSG84, and they're all the same

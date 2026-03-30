@@ -8,7 +8,7 @@ from typing import Any
 from osgeo import gdal, ogr
 
 from .. import __version__
-from ..window import Area, MapProjection, PixelScale
+from .._datatypes import Area, MapProjection, PixelScale
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 from .._backends import backend

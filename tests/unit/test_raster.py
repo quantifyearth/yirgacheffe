@@ -12,7 +12,8 @@ from tests.unit.helpers import (
     gdal_multiband_dataset_with_data,
     gdal_dataset_with_data,
 )
-from yirgacheffe import Area, MapProjection, PixelScale, Window, DataType
+from yirgacheffe import Area, MapProjection, PixelScale, DataType
+from yirgacheffe._datatypes import Window
 from yirgacheffe.layers import RasterLayer, InvalidRasterBand
 
 

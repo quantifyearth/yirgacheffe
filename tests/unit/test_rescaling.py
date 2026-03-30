@@ -5,7 +5,8 @@ import pytest
 import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer, RescaledRasterLayer
-from yirgacheffe.window import Area, MapProjection, Window
+from yirgacheffe import Area, MapProjection
+from yirgacheffe._datatypes import Window
 
 # because we reproject via gdal virtual files, we need to be careful in name comparisons
 WGS_84_PROJECTION = pyproj.CRS.from_epsg(4326).to_wkt(version='WKT1_GDAL')

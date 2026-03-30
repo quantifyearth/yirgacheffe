@@ -10,7 +10,8 @@ from tests.unit.helpers import (
 )
 from yirgacheffe import DataType
 from yirgacheffe.layers import RasterLayer, VectorLayer
-from yirgacheffe import Area, MapProjection, PixelScale, Window
+from yirgacheffe import Area, MapProjection, PixelScale
+from yirgacheffe._datatypes import Window
 
 
 def test_basic_vector_layer_no_filter_match() -> None:

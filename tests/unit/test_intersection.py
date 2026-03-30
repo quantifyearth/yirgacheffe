@@ -9,8 +9,9 @@ from tests.unit.helpers import (
     gdal_empty_dataset_of_region,
     make_vectors_with_id,
 )
-from yirgacheffe import Area, MapProjection, Window
+from yirgacheffe import Area, MapProjection
 from yirgacheffe.layers import RasterLayer, ConstantLayer, H3CellLayer, VectorLayer
+from yirgacheffe._datatypes import Window
 
 
 def test_find_intersection_empty_list() -> None:

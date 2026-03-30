@@ -10,7 +10,8 @@ import pytest
 import yirgacheffe as yg
 from yirgacheffe import DataType
 from yirgacheffe.layers import InvalidRasterBand, RasterLayer
-from yirgacheffe.window import Area, MapProjection, Window
+from yirgacheffe import Area, MapProjection
+from yirgacheffe._datatypes import Window
 from tests.unit.helpers import (
     gdal_dataset_of_region,
     gdal_multiband_dataset_with_data,

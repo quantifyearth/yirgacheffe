@@ -4,7 +4,7 @@ import pytest
 from osgeo import gdal
 
 from yirgacheffe.layers import RasterLayer, H3CellLayer
-from yirgacheffe.window import Area, MapProjection
+from yirgacheffe import Area, MapProjection
 from yirgacheffe._backends import backend
 
 # work around of pylint

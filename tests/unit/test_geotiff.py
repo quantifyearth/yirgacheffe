@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
+from yirgacheffe._datatypes import Window
 
 def test_save_and_read_simple_geotiff() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -18,7 +19,7 @@ def test_save_and_read_simple_geotiff() -> None:
 
         with yg.read_raster(filename) as layer:
             assert layer.area == yg.Area(0, 0, 400.0, -200.0, projection)
-            assert layer.window == yg.Window(0, 0, 4, 2)
+            assert layer.window == Window(0, 0, 4, 2)
             assert layer.nodata is None
             assert layer.datatype == yg.DataType.Int64
 
@@ -37,7 +38,7 @@ def test_save_and_read_simple_geotiff_no_parent() -> None:
 
         with yg.read_raster(filename) as layer:
             assert layer.area == yg.Area(0, 0, 400.0, -200.0, projection)
-            assert layer.window == yg.Window(0, 0, 4, 2)
+            assert layer.window == Window(0, 0, 4, 2)
             assert layer.nodata is None
             assert layer.datatype == yg.DataType.Int64
 
@@ -56,7 +57,7 @@ def test_save_and_read_nodata_geotiff() -> None:
 
         with yg.read_raster(filename) as layer:
             assert layer.area == yg.Area(0, 0, 400.0, -200.0, projection)
-            assert layer.window == yg.Window(0, 0, 4, 2)
+            assert layer.window == Window(0, 0, 4, 2)
             assert layer.nodata == 3.0
             assert layer.datatype == yg.DataType.Float64
 
@@ -147,7 +148,7 @@ def test_save_multiband_non_overlapping_area() -> None:
             -4.0,
             projection,
         )
-        expected_window = yg.Window(0, 0, 44, 44)
+        expected_window = Window(0, 0, 44, 44)
 
         for idx in range(5):
             with yg.read_raster(filename, band=idx + 1) as layer:
@@ -218,7 +219,7 @@ def test_save_multiband_calc_non_overlapping_area() -> None:
             -4.0,
             projection,
         )
-        expected_window = yg.Window(0, 0, 44, 44)
+        expected_window = Window(0, 0, 44, 44)
 
         for idx in range(5):
             with yg.read_raster(filename, band=idx + 1) as layer:

@@ -10,8 +10,9 @@ import torch
 from osgeo import gdal
 
 import yirgacheffe as yg
-from yirgacheffe import Area, PixelScale, Window, DataType
+from yirgacheffe import Area, PixelScale, DataType
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
+from yirgacheffe._datatypes import Window
 from yirgacheffe._operators import LayerOperation
 from yirgacheffe._backends import backend
 from tests.unit.helpers import (

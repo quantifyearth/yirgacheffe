@@ -17,7 +17,7 @@ from .layers import GroupLayer, TiledGroupLayer
 from .layers import RasterLayer
 from .layers import VectorLayer
 from .layers import AreaPerPixelLayer
-from .window import MapProjection
+from ._datatypes import MapProjection
 from ._backends.enumeration import dtype as DataType
 
 def read_raster(

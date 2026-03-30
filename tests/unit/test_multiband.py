@@ -6,7 +6,7 @@ from osgeo import gdal
 
 import yirgacheffe as yg
 from yirgacheffe.layers import RasterLayer
-from yirgacheffe.window import Area, PixelScale
+from yirgacheffe import Area, PixelScale
 
 
 def test_simple_two_band_image() -> None:

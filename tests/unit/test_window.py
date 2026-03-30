@@ -1,9 +1,6 @@
 import pytest
 
-# I've no idea why pylint dislikes this particular import but accepts
-# other entries in the module.
-from yirgacheffe.window import Window  # pylint: disable=E0401, E0611
-
+from yirgacheffe._datatypes import Window
 
 @pytest.mark.parametrize(
     "lhs,rhs,is_greater,is_equal",

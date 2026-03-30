@@ -1,6 +1,5 @@
 from osgeo import ogr
 
-from ..window import PixelScale
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer, InvalidRasterBand
 from .rescaled import RescaledRasterLayer

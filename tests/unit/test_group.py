@@ -12,7 +12,8 @@ from tests.unit.helpers import (
     generate_child_tile,
 )
 from yirgacheffe.layers import GroupLayer, RasterLayer, TiledGroupLayer, VectorLayer
-from yirgacheffe import Area, MapProjection, PixelScale, Window, DataType
+from yirgacheffe import Area, MapProjection, PixelScale, DataType
+from yirgacheffe._datatypes import Window
 
 
 def test_empty_group():

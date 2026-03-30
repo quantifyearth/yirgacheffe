@@ -2,13 +2,14 @@ import math
 
 import numpy as np
 import yirgacheffe as yg
+from yirgacheffe._datatypes import Window
 
 
 def test_simple_wgs84_layer() -> None:
     projection = yg.MapProjection("epsg:4326", 10.0, -10.0)
     with yg.area_raster(projection) as area_raster:
         assert area_raster.map_projection == projection
-        assert area_raster.window == yg.Window(0, 0, 36, 18)
+        assert area_raster.window == Window(0, 0, 36, 18)
         assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
 
         # I don't want to test specific values, just trends
@@ -70,7 +71,7 @@ def test_simple_mollweide_layer() -> None:
     projection = yg.MapProjection("esri:54009", 1000.0, -1000.0)
     with yg.area_raster(projection) as area_raster:
         assert area_raster.map_projection == projection
-        assert area_raster.window == yg.Window(0, 0, 36082, 18041)
+        assert area_raster.window == Window(0, 0, 36082, 18041)
         assert area_raster.area == yg.Area(
             left=-18041000.0,
             top=9020000.0,
@@ -131,7 +132,7 @@ def test_with_no_bounds_in_tiff_geographic() -> None:
     # But this is a geographic CRS, so we can assume it is global
     with yg.area_raster(projection) as area_raster:
         assert area_raster.map_projection == projection
-        assert area_raster.window == yg.Window(0, 0, 36, 18)
+        assert area_raster.window == Window(0, 0, 36, 18)
         assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
 
 
@@ -153,7 +154,7 @@ def test_with_no_bounds_in_tiff_nongeographic() -> None:
     # don't quite match the version we programatically generate with
     # pyproj in the AreaPerPixelLayer constructor. Really Area and Window
     # need an "is_close" type method.
-    expected_window = yg.Window(
+    expected_window = Window(
         0, 0,
         math.ceil((east - west) / 10),
         math.floor((north - south) / 10),
