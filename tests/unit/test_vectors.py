@@ -8,10 +8,9 @@ from tests.unit.helpers import (
     make_vectors_with_id,
     make_vectors_with_empty_feature,
 )
-from yirgacheffe import WGS_84_PROJECTION
+from yirgacheffe import WGS_84_PROJECTION, DataType
 from yirgacheffe.layers import RasterLayer, VectorLayer
 from yirgacheffe import Area, MapProjection, PixelScale, Window
-from yirgacheffe.operators import DataType
 
 
 def test_basic_vector_layer_no_filter_match() -> None:
@@ -101,8 +100,6 @@ def test_empty_layer_from_vector():
         )
 
         empty = RasterLayer.empty_raster_layer_like(source)
-        assert empty.pixel_scale == source.pixel_scale
-        assert empty.projection == source.projection
         assert empty.map_projection == source.map_projection
         assert empty.window == source.window
         assert empty.area == source.area

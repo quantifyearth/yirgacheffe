@@ -8,10 +8,9 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe import WGS_84_PROJECTION
+from yirgacheffe import WGS_84_PROJECTION, DataType
 from yirgacheffe.layers import InvalidRasterBand, RasterLayer
 from yirgacheffe.window import Area, MapProjection, Window
-from yirgacheffe.operators import DataType
 from tests.unit.helpers import (
     gdal_dataset_of_region,
     gdal_multiband_dataset_with_data,
@@ -49,14 +48,15 @@ def test_too_many_files() -> None:
 def test_open_raster_file() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
+        projection = MapProjection("epsg:4326", 0.02, -0.02)
+        area = Area(-10, 10, 10, -10, projection)
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
         dataset.Close()
         assert os.path.exists(path)
 
         with yg.read_raster(path) as layer:
             assert layer.area == area
-            assert layer.pixel_scale == (0.02, -0.02)
+            assert layer.map_projection == projection
             assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.window == Window(0, 0, 1000, 1000)
 
@@ -64,14 +64,15 @@ def test_open_raster_file() -> None:
 def test_open_raster_file_as_path() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.tif"
-        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
+        projection = MapProjection("epsg:4326", 0.02, -0.02)
+        area = Area(-10, 10, 10, -10, projection)
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
         dataset.Close()
         assert path.exists()
 
         with yg.read_raster(path) as layer:
             assert layer.area == area
-            assert layer.pixel_scale == (0.02, -0.02)
+            assert layer.map_projection == projection
             assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.window == Window(0, 0, 1000, 1000)
 
@@ -141,7 +142,7 @@ def test_open_gpkg_with_no_projection() -> None:
 
         with yg.read_shape(path) as layer:
             assert layer.area == area
-            assert layer.projection is None
+            assert layer.map_projection is None
             with pytest.raises(AttributeError):
                 _ = layer.geo_transform
             with pytest.raises(AttributeError):
@@ -200,7 +201,7 @@ def test_open_shape_like() -> None:
                 )
                 assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
                 assert layer.window == Window(0, 0, 20, 10)
-                assert layer.projection == raster_layer.projection
+                assert layer.map_projection == raster_layer.map_projection
 
 
 @pytest.mark.parametrize("tiled", [False, True])
@@ -386,5 +387,4 @@ def test_simple_scale_down() -> None:
         ):
             assert layer.area == expected_area
             assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
             assert layer.map_projection == reference.map_projection

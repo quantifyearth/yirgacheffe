@@ -37,7 +37,7 @@ def test_open_uniform_area_layer(pixel_scale: float) -> None:
         dataset.Close()
 
         layer = UniformAreaLayer.layer_from_file(path)
-        assert layer.pixel_scale == (pixel_scale, -pixel_scale)
+        assert layer.map_projection.scale == (pixel_scale, -pixel_scale)
         assert layer.area == Area(
             floor(-180 / pixel_scale) * pixel_scale,
             ceil(90 / pixel_scale) * pixel_scale,

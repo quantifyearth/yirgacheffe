@@ -6,7 +6,7 @@ import pytest
 from osgeo import gdal
 
 import yirgacheffe as yg
-from yirgacheffe.operators import DataType
+from yirgacheffe import DataType
 from yirgacheffe._backends import backend, BACKEND
 from yirgacheffe.layers import RasterLayer
 

@@ -3,7 +3,7 @@ import pytest
 
 import yirgacheffe as yg
 from yirgacheffe.layers import RasterLayer, ConstantLayer
-from yirgacheffe.operators import DataType
+from yirgacheffe import DataType
 from yirgacheffe.window import Area, PixelScale
 
 

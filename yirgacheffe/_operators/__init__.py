@@ -24,7 +24,6 @@ from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
 from typing import Any
 
-import deprecation
 import numpy as np
 import numpy.typing as npt
 from osgeo import gdal
@@ -498,39 +497,6 @@ class LayerMathMixin:
 
 class LayerOperation(LayerMathMixin):
 
-    @staticmethod
-    @deprecation.deprecated(
-        deprecated_in="1.10",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use from top level module instead."
-    )
-    def where(cond, a, b):
-        from . import functions # type: ignore # pylint: disable=C0415
-        return functions.where(cond, a, b)
-
-    @staticmethod
-    @deprecation.deprecated(
-        deprecated_in="1.10",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use from top level module instead."
-    )
-    def minimum(a, b):
-        from . import functions # type: ignore # pylint: disable=C0415
-        return functions.minimum(a, b)
-
-    @staticmethod
-    @deprecation.deprecated(
-        deprecated_in="1.10",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use from top level module instead."
-    )
-    def maximum(a, b):
-        from . import functions # type: ignore # pylint: disable=C0415
-        return functions.maximum(a, b)
-
     def __init__(
         self,
         lhs: Any,
@@ -680,25 +646,6 @@ class LayerOperation(LayerMathMixin):
             return area
 
     @property
-    @deprecation.deprecated(
-        deprecated_in="1.7",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use `map_projection` instead."
-    )
-    def pixel_scale(self) -> PixelScale:
-        # Because we test at construction that pixel scales for RHS/other are roughly equal,
-        # I believe this should be sufficient...
-        try:
-            pixel_scale = self.lhs.pixel_scale
-        except AttributeError:
-            pixel_scale = None
-
-        if pixel_scale is None:
-            return self.rhs.pixel_scale
-        return pixel_scale
-
-    @property
     def window(self) -> Window:
         projection = self.map_projection
         if projection is None:
@@ -737,23 +684,6 @@ class LayerOperation(LayerMathMixin):
         internal_types_as_numpy_types = [dtype_to_numpy(x) for x in internal_types]
         coerced_type = np.result_type(*internal_types_as_numpy_types)
         return numpy_to_dtype(coerced_type)
-
-    @property
-    @deprecation.deprecated(
-        deprecated_in="1.7",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use `map_projection` instead."
-    )
-    def projection(self):
-        try:
-            projection = self.lhs.projection
-        except AttributeError:
-            projection = None
-
-        if projection is None:
-            projection = self.rhs.projection
-        return projection
 
     @property
     def map_projection(self) -> MapProjection | None:

@@ -22,7 +22,6 @@ def test_simple_scale_down() -> None:
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
             assert layer.window == Window(0, 0, 2000, 2000)
 
@@ -35,7 +34,6 @@ def test_simple_scale_up() -> None:
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
             assert layer.window == Window(0, 0, 500, 500)
 
@@ -53,7 +51,6 @@ def test_scaling_up_pixels() -> None:
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0, 0, 4, -4, target_projection)
             assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (0.0, 0.5, 0.0, 0.0, 0.0, -0.5)
             assert layer.window == Window(0, 0, 8, 8)
 
@@ -121,7 +118,6 @@ def test_scaling_down_pixels() -> None:
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0, 0, 8, -8, target_projection)
             assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
             assert layer.geo_transform == (0.0, 2.0, 0.0, 0.0, 0.0, -2.0)
             assert layer.window == Window(0, 0, 4, 4)
 

@@ -10,9 +10,8 @@ import torch
 from osgeo import gdal
 
 import yirgacheffe as yg
-from yirgacheffe import Area, PixelScale, Window
+from yirgacheffe import Area, PixelScale, Window, DataType
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
-from yirgacheffe.operators import DataType
 from yirgacheffe._operators import LayerOperation
 from yirgacheffe._backends import backend
 from tests.unit.helpers import (
@@ -61,7 +60,7 @@ def test_error_of_pixel_scale_wrong_three_param() -> None:
     layer3 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.01, data3))
 
     with pytest.raises(ValueError):
-        _ = LayerOperation.where(layer1, layer2, layer3)
+        _ = yg.where(layer1, layer2, layer3)
 
 
 def test_incompatible_source_and_destination_projections() -> None:
@@ -1040,7 +1039,7 @@ def test_where_simple(ct) -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.where(layer1 > 0, ct(1), ct(2))
+    comp = yg.where(layer1 > 0, ct(1), ct(2))
     comp.ystep = 1
     comp.save(result)
 
@@ -1058,7 +1057,7 @@ def test_where_layers() -> None:
     layer_b = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data_b))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.where(layer1 > 0, layer_a, layer_b)
+    comp = yg.where(layer1 > 0, layer_a, layer_b)
     comp.ystep = 1
     comp.save(result)
 
@@ -1087,7 +1086,7 @@ def test_isin_simple_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.isin(layer1, [2, 3])
+    comp = yg.isin(layer1, [2, 3])
     comp.ystep = 1
     comp.save(result)
 
@@ -1265,7 +1264,7 @@ def test_log_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.log(layer1)
+    comp = yg.log(layer1)
     comp.save(result)
 
     expected = backend.log(backend.promote(data1))
@@ -1325,7 +1324,7 @@ def test_exp_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.exp(layer1)
+    comp = yg.exp(layer1)
     comp.save(result)
 
     expected = backend.exp(backend.promote(data1))
@@ -1357,7 +1356,7 @@ def test_minimum_layers() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.minimum(layer1, layer2)
+    comp = yg.minimum(layer1, layer2)
     comp.save(result)
 
     expected = np.minimum(data1, data2)
@@ -1372,7 +1371,7 @@ def test_maximum_layers() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.maximum(layer1, layer2)
+    comp = yg.maximum(layer1, layer2)
     comp.save(result)
 
     expected = np.maximum(data1, data2)
@@ -1398,7 +1397,7 @@ def test_clip_both_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.clip(layer1, 3.0, 6.0)
+    comp = yg.clip(layer1, 3.0, 6.0)
     comp.save(result)
 
     expected = np.clip(data1, 3.0, 6.0)
@@ -1424,7 +1423,7 @@ def test_clip_upper_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.clip(layer1, max=6.0)
+    comp = yg.clip(layer1, max=6.0)
     comp.save(result)
 
     expected = np.clip(data1, a_min=None, a_max=6.0)
@@ -1450,7 +1449,7 @@ def test_clip_lower_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.clip(layer1, min=3.0)
+    comp = yg.clip(layer1, min=3.0)
     comp.save(result)
 
     expected = np.clip(data1, a_min=3.0, a_max=None)
@@ -1478,7 +1477,7 @@ def test_abs_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.abs(layer1)
+    comp = yg.abs(layer1)
     comp.save(result)
 
     expected = backend.abs_op(backend.promote(data1))
@@ -1646,7 +1645,7 @@ def test_floor_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.floor(layer1)
+    comp = yg.floor(layer1)
     comp.save(result)
 
     expected = backend.floor_op(backend.promote(data1))
@@ -1676,7 +1675,7 @@ def test_round_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.round(layer1)
+    comp = yg.round(layer1)
     comp.save(result)
 
     expected = backend.round_op(backend.promote(data1))
@@ -1706,7 +1705,7 @@ def test_ceil_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.ceil(layer1)
+    comp = yg.ceil(layer1)
     comp.save(result)
 
     expected = backend.ceil_op(backend.promote(data1))

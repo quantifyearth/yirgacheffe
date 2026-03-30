@@ -335,7 +335,7 @@ def test_vector_layers_multiply() -> None:
 
         burn_value = 2
         layer2 = VectorLayer.layer_from_file(
-            path, None, layer1.pixel_scale, layer1.projection, burn_value=burn_value
+            path, None, layer1.map_projection.scale, layer1.map_projection.name, burn_value=burn_value
         )
         layer2_total = layer2.sum()
         assert (

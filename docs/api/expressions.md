@@ -89,9 +89,9 @@ calc = layer1.log10()
 Or via the operators module, as it's sometimes nicer to do it this way when chaining together operations in a single expression:
 
 ```python
-import yirgaceffe.operators as yo
+import yirgaceffe as yg
 
-calc = yo.log10(layer1 / layer2)
+calc = yg.log10(layer1 / layer2)
 ```
 
 ### 2D matrix convolution

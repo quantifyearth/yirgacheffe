@@ -12,9 +12,8 @@ from tests.unit.helpers import (
     gdal_multiband_dataset_with_data,
     gdal_dataset_with_data,
 )
-from yirgacheffe import Area, MapProjection, PixelScale, Window
+from yirgacheffe import Area, MapProjection, PixelScale, Window, DataType
 from yirgacheffe.layers import RasterLayer, InvalidRasterBand
-from yirgacheffe.operators import DataType
 
 
 # There is a lot of "del" in this file, due to a combination of gdal having no way
@@ -24,7 +23,8 @@ from yirgacheffe.operators import DataType
 
 
 def test_make_basic_layer() -> None:
-    area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
+    projection = MapProjection("epsg:4326", 0.02, -0.02)
+    area = Area(-10, 10, 10, -10, projection)
     dataset = gdal_dataset_of_region(area, 0.02)
 
     # The context manager routines are just called on the base class, so ensure
@@ -40,7 +40,7 @@ def test_make_basic_layer() -> None:
 
     with RasterLayer(dataset) as layer:
         assert layer.area == area
-        assert layer.pixel_scale == (0.02, -0.02)
+        assert layer.map_projection == projection
         assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
         assert layer.window == Window(0, 0, 1000, 1000)
 
@@ -63,13 +63,14 @@ def test_layer_from_nonexistent_file() -> None:
 def test_open_file() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
+        projection = MapProjection("epsg:4326", 0.02, -0.02)
+        area = Area(-10, 10, 10, -10, projection)
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
         dataset.Close()
         assert os.path.exists(path)
         with RasterLayer.layer_from_file(path) as layer:
             assert layer.area == area
-            assert layer.pixel_scale == (0.02, -0.02)
+            assert layer.map_projection == projection
             assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.window == Window(0, 0, 1000, 1000)
             del layer
@@ -108,8 +109,6 @@ def test_empty_layers_are_pixel_aligned(initial_area):
 def test_empty_layer_from_raster():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     empty = RasterLayer.empty_raster_layer_like(source)
-    assert empty.pixel_scale == source.pixel_scale
-    assert empty.projection == source.projection
     assert empty.map_projection == source.map_projection
     assert empty.window == source.window
     assert empty.datatype == source.datatype
@@ -121,8 +120,6 @@ def test_empty_layer_from_raster():
 def test_empty_layer_from_raster_with_no_data_value(nodata):
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     empty = RasterLayer.empty_raster_layer_like(source, nodata=nodata)
-    assert empty.pixel_scale == source.pixel_scale
-    assert empty.projection == source.projection
     assert empty.map_projection == source.map_projection
     assert empty.window == source.window
     assert empty.datatype == source.datatype
@@ -134,8 +131,6 @@ def test_empty_layer_from_raster_with_new_smaller_area():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     smaller_area = Area(-1, 1, 1, -1)
     empty = RasterLayer.empty_raster_layer_like(source, area=smaller_area)
-    assert empty.pixel_scale == source.pixel_scale
-    assert empty.projection == source.projection
     assert empty.map_projection == source.map_projection
     assert empty.window == Window(0, 0, 100, 100)
     assert empty.datatype == source.datatype
@@ -148,8 +143,6 @@ def test_empty_layer_from_raster_new_datatype():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     assert source.datatype == DataType.Byte
     empty = RasterLayer.empty_raster_layer_like(source, datatype=gdal.GDT_Float64)
-    assert empty.pixel_scale == source.pixel_scale
-    assert empty.projection == source.projection
     assert empty.map_projection == source.map_projection
     assert empty.window == source.window
     assert empty.datatype == DataType.Float64
@@ -163,8 +156,6 @@ def test_empty_layer_from_raster_with_window():
     assert source.window < original_window
 
     empty = RasterLayer.empty_raster_layer_like(source)
-    assert empty.pixel_scale == source.pixel_scale
-    assert empty.projection == source.projection
     assert empty.map_projection == source.map_projection
     assert empty.window.xoff == 0
     assert empty.window.yoff == 0

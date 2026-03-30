@@ -2,10 +2,10 @@ import h3
 import numpy as np
 import pytest
 
+import yirgacheffe as yg
 from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, MapProjection
-import yirgacheffe.operators as yo
 from yirgacheffe._backends import backend
 
 
@@ -168,7 +168,7 @@ def test_cells_dont_overlap(cell_id):
     calc = layers[0]
     for layer in layers[1:]:
         calc += layer
-    calc = yo.where(calc > 1, 1, 0)
+    calc = yg.where(calc > 1, 1, 0)
     assert calc.sum() == 0
 
     # If we didn't get an exception, then there's no over drawing

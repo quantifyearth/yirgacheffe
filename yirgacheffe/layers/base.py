@@ -5,8 +5,6 @@ from collections.abc import Callable
 from functools import reduce
 from typing import Any, Sequence
 
-import deprecation
-
 from .. import __version__
 from .._operators import LayerMathMixin
 from .._datatypes import Area, MapProjection, PixelScale, Window
@@ -56,32 +54,6 @@ class YirgacheffeLayer(LayerMathMixin):
     def datatype(self) -> DataType:
         """Returns the [`DataType`][yirgacheffe.DataType] of the pixels within a layer."""
         raise NotImplementedError("Must be overridden by subclass")
-
-    @property
-    @deprecation.deprecated(
-        deprecated_in="1.7",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use `map_projection` instead."
-    )
-    def projection(self) -> str | None:
-        if self.map_projection:
-            return self.map_projection.name
-        else:
-            return None
-
-    @property
-    @deprecation.deprecated(
-        deprecated_in="1.7",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use `map_projection` instead."
-    )
-    def pixel_scale(self) -> PixelScale | None:
-        if self.map_projection:
-            return self.map_projection.scale
-        else:
-            return None
 
     @property
     def map_projection(self) -> MapProjection | None:
@@ -241,13 +213,13 @@ class YirgacheffeLayer(LayerMathMixin):
             xsize=self.window.xsize + (2 * offset),
             ysize=self.window.ysize + (2 * offset),
         )
-        scale = self.pixel_scale
-        if scale is None:
+        if self.map_projection is None:
             raise ValueError("Can not offset Window without explicit pixel scale")
 
         # Note we can't assume that we weren't already on an intersection when making the offset!
         # But remember that window is always relative to underlying area, and new_window
         # here is based off the existing window
+        scale = self.map_projection.scale
         new_left = self._underlying_area.left + (new_window.xoff * scale.xstep)
         new_top = self._underlying_area.top + (new_window.yoff * scale.ystep)
         new_area = Area(
