@@ -8,7 +8,6 @@ from typing import Any
 import numpy as np
 from osgeo import gdal
 
-from ..constants import WGS_84_PROJECTION
 from .._datatypes import Area, MapProjection, PixelScale, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
@@ -29,7 +28,7 @@ class RasterLayer(YirgacheffeLayer):
         scale: PixelScale,
         datatype: int | DataType,
         filename: Path | str | None = None,
-        projection: str=WGS_84_PROJECTION,
+        projection: str="epsg:4326",
         name: str | None = None,
         compress: bool=True,
         nodata: float | int | None = None,

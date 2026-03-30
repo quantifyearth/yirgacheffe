@@ -3,7 +3,6 @@ import numpy as np
 import pytest
 from osgeo import gdal
 
-from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, MapProjection
 from yirgacheffe._backends import backend
@@ -22,7 +21,7 @@ demote_array = backend.demote_array
 def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
     if is_valid:
         with H3CellLayer(
-            cell_id, MapProjection(WGS_84_PROJECTION, 0.001, -0.001)
+            cell_id, MapProjection("epsg:4326", 0.001, -0.001)
         ) as layer:
             assert layer.zoom == expected_zoom
             assert layer.map_projection.epsg == 4326
@@ -38,7 +37,7 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
     else:
         with pytest.raises(ValueError):
             with H3CellLayer(
-                cell_id, MapProjection(WGS_84_PROJECTION, 0.001, -0.001)
+                cell_id, MapProjection("epsg:4326", 0.001, -0.001)
             ) as _layer:
                 pass
 
@@ -60,7 +59,7 @@ def test_h3_layer_magnifications(lat: float, lng: float) -> None:
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         h3_layer = H3CellLayer(
             cell_id,
-            MapProjection(WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120),
+            MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120),
         )
         on_cell_count = h3_layer.sum()
         total_count = h3_layer.window.xsize * h3_layer.window.ysize
@@ -83,7 +82,7 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
     for zoom in range(6, 10):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         projection = MapProjection(
-            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+            "epsg:4326", 0.000898315284120, -0.000898315284120
         )
         h3_layer = H3CellLayer(cell_id, projection)
 
@@ -141,7 +140,7 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
     for zoom in range(6, 8):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         projection = MapProjection(
-            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+            "epsg:4326", 0.000898315284120, -0.000898315284120
         )
         h3_layer = H3CellLayer(cell_id, projection)
 
@@ -203,7 +202,7 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
 )
 def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
     cell_id = h3.latlng_to_cell(lat, lng, 3)
-    projection = MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
+    projection = MapProjection("epsg:4326", 0.01, -0.01)
     h3_layer = H3CellLayer(cell_id, projection)
 
     # Just sanity check this test has caught a cell that wraps the entire planet and is testing
@@ -261,7 +260,7 @@ def test_h3_layer_overlapped():
     # This is based on a regression, where somehow I made tiles not tesselate properly
     left, top = (121.26706, 19.45338)
     right, bottom = (121.62494, 19.18478)
-    projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120)
+    projection = MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120)
 
     cells = h3.geo_to_cells(
         h3.LatLngPoly(

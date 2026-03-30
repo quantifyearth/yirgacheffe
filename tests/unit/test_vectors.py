@@ -8,7 +8,7 @@ from tests.unit.helpers import (
     make_vectors_with_id,
     make_vectors_with_empty_feature,
 )
-from yirgacheffe import WGS_84_PROJECTION, DataType
+from yirgacheffe import DataType
 from yirgacheffe.layers import RasterLayer, VectorLayer
 from yirgacheffe import Area, MapProjection, PixelScale, Window
 
@@ -33,7 +33,7 @@ def test_basic_dynamic_vector_layer() -> None:
         make_vectors_with_id(42, {area}, path)
 
         with VectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
+            path, "id_no = 42", PixelScale(1.0, -1.0), "epsg:4326"
         ) as layer:
             assert layer.area == Area(
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
@@ -55,7 +55,7 @@ def test_basic_dynamic_vector_layer_no_filter_match() -> None:
 
         with pytest.raises(ValueError):
             _ = VectorLayer.layer_from_file(
-                path, "id_no = 123", PixelScale(1.0, -1.0), WGS_84_PROJECTION
+                path, "id_no = 123", PixelScale(1.0, -1.0), "epsg:4326"
             )
 
 
@@ -66,7 +66,7 @@ def test_multi_area_vector() -> None:
         make_vectors_with_id(42, areas, path)
 
         layer = VectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
+            path, "id_no = 42", PixelScale(1.0, -1.0), "epsg:4326"
         )
 
         assert layer.area == Area(
@@ -96,7 +96,7 @@ def test_empty_layer_from_vector():
             path,
             "id_no = 42",
             PixelScale(xstep=0.00026949458523585647, ystep=-0.00026949458523585647),
-            WGS_84_PROJECTION,
+            "epsg:4326",
         )
 
         empty = RasterLayer.empty_raster_layer_like(source)
@@ -112,7 +112,7 @@ def test_vector_layers_with_default_burn_value() -> None:
         make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION
+            path, None, PixelScale(1.0, -1.0), "epsg:4326"
         )
 
         assert layer.area == Area(
@@ -135,7 +135,7 @@ def test_vector_layers_with_fixed_burn_value() -> None:
         make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value=5
+            path, None, PixelScale(1.0, -1.0), "epsg:4326", burn_value=5
         )
 
         assert layer.area == Area(
@@ -157,7 +157,7 @@ def test_vector_layers_with_default_burn_value_and_filter() -> None:
         make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
-            path, "id_no=42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
+            path, "id_no=42", PixelScale(1.0, -1.0), "epsg:4326"
         )
 
         assert layer.area == Area(
@@ -182,7 +182,7 @@ def test_vector_layers_with_invalid_burn_value() -> None:
                 path,
                 None,
                 PixelScale(1.0, -1.0),
-                WGS_84_PROJECTION,
+                "epsg:4326",
                 burn_value="this_is_wrong",
             )
 
@@ -194,7 +194,7 @@ def test_vector_layers_with_field_value() -> None:
         make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value="id_no"
+            path, None, PixelScale(1.0, -1.0), "epsg:4326", burn_value="id_no"
         )
 
         assert layer.area == Area(
@@ -232,7 +232,7 @@ def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
         make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value=value
+            path, None, PixelScale(1.0, -1.0), "epsg:4326", burn_value=value
         )
 
         assert layer.area == Area(
@@ -273,7 +273,7 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
             path,
             None,
             PixelScale(1.0, -1.0),
-            WGS_84_PROJECTION,
+            "epsg:4326",
             datatype=datatype,
             burn_value="id_no",
         )
@@ -306,7 +306,7 @@ def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None
         make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value="id_no"
+            path, None, PixelScale(1.0, -1.0), "epsg:4326", burn_value="id_no"
         )
 
         assert layer.area == Area(
@@ -339,7 +339,7 @@ def test_read_array_size(size, expect_success):
         make_vectors_with_id(42, {area}, path)
 
         source = VectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
+            path, "id_no = 42", PixelScale(1.0, -1.0), "epsg:4326"
         )
 
         if expect_success:
@@ -451,7 +451,7 @@ def test_anchor_offsets(anchor, area, expected):
         make_vectors_with_id(42, {area}, path)
 
         source = VectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION, anchor=anchor
+            path, "id_no = 42", PixelScale(1.0, -1.0), "epsg:4326", anchor=anchor
         )
 
         final_area = source.area
@@ -465,7 +465,7 @@ def test_vector_layers_with_empty_features() -> None:
         make_vectors_with_empty_feature(areas, path)
 
         layer = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION
+            path, None, PixelScale(1.0, -1.0), "epsg:4326"
         )
 
         assert layer.area == Area(

@@ -11,7 +11,6 @@ from tests.unit.helpers import (
 )
 from yirgacheffe import Area, MapProjection, Window
 from yirgacheffe.layers import RasterLayer, ConstantLayer, H3CellLayer, VectorLayer
-from yirgacheffe import WGS_84_PROJECTION
 
 
 def test_find_intersection_empty_list() -> None:
@@ -285,7 +284,7 @@ def test_intersection_stability() -> None:
         "874b93a84ffffff",
         "874b93a80ffffff",
     ]
-    projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120)
+    projection = MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120)
 
     tiles = [H3CellLayer(cell_id, projection) for cell_id in cells]
 

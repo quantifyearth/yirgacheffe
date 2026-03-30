@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe import WGS_84_PROJECTION, DataType
+from yirgacheffe import DataType
 from yirgacheffe.layers import InvalidRasterBand, RasterLayer
 from yirgacheffe.window import Area, MapProjection, Window
 from tests.unit.helpers import (
@@ -115,7 +115,7 @@ def test_open_multiband_raster() -> None:
 def test_shape_from_nonexistent_file() -> None:
     with pytest.raises(FileNotFoundError):
         _ = yg.read_shape(
-            "this_file_does_not_exist.gpkg", (WGS_84_PROJECTION, (1.0, -1.0))
+            "this_file_does_not_exist.gpkg", ("epsg:4326", (1.0, -1.0))
         )
 
 
@@ -125,13 +125,13 @@ def test_open_gpkg_with_mapprojection() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        with yg.read_shape(path, MapProjection(WGS_84_PROJECTION, 1.0, -1.0)) as layer:
+        with yg.read_shape(path, MapProjection("epsg:4326", 1.0, -1.0)) as layer:
             assert layer.area == Area(
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
-            assert layer.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+            assert layer.map_projection == MapProjection("epsg:4326", 1.0, -1.0)
 
 
 def test_open_gpkg_with_no_projection() -> None:
@@ -155,13 +155,13 @@ def test_open_gpkg_direct_scale() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        with yg.read_shape(path, (WGS_84_PROJECTION, (1.0, -1.0))) as layer:
+        with yg.read_shape(path, ("epsg:4326", (1.0, -1.0))) as layer:
             assert layer.area == Area(
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.window == Window(0, 0, 20, 10)
-            assert layer.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+            assert layer.map_projection == MapProjection("epsg:4326", 1.0, -1.0)
 
 
 def test_open_gpkg_with_filter() -> None:
@@ -170,7 +170,7 @@ def test_open_gpkg_with_filter() -> None:
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
         make_vectors_with_multiple_ids(areas, path)
 
-        with yg.read_shape(path, (WGS_84_PROJECTION, (1.0, -1.0)), "id_no=42") as layer:
+        with yg.read_shape(path, ("epsg:4326", (1.0, -1.0)), "id_no=42") as layer:
             assert layer.area == Area(
                 -10.0, 10.0, 0.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
@@ -311,7 +311,7 @@ def test_incorrect_tiff_for_uniform_area() -> None:
 def test_constant() -> None:
     with yg.constant(42.0) as layer:
         area = Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0)
-        projection = MapProjection(WGS_84_PROJECTION, 0.1, -0.1)
+        projection = MapProjection("epsg:4326", 0.1, -0.1)
         with RasterLayer.empty_raster_layer(
             area, projection.scale, DataType.Float32
         ) as result:
@@ -323,7 +323,7 @@ def test_constant() -> None:
 
 
 def test_create_simple_float() -> None:
-    projection = MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+    projection = MapProjection("epsg:4326", 1.0, -1.0)
     data = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     with yg.from_array(data, (-2.0, 1.0), projection) as layer:
         expected_area = Area(
@@ -339,9 +339,9 @@ def test_create_simple_float() -> None:
 
 
 def test_create_simple_direct_projection() -> None:
-    expected_projection = MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+    expected_projection = MapProjection("epsg:4326", 1.0, -1.0)
     data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-    with yg.from_array(data, (-2.0, 1.0), (WGS_84_PROJECTION, (1.0, -1.0))) as layer:
+    with yg.from_array(data, (-2.0, 1.0), ("epsg:4326", (1.0, -1.0))) as layer:
         expected_area = Area(
             left=-2.0, right=2.0, top=1.0, bottom=-1.0, projection=expected_projection
         )

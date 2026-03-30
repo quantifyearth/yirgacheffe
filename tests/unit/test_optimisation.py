@@ -3,7 +3,6 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe import WGS_84_PROJECTION
 from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe.window import Area, MapProjection
 from yirgacheffe._backends import backend
@@ -47,7 +46,7 @@ def test_h3_vs_naive(lat: float, lng: float) -> None:
     for zoom in range(5, 9):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         projection = MapProjection(
-            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+            "epsg:4326", 0.000898315284120, -0.000898315284120
         )
         optimised_layer = H3CellLayer(cell_id, projection)
         naive_layer = NaiveH3CellLayer(cell_id, projection)
@@ -75,7 +74,7 @@ def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
     for zoom in range(7, 9):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         projection = MapProjection(
-            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+            "epsg:4326", 0.000898315284120, -0.000898315284120
         )
         optimised_layer = H3CellLayer(cell_id, projection)
         naive_layer = NaiveH3CellLayer(cell_id, projection)
@@ -114,7 +113,7 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
     for zoom in range(7, 9):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         projection = MapProjection(
-            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+            "epsg:4326", 0.000898315284120, -0.000898315284120
         )
         optimised_layer = H3CellLayer(cell_id, projection)
         naive_layer = NaiveH3CellLayer(cell_id, projection)
@@ -158,7 +157,7 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
 def test_cells_dont_overlap(cell_id):
 
     cluster = h3.grid_disk(cell_id, 1)
-    projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120)
+    projection = MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120)
     layers = [H3CellLayer(x, projection) for x in cluster]
 
     union = RasterLayer.find_union(layers)

@@ -1874,7 +1874,7 @@ def test_raster_and_vector() -> None:
         assert path.exists()
 
         vector = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), yg.WGS_84_PROJECTION
+            path, None, PixelScale(1.0, -1.0), "epsg:4326"
         )
 
         calc = raster * vector
@@ -1893,7 +1893,7 @@ def test_raster_and_vector_mixed_projection() -> None:
         assert path.exists()
 
         vector = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), yg.WGS_84_PROJECTION
+            path, None, PixelScale(1.0, -1.0), "epsg:4326"
         )
 
         with pytest.raises(ValueError):
