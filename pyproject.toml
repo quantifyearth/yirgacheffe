@@ -27,7 +27,6 @@ dependencies = [
     "scikit-image>=0.20,<1.0",
     "torch",
     "dill",
-    "deprecation",
     "tomli",
     "h3",
     "pyproj",
@@ -84,7 +83,6 @@ module = "h3.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "deprecation.*"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
