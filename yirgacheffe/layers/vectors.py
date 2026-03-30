@@ -5,7 +5,6 @@ from math import ceil, floor
 from pathlib import Path
 from typing import Any
 
-import deprecation
 from osgeo import gdal, ogr
 
 from .. import __version__
@@ -55,123 +54,6 @@ def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> DataType: # pylin
         return DataType.Float64
     else:
         raise ValueError(f"data type of burn value {burn_value} not supported")
-
-
-class RasteredVectorLayer(RasterLayer):
-    """This layer takes a vector file and rasterises it for the given filter. Rasterization
-    up front like this is very expensive, so not recommended. Instead you should use
-    VectorLayer."""
-
-    @classmethod
-    @deprecation.deprecated(
-        deprecated_in="1.7",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use `VectorLayer` instead."
-    )
-    def layer_from_file( # type: ignore[override] # pylint: disable=W0221
-        cls,
-        filename: Path | str,
-        where_filter: str | None,
-        scale: PixelScale,
-        projection: str,
-        datatype: int | DataType | None = None,
-        burn_value: int | float | str = 1,
-    ) -> RasteredVectorLayer:
-        vectors = ogr.Open(filename)
-        if vectors is None:
-            raise FileNotFoundError(filename)
-        layer = vectors.GetLayer()
-        if where_filter is not None:
-            layer.SetAttributeFilter(where_filter)
-
-        estimated_datatype = _validate_burn_value(burn_value, layer)
-        if datatype is None:
-            datatype_arg: DataType = estimated_datatype
-        elif isinstance(datatype, int):
-            datatype_arg = DataType.of_gdal(datatype)
-        else:
-            datatype_arg = datatype
-
-        map_projection = MapProjection(projection, scale.xstep, scale.ystep)
-
-        vector_layer = RasteredVectorLayer(
-            layer,
-            map_projection,
-            datatype=datatype_arg,
-            burn_value=burn_value
-        )
-
-        # this is a gross hack, but unless you hold open the original file, you'll get
-        # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
-        # the original object being around
-        vector_layer._original = vectors
-        return vector_layer
-
-    def __init__(
-        self,
-        layer: ogr.Layer,
-        projection: MapProjection,
-        datatype: int | DataType = DataType.Byte,
-        burn_value: int | float | str = 1,
-    ):
-        if layer is None:
-            raise ValueError('No layer provided')
-        self.layer = layer
-
-        self._original: Any | None = None
-
-        if isinstance(datatype, int):
-            datatype_arg = DataType.of_gdal(datatype)
-        else:
-            datatype_arg = datatype
-
-        # work out region for mask
-        envelopes = []
-        layer.ResetReading()
-        feature = layer.GetNextFeature()
-        while feature:
-            geometry = feature.GetGeometryRef()
-            if geometry:
-                envelopes.append(geometry.GetEnvelope())
-            feature = layer.GetNextFeature()
-        if len(envelopes) == 0:
-            raise ValueError('No geometry found for')
-
-        # Get the area, but scale it to the pixel resolution that we're using. Note that
-        # the pixel scale GDAL uses can have -ve values, but those will mess up the
-        # ceil/floor math, so we use absolute versions when trying to round.
-        abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
-        area = Area(
-            left=floor(min(x[0] for x in envelopes) / abs_xstep) * abs_xstep,
-            top=ceil(max(x[3] for x in envelopes) / abs_ystep) * abs_ystep,
-            right=ceil(max(x[1] for x in envelopes) / abs_xstep) * abs_xstep,
-            bottom=floor(min(x[2] for x in envelopes) / abs_ystep) * abs_ystep,
-            projection=projection,
-        )
-
-        # create new dataset for just that area
-        dataset = gdal.GetDriverByName('mem').Create(
-            'mem',
-            round((area.right - area.left) / abs_xstep),
-            round((area.top - area.bottom) / abs_ystep),
-            1,
-            datatype_arg.to_gdal(),
-            []
-        )
-        if not dataset:
-            raise MemoryError('Failed to create memory mask')
-
-        dataset.SetProjection(projection._gdal_projection)
-        dataset.SetGeoTransform(area.geo_transform)
-        if isinstance(burn_value, (int, float)):
-            gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[burn_value], options=["ALL_TOUCHED=TRUE"])
-        elif isinstance(burn_value, str):
-            gdal.RasterizeLayer(dataset, [1], self.layer, options=[f"ATTRIBUTE={burn_value}", "ALL_TOUCHED=TRUE"])
-        else:
-            raise ValueError("Burn value for layer should be number or field name")
-        super().__init__(dataset)
-
 
 class VectorLayer(YirgacheffeLayer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization occurs only

@@ -5,7 +5,7 @@ from .base import YirgacheffeLayer
 from .rasters import RasterLayer, InvalidRasterBand
 from .rescaled import RescaledRasterLayer
 from .reprojected import ReprojectedRasterLayer, ResamplingMethod
-from .vectors import RasteredVectorLayer, VectorLayer
+from .vectors import VectorLayer
 from .area import UniformAreaLayer
 from .constant import ConstantLayer
 from .group import GroupLayer, TiledGroupLayer
