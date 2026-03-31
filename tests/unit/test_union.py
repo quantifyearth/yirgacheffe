@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe import Area, MapProjection
 from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
@@ -11,12 +12,12 @@ from yirgacheffe._datatypes import Window
 
 def test_find_union_empty_list() -> None:
     with pytest.raises(ValueError):
-        _ = RasterLayer.find_union([])
+        _ = yg.find_union([])
 
 
 def test_find_union_single_item() -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
-    union = RasterLayer.find_union([layer])
+    union = yg.find_union([layer])
     assert union == layer.area
 
 
@@ -25,7 +26,7 @@ def test_find_union_same() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == layers[0].area
 
 
@@ -34,7 +35,7 @@ def test_find_union_subset() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
         RasterLayer(gdal_dataset_of_region(Area(-1, 1, 1, -1), 0.02)),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == layers[0].area
 
 
@@ -43,7 +44,7 @@ def test_find_union_overlap() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
         RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02)),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == Area(-15, 15, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
 
 
@@ -52,7 +53,7 @@ def test_find_union_distinct() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-110, 10, -100, -10), 0.02)),
         RasterLayer(gdal_dataset_of_region(Area(100, 10, 110, -10), 0.02)),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == Area(-110, 10, 110, -10, MapProjection("epsg:4326", 0.02, -0.02))
 
     for layer in layers:
@@ -64,7 +65,7 @@ def test_find_union_with_null() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
         ConstantLayer(0.0),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == layers[0].area
 
 
@@ -74,7 +75,7 @@ def test_find_union_different_pixel_pitch() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.01)),
     ]
     with pytest.raises(ValueError):
-        _ = RasterLayer.find_union(layers)
+        _ = yg.find_union(layers)
 
 
 def test_find_union_with_vector_unbound() -> None:
@@ -93,7 +94,7 @@ def test_find_union_with_vector_unbound() -> None:
         assert vector.area == area
 
         layers = [raster, vector]
-        union = RasterLayer.find_union(layers)
+        union = yg.find_union(layers)
         aligned_area = vector.area.project_like(raster.area)
         assert union == aligned_area
 
@@ -118,7 +119,7 @@ def test_find_union_with_vector_bound() -> None:
         assert vector.area != area
 
         layers = [raster, vector]
-        union = RasterLayer.find_union(layers)
+        union = yg.find_union(layers)
         assert union == vector.area
 
         for layer in layers:

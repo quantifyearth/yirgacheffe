@@ -194,7 +194,7 @@ with (
     RasterLayer.layer_from_file(...) as area_layer,
     VectorLayer(...) as mask_layer
 ):
-    intersection = RasterLayer.find_intersection([area_layer, mask_layer])
+    intersection = yg.find_intersection([area_layer, mask_layer])
     area_layer.set_intersection_window(intersection)
     mask_layer.set_intersection_window(intersection)
 

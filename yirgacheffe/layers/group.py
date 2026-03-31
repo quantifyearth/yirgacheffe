@@ -6,6 +6,7 @@ from typing import Any, Sequence
 import numpy as np
 from numpy import ma
 
+from .static import find_union
 from .._datatypes import Area, Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
@@ -61,7 +62,7 @@ class GroupLayer(YirgacheffeLayer):
                 raise ValueError("Layers can not currently be constrained")
 
         # area/window are superset of all tiles
-        union = YirgacheffeLayer.find_union(layers)
+        union = find_union(layers)
         super().__init__(union, name=name)
 
         # We store them in reverse order so that from the user's perspective

@@ -15,5 +15,7 @@ To get started with yirgacheffe you can import data using the following core met
             - from_array
             - area_raster
             - to_geotiff
+            - find_intersection
+            - find_union
         show_root_heading: false
         show_source: false

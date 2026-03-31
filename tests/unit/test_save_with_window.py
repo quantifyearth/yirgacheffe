@@ -1,5 +1,6 @@
 import numpy
 
+import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer
 
@@ -51,7 +52,7 @@ def test_add_byte_layers_with_union() -> None:
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     layers = [layer1, layer2, result]
-    window = RasterLayer.find_union(layers)
+    window = yg.find_union(layers)
     for layer in layers:
         layer.set_window_for_union(window)
 
@@ -139,7 +140,7 @@ def test_add_byte_layers_with_intersection_with_max_save_raster() -> None:
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     layers = [layer1, layer2, result]
-    window = RasterLayer.find_intersection(layers)
+    window = yg.find_intersection(layers)
     for layer in layers:
         layer.set_window_for_intersection(window)
 
@@ -227,7 +228,7 @@ def test_add_byte_layers_with_intersection_with_min_save_raster() -> None:
     result = RasterLayer.empty_raster_layer_like(layer2)
     layers = [layer1, layer2, result]
 
-    window = RasterLayer.find_intersection(layers)
+    window = yg.find_intersection(layers)
     for layer in layers:
         layer.set_window_for_intersection(window)
 

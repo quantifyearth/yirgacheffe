@@ -52,7 +52,7 @@ def test_stack_tifs_with_area_match() -> None:
             layer1 = yg.from_array(data1, (-100 + i, 100 + i), projection)
             source_layers.append(layer1)
 
-        intersection = RasterLayer.find_intersection(source_layers)
+        intersection = yg.find_intersection(source_layers)
         for layer in source_layers:
             layer.set_window_for_intersection(intersection)
 

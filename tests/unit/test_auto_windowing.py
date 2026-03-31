@@ -173,7 +173,7 @@ def test_constant_layer_result_lhs_add() -> None:
     const_layer = ConstantLayer(1.0)
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    intersection = RasterLayer.find_intersection([layer1, const_layer])
+    intersection = yg.find_intersection([layer1, const_layer])
     const_layer.set_window_for_intersection(intersection)
     layer1.set_window_for_intersection(intersection)
 
@@ -214,7 +214,7 @@ def test_constant_layer_result_lhs_multiply() -> None:
     const_layer = ConstantLayer(2.0)
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    intersection = RasterLayer.find_intersection([layer1, const_layer])
+    intersection = yg.find_intersection([layer1, const_layer])
     const_layer.set_window_for_intersection(intersection)
     layer1.set_window_for_intersection(intersection)
 

@@ -160,7 +160,7 @@ def test_cells_dont_overlap(cell_id):
     projection = MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120)
     layers = [H3CellLayer(x, projection) for x in cluster]
 
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     for layer in layers:
         layer.set_window_for_union(union)
 

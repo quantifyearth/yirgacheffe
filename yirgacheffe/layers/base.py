@@ -2,6 +2,7 @@ from __future__ import annotations
 import operator
 import uuid
 from collections.abc import Callable
+from copy import deepcopy
 from functools import reduce
 from typing import Any, Sequence
 
@@ -99,39 +100,6 @@ class YirgacheffeLayer(LayerMathMixin):
     @property
     def nodata(self) -> None:
         return None
-
-    @staticmethod
-    def find_intersection(layers: Sequence[YirgacheffeLayer]) -> Area:
-        if not layers:
-            raise ValueError("Expected list of layers")
-
-        # This only makes sense (currently) if all layers
-        # have the same pixel pitch (modulo desired accuracy)
-        projections = [x.map_projection for x in layers if x.map_projection is not None]
-        if not projections:
-            raise ValueError("No layers have a projection")
-        if not all(projections[0] == x for x in projections[1:]):
-            raise ValueError("Not all layers are at the same projection or pixel scale")
-
-        layer_areas = [x._get_operation_area(projections[0]) for x in layers]
-        return reduce(operator.and_, layer_areas)
-
-    @staticmethod
-    def find_union(layers: Sequence[YirgacheffeLayer]) -> Area:
-        if not layers:
-            raise ValueError("Expected list of layers")
-
-        # This only makes sense (currently) if all layers
-        # have the same pixel pitch (modulo desired accuracy)
-        projections = [x.map_projection for x in layers if x.map_projection is not None]
-        if not projections:
-            raise ValueError("No layers have a projection")
-        if not all(projections[0] == x for x in projections[1:]):
-            raise ValueError("Not all layers are at the same projectin or pixel scale")
-
-        layer_areas = [x._get_operation_area(projections[0]) for x in layers]
-        # This removal of global layers is to stop constant layers forcing everything to be global
-        return reduce(operator.or_, [x for x in layer_areas if not x.is_world])
 
     @property
     def geo_transform(self) -> tuple[float, float, float, float, float, float]:

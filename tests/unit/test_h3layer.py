@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 from osgeo import gdal
 
+import yirgacheffe as yg
 from yirgacheffe.layers import RasterLayer, H3CellLayer
 from yirgacheffe import Area, MapProjection
 from yirgacheffe._backends import backend
@@ -276,7 +277,7 @@ def test_h3_layer_overlapped():
 
     tiles = [H3CellLayer(cell_id, projection) for cell_id in cells]
 
-    union = RasterLayer.find_union(tiles)
+    union = yg.find_union(tiles)
     union = union.grow(projection.xstep * 25)
 
     scratch = RasterLayer.empty_raster_layer(union, projection.scale, gdal.GDT_Float64)
@@ -286,7 +287,7 @@ def test_h3_layer_overlapped():
     for tile in tiles:
         scratch.reset_window()
         layers = [scratch, tile]
-        intersection = RasterLayer.find_intersection(layers)
+        intersection = yg.find_intersection(layers)
         for layer in layers:
             layer.set_window_for_intersection(intersection)
         result = scratch + tile

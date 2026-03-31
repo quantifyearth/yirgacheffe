@@ -1,5 +1,6 @@
 import numpy
 
+import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_with_data
 from yirgacheffe.layers import RasterLayer
 
@@ -83,7 +84,7 @@ def test_sum_with_union() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
 
     layers = [layer1, layer2]
-    window = RasterLayer.find_union(layers)
+    window = yg.find_union(layers)
     for layer in layers:
         layer.set_window_for_union(window)
 
@@ -165,7 +166,7 @@ def test_sum_with_intersection() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
 
     layers = [layer1, layer2]
-    window = RasterLayer.find_intersection(layers)
+    window = yg.find_intersection(layers)
     for layer in layers:
         layer.set_window_for_intersection(window)
 
@@ -249,7 +250,7 @@ def test_save_with_sum_with_union() -> None:
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     layers = [layer1, layer2, result]
-    window = RasterLayer.find_union(layers)
+    window = yg.find_union(layers)
     for layer in layers:
         layer.set_window_for_union(window)
 
@@ -338,7 +339,7 @@ def test_save_with_sum_with_intersection() -> None:
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     layers = [layer1, layer2, result]
-    window = RasterLayer.find_intersection(layers)
+    window = yg.find_intersection(layers)
     for layer in layers:
         layer.set_window_for_intersection(window)
 

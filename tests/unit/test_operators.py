@@ -629,7 +629,7 @@ def test_constant_layer_result_rhs() -> None:
     result = RasterLayer.empty_raster_layer_like(layer1)
 
     layers = [layer1, const_layer, result]
-    intersection = RasterLayer.find_intersection(layers)
+    intersection = yg.find_intersection(layers)
     for layer in layers:
         layer.set_window_for_intersection(intersection)
 
@@ -649,7 +649,7 @@ def test_constant_layer_result_lhs() -> None:
     const_layer = ConstantLayer(1.0)
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    intersection = RasterLayer.find_intersection([layer1, const_layer])
+    intersection = yg.find_intersection([layer1, const_layer])
     const_layer.set_window_for_intersection(intersection)
     layer1.set_window_for_intersection(intersection)
 

@@ -17,6 +17,7 @@ from .layers import GroupLayer, TiledGroupLayer
 from .layers import RasterLayer
 from .layers import VectorLayer
 from .layers import AreaPerPixelLayer
+from .layers import find_union
 from ._datatypes import MapProjection
 from ._backends.enumeration import dtype as DataType
 
@@ -343,7 +344,7 @@ def to_geotiff(
     if not is_vsi_based:
         typed_filename.parent.mkdir(parents=True, exist_ok=True)
 
-    union_area = YirgacheffeLayer.find_union(layer_list)
+    union_area = find_union(layer_list)
 
     # GDAL TIFF compression is a significant bottleneck, and threading really helps. Yirgacheffe otherwise
     # will parallel compute a block of data, and then wait as a single thread does the GDAL TIFF compression
