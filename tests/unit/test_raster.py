@@ -14,7 +14,7 @@ from tests.unit.helpers import (
 )
 from yirgacheffe import Area, MapProjection, PixelScale, DataType
 from yirgacheffe._datatypes import Window
-from yirgacheffe.layers import RasterLayer, InvalidRasterBand
+from yirgacheffe._layers import RasterLayer, InvalidRasterBand
 
 
 # There is a lot of "del" in this file, due to a combination of gdal having no way

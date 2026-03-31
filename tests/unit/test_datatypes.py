@@ -8,7 +8,7 @@ from osgeo import gdal
 import yirgacheffe as yg
 from yirgacheffe import DataType
 from yirgacheffe._backends import backend, BACKEND
-from yirgacheffe.layers import RasterLayer
+from yirgacheffe._layers import RasterLayer
 
 from tests.unit.helpers import gdal_dataset_with_data
 

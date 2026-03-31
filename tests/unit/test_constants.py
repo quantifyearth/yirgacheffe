@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe.layers import RasterLayer, ConstantLayer
+from yirgacheffe._layers import RasterLayer, ConstantLayer
 from yirgacheffe import DataType
 from yirgacheffe import Area, PixelScale
 

@@ -4,7 +4,7 @@ import numpy as np
 from osgeo import gdal, ogr
 
 from yirgacheffe import Area, MapProjection
-from yirgacheffe.layers import YirgacheffeLayer
+from yirgacheffe._layers import YirgacheffeLayer
 
 
 def gdal_dataset_of_region(

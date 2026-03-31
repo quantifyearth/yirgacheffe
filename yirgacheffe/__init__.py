@@ -12,7 +12,7 @@ except ModuleNotFoundError:
         pyproject_data = tomllib.load(f)
     __version__ = pyproject_data["project"]["version"]
 
-from .layers import YirgacheffeLayer, ResamplingMethod, find_union, find_intersection
+from ._layers import YirgacheffeLayer, ResamplingMethod, find_union, find_intersection
 from ._core import read_raster, read_rasters, read_shape, read_raster_like, read_shape_like, constant, \
     read_narrow_raster, from_array, area_raster, to_geotiff
 from ._datatypes.area import Area

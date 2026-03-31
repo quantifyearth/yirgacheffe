@@ -9,7 +9,7 @@ from tests.unit.helpers import (
     make_vectors_with_empty_feature,
 )
 from yirgacheffe import DataType
-from yirgacheffe.layers import RasterLayer, VectorLayer
+from yirgacheffe._layers import RasterLayer, VectorLayer
 from yirgacheffe import Area, MapProjection, PixelScale
 from yirgacheffe._datatypes import Window
 

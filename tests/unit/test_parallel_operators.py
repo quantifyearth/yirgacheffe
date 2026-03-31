@@ -8,7 +8,7 @@ import torch
 
 import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_with_data
-from yirgacheffe.layers import RasterLayer
+from yirgacheffe._layers import RasterLayer
 from yirgacheffe._operators import LayerOperation
 
 # These tests are marked skip for MLX, because there seems to be a problem with

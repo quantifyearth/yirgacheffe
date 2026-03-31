@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe.layers import YirgacheffeLayer
+from yirgacheffe._layers import YirgacheffeLayer
 from yirgacheffe import Area, MapProjection
 
 from tests.unit.helpers import make_vectors_with_id

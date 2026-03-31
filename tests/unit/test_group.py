@@ -11,7 +11,7 @@ from tests.unit.helpers import (
     make_vectors_with_id,
     generate_child_tile,
 )
-from yirgacheffe.layers import GroupLayer, RasterLayer, TiledGroupLayer, VectorLayer
+from yirgacheffe._layers import GroupLayer, RasterLayer, TiledGroupLayer, VectorLayer
 from yirgacheffe import Area, MapProjection, PixelScale, DataType
 from yirgacheffe._datatypes import Window
 

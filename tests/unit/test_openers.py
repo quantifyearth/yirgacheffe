@@ -9,7 +9,7 @@ import pytest
 
 import yirgacheffe as yg
 from yirgacheffe import DataType
-from yirgacheffe.layers import InvalidRasterBand, RasterLayer
+from yirgacheffe._layers import InvalidRasterBand, RasterLayer
 from yirgacheffe import Area, MapProjection
 from yirgacheffe._datatypes import Window
 from tests.unit.helpers import (

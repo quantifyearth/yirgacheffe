@@ -11,7 +11,7 @@ from tests.unit.helpers import (
     make_vectors_with_id,
 )
 from yirgacheffe import Area, MapProjection
-from yirgacheffe.layers import RasterLayer, ConstantLayer, H3CellLayer, VectorLayer
+from yirgacheffe._layers import RasterLayer, ConstantLayer, H3CellLayer, VectorLayer
 from yirgacheffe._datatypes import Window
 
 

@@ -10,11 +10,12 @@
 
 ### Removed
 
-* Removed `window` property from the public API
-* Removed `Window` class from the public API
-* Removed `RasteredVectorLayer` class (use `VectorLayer` instead)
+* Removed `window` property from the public API.
+* Removed `Window` class from the public API.
+* Removed `RasteredVectorLayer` class (use `VectorLayer` instead).
+* Removed `layers` from the public API, core methods should be used to access layers instead.
 * Removed properties from internal `LayerObject` API that was earlier exposed and had to be maintained for backwards compatibility.
-* Remove `WGS_84_PROJECTION` constant - for a while now this has been deprecated since we added more human readable string support (e.g., "epsg:4326")
+* Remove `WGS_84_PROJECTION` constant - for a while now this has been deprecated since we added more human readable string support (e.g., "epsg:4326").
 
 ## v1.13.1 (18/03/2026)
 

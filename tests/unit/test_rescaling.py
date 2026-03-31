@@ -4,7 +4,7 @@ import pytest
 
 import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, gdal_dataset_with_data
-from yirgacheffe.layers import RasterLayer, RescaledRasterLayer
+from yirgacheffe._layers import RasterLayer, RescaledRasterLayer
 from yirgacheffe import Area, MapProjection
 from yirgacheffe._datatypes import Window
 

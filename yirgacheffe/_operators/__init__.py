@@ -1373,7 +1373,7 @@ class LayerOperation(LayerMathMixin):
         )
         with context as tempory_file:
             # Local import due to circular dependancy
-            from yirgacheffe.layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
+            from yirgacheffe._layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
             inner_filename = tempory_file if is_vsi_based else tempory_file.name
             try:
                 with RasterLayer.empty_raster_layer_like(

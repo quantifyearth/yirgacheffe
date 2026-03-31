@@ -11,7 +11,7 @@ from tests.unit.helpers import (
     gdal_multiband_dataset_with_data,
 )
 import yirgacheffe as yg
-from yirgacheffe.layers import H3CellLayer
+from yirgacheffe._layers import H3CellLayer
 from yirgacheffe._operators.cse import CSECacheTable
 from yirgacheffe._backends import backend
 

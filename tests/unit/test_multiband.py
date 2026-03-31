@@ -5,7 +5,7 @@ import numpy as np
 from osgeo import gdal
 
 import yirgacheffe as yg
-from yirgacheffe.layers import RasterLayer
+from yirgacheffe._layers import RasterLayer
 from yirgacheffe import Area, PixelScale
 
 

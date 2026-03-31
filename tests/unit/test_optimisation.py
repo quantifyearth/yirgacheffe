@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe.layers import RasterLayer, H3CellLayer
+from yirgacheffe._layers import RasterLayer, H3CellLayer
 from yirgacheffe import Area, MapProjection
 from yirgacheffe._backends import backend
 

@@ -9,15 +9,15 @@ from typing import Sequence
 import numpy as np
 from osgeo import gdal
 
-from .layers import UniformAreaLayer
-from .layers import YirgacheffeLayer
-from .layers import ReprojectedRasterLayer, ResamplingMethod
-from .layers import ConstantLayer
-from .layers import GroupLayer, TiledGroupLayer
-from .layers import RasterLayer
-from .layers import VectorLayer
-from .layers import AreaPerPixelLayer
-from .layers import find_union
+from ._layers import UniformAreaLayer
+from ._layers import YirgacheffeLayer
+from ._layers import ReprojectedRasterLayer, ResamplingMethod
+from ._layers import ConstantLayer
+from ._layers import GroupLayer, TiledGroupLayer
+from ._layers import RasterLayer
+from ._layers import VectorLayer
+from ._layers import AreaPerPixelLayer
+from ._layers import find_union
 from ._datatypes import MapProjection
 from ._backends.enumeration import dtype as DataType
 

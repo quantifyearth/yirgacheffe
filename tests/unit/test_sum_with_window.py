@@ -2,7 +2,7 @@ import numpy
 
 import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_with_data
-from yirgacheffe.layers import RasterLayer
+from yirgacheffe._layers import RasterLayer
 
 
 def test_sum_sans_window_update() -> None:

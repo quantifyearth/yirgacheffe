@@ -10,7 +10,7 @@ import pytest
 from tests.unit.helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe import Area, MapProjection, PixelScale
 from yirgacheffe._datatypes import Window
-from yirgacheffe.layers import (
+from yirgacheffe._layers import (
     ConstantLayer,
     GroupLayer,
     RasterLayer,

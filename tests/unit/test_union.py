@@ -6,7 +6,7 @@ import pytest
 import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, make_vectors_with_id
 from yirgacheffe import Area, MapProjection
-from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
+from yirgacheffe._layers import ConstantLayer, RasterLayer, VectorLayer
 from yirgacheffe._datatypes import Window
 
 
