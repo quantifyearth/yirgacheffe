@@ -430,6 +430,10 @@ class LayerMathMixin:
         raise NotImplementedError("Must be overridden by subclass")
 
     @property
+    def dimensions(self) -> tuple[int,int]:
+        raise NotImplementedError("Must be overridden by subclass")
+
+    @property
     def area(self) -> Area:
         raise NotImplementedError("Must be overridden by subclass")
 
@@ -664,6 +668,20 @@ class LayerOperation(LayerMathMixin):
             (area.top - area.bottom) / (projection.ystep * -1.0),
         )
         return Window(xoff, yoff, xsize, ysize)
+
+    @property
+    def dimensions(self) -> tuple[int,int]:
+        projection = self.map_projection
+        if projection is None:
+            # This can happen if your source layers are say just constants
+            raise AttributeError("No dimensions without projection")
+        area = self._get_operation_area(projection)
+        assert area is not None
+        assert not area.is_world
+        return projection.round_up_pixels(
+            (area.right - area.left) / projection.xstep,
+            (area.top - area.bottom) / (projection.ystep * -1.0),
+        )
 
     @property
     def datatype(self) -> DataType:

@@ -19,6 +19,7 @@ def test_save_and_read_simple_geotiff() -> None:
 
         with yg.read_raster(filename) as layer:
             assert layer.area == yg.Area(0, 0, 400.0, -200.0, projection)
+            assert layer.dimensions == (4, 2)
             assert layer.window == Window(0, 0, 4, 2)
             assert layer.nodata is None
             assert layer.datatype == yg.DataType.Int64
@@ -38,6 +39,7 @@ def test_save_and_read_simple_geotiff_no_parent() -> None:
 
         with yg.read_raster(filename) as layer:
             assert layer.area == yg.Area(0, 0, 400.0, -200.0, projection)
+            assert layer.dimensions == (4, 2)
             assert layer.window == Window(0, 0, 4, 2)
             assert layer.nodata is None
             assert layer.datatype == yg.DataType.Int64
@@ -57,6 +59,7 @@ def test_save_and_read_nodata_geotiff() -> None:
 
         with yg.read_raster(filename) as layer:
             assert layer.area == yg.Area(0, 0, 400.0, -200.0, projection)
+            assert layer.dimensions == (4, 2)
             assert layer.window == Window(0, 0, 4, 2)
             assert layer.nodata == 3.0
             assert layer.datatype == yg.DataType.Float64
@@ -153,6 +156,7 @@ def test_save_multiband_non_overlapping_area() -> None:
         for idx in range(5):
             with yg.read_raster(filename, band=idx + 1) as layer:
                 assert layer.area == expected_area
+                assert layer.dimensions == (expected_window.xsize, expected_window.ysize)
                 assert layer.window == expected_window
 
                 region = np.array([
@@ -224,6 +228,7 @@ def test_save_multiband_calc_non_overlapping_area() -> None:
         for idx in range(5):
             with yg.read_raster(filename, band=idx + 1) as layer:
                 assert layer.area == expected_area
+                assert layer.dimensions == (expected_window.xsize, expected_window.ysize)
                 assert layer.window == expected_window
 
                 region = np.array([

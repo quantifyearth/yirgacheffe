@@ -35,6 +35,7 @@ def test_pickle_raster_layer() -> None:
         assert restore.area == area
         assert restore.map_projection == MapProjection(WGS_84_PROJECTION, 0.02, -0.02)
         assert restore.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+        assert restore.dimensions == (1000, 1000)
         assert restore.window == Window(0, 0, 1000, 1000)
 
 
@@ -60,6 +61,7 @@ def test_pickle_dyanamic_vector_layer() -> None:
 
         assert restore.area == area
         assert restore.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+        assert restore.dimensions == (20, 10)
         assert restore.window == Window(0, 0, 20, 10)
         assert restore.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
 
@@ -94,6 +96,10 @@ def test_pickle_uniform_area_layer() -> None:
             math.floor(-90 / pixel_scale) * pixel_scale,
             MapProjection(WGS_84_PROJECTION, pixel_scale, -pixel_scale),
         )
+        assert restore.dimensions == (
+            math.ceil((restore.area.right - restore.area.left) / pixel_scale),
+            math.ceil((restore.area.top - restore.area.bottom) / pixel_scale),
+        )
         assert restore.window == Window(
             0,
             0,
@@ -117,6 +123,7 @@ def test_pickle_group_layer() -> None:
         restore = pickle.loads(p)
 
         assert restore.area == area
+        assert restore.dimensions == (100, 100)
         assert restore.window == Window(0, 0, 100, 100)
 
         result = restore.read_array(0, 0, 100, 100)
@@ -217,6 +224,7 @@ def test_pickle_rescaled_raster_layer() -> None:
         )
         assert restore.map_projection == projection
         assert restore.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
+        assert restore.dimensions == (2000, 2000)
         assert restore.window == Window(0, 0, 2000, 2000)
 
         expected = restore.read_array(0, 0, 100, 100)

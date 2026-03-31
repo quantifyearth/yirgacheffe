@@ -59,6 +59,7 @@ def test_open_raster_file() -> None:
             assert layer.area == area
             assert layer.map_projection == projection
             assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+            assert layer.dimensions == (1000, 1000)
             assert layer.window == Window(0, 0, 1000, 1000)
 
 
@@ -75,6 +76,7 @@ def test_open_raster_file_as_path() -> None:
             assert layer.area == area
             assert layer.map_projection == projection
             assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+            assert layer.dimensions == (1000, 1000)
             assert layer.window == Window(0, 0, 1000, 1000)
 
 
@@ -131,6 +133,7 @@ def test_open_gpkg_with_mapprojection() -> None:
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.dimensions == (20, 10)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.map_projection == MapProjection("epsg:4326", 1.0, -1.0)
 
@@ -161,6 +164,7 @@ def test_open_gpkg_direct_scale() -> None:
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.dimensions == (20, 10)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.map_projection == MapProjection("epsg:4326", 1.0, -1.0)
 
@@ -176,6 +180,7 @@ def test_open_gpkg_with_filter() -> None:
                 -10.0, 10.0, 0.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
             assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+            assert layer.dimensions == (10, 10)
             assert layer.window == Window(0, 0, 10, 10)
 
             # Because we picked one later, all pixels should be burned
@@ -201,6 +206,7 @@ def test_open_shape_like() -> None:
                     -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
                 )
                 assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+                assert layer.dimensions == (20, 10)
                 assert layer.window == Window(0, 0, 20, 10)
                 assert layer.map_projection == raster_layer.map_projection
 
@@ -228,6 +234,7 @@ def test_open_two_raster_areas_side_by_side(tiled):
             assert group.area == Area(
                 -10, 10, 30, -10, MapProjection("epsg:4326", 0.2, -0.2)
             )
+            assert group.dimensions == (200, 100)
             assert group.window == Window(0, 0, 200, 100)
 
             with yg.read_raster(path1) as raster1:
@@ -253,6 +260,7 @@ def test_open_two_raster_by_glob(tiled):
             assert group.area == Area(
                 -10, 10, 30, -10, MapProjection("epsg:4326", 0.2, -0.2)
             )
+            assert group.dimensions == (200, 100)
             assert group.window == Window(0, 0, 200, 100)
 
             with yg.read_raster(path1) as raster1:
@@ -290,6 +298,10 @@ def test_open_uniform_area_layer() -> None:
                 ceil(180 / pixel_scale) * pixel_scale,
                 floor(-90 / pixel_scale) * pixel_scale,
                 MapProjection("epsg:4326", pixel_scale, -pixel_scale),
+            )
+            assert layer.dimensions == (
+                ceil((layer.area.right - layer.area.left) / pixel_scale),
+                ceil((layer.area.top - layer.area.bottom) / pixel_scale),
             )
             assert layer.window == Window(
                 0,

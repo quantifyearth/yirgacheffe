@@ -86,6 +86,17 @@ class YirgacheffeLayer(LayerMathMixin):
         return self._window
 
     @property
+    def dimensions(self) -> tuple[int,int]:
+        """Natural dimensions of the layer in pixels in width and height.
+
+        If the layer is based on a vector that hasn't had a reference map projection applied yet then
+        this will throw an attribute error.
+        """
+        if self._window is None:
+            raise AttributeError("Layer has no dimensions")
+        return (self._window.xsize, self._window.ysize)
+
+    @property
     def nodata(self) -> None:
         return None
 

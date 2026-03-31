@@ -40,6 +40,7 @@ def test_basic_dynamic_vector_layer() -> None:
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.dimensions == (20, 10)
             assert layer.window == Window(0, 0, 20, 10)
             assert layer.map_projection.epsg == 4326
 
@@ -74,12 +75,13 @@ def test_multi_area_vector() -> None:
             -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.dimensions == (20, 20)
         assert layer.window == Window(0, 0, 20, 20)
 
-        window = layer.window
-        for yoffset in range(window.ysize):
-            raster = layer.read_array(0, yoffset, window.xsize, 1)
-            assert raster.shape == (1, window.xsize)
+        xsize, ysize = layer.dimensions
+        for yoffset in range(ysize):
+            raster = layer.read_array(0, yoffset, xsize, 1)
+            assert raster.shape == (1, xsize)
 
 
 def test_empty_layer_from_vector():
@@ -102,6 +104,7 @@ def test_empty_layer_from_vector():
 
         empty = RasterLayer.empty_raster_layer_like(source)
         assert empty.map_projection == source.map_projection
+        assert empty.dimensions == source.dimensions
         assert empty.window == source.window
         assert empty.area == source.area
 
@@ -120,13 +123,15 @@ def test_vector_layers_with_default_burn_value() -> None:
             -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.dimensions == (20, 20)
         assert layer.window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) / 2
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) / 2
 
 
 def test_vector_layers_with_fixed_burn_value() -> None:
@@ -143,12 +148,14 @@ def test_vector_layers_with_fixed_burn_value() -> None:
             -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.dimensions == (20, 20)
         assert layer.window == Window(0, 0, 20, 20)
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
         total = layer.sum()
-        assert total == ((layer.window.xsize * layer.window.ysize) / 2) * 5
+        xsize, ysize = layer.dimensions
+        assert total == ((xsize * ysize) / 2) * 5
 
 
 def test_vector_layers_with_default_burn_value_and_filter() -> None:
@@ -165,11 +172,13 @@ def test_vector_layers_with_default_burn_value_and_filter() -> None:
             -10.0, 10.0, 0.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.dimensions == (10, 10)
         assert layer.window == Window(0, 0, 10, 10)
 
         # Because we picked one later, all pixels should be burned
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize)
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize)
 
 
 def test_vector_layers_with_invalid_burn_value() -> None:
@@ -202,14 +211,14 @@ def test_vector_layers_with_field_value() -> None:
             -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.dimensions == (20, 20)
         assert layer.window == Window(0, 0, 20, 20)
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half
         total = layer.sum()
-        assert total == (((layer.window.xsize * layer.window.ysize) / 4) * 42) + (
-            ((layer.window.xsize * layer.window.ysize) / 4) * 43
-        )
+        xsize, ysize = layer.dimensions
+        assert total == (((xsize * ysize) / 4) * 42) + (((xsize * ysize) / 4) * 43)
 
 
 @pytest.mark.parametrize(
@@ -240,13 +249,15 @@ def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
             -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.dimensions == (20, 20)
         assert layer.window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) * value
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) * value
 
 
 @pytest.mark.parametrize(
@@ -283,12 +294,14 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
             -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.dimensions == (20, 20)
         assert layer.window == Window(0, 0, 20, 20)
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) * value
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) * value
 
 
 @pytest.mark.parametrize(
@@ -314,13 +327,15 @@ def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None
             -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.dimensions == (20, 20)
         assert layer.window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) * value
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) * value
 
 
 @pytest.mark.parametrize(
@@ -473,10 +488,12 @@ def test_vector_layers_with_empty_features() -> None:
             -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.dimensions == (20, 20)
         assert layer.window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) / 2
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) / 2

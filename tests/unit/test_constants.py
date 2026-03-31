@@ -7,6 +7,14 @@ from yirgacheffe import DataType
 from yirgacheffe import Area, PixelScale
 
 
+def test_constant_default_behaviour() -> None:
+    c = yg.constant(42)
+    assert c.map_projection == None
+    assert c.area == Area.world()
+    with pytest.raises(AttributeError):
+        _ = c.dimensions
+
+
 def test_constant_save() -> None:
     area = Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0)
     scale = PixelScale(0.1, -0.1)

@@ -23,6 +23,7 @@ def test_simple_scale_down() -> None:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
             assert layer.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
+            assert layer.dimensions == (2000, 2000)
             assert layer.window == Window(0, 0, 2000, 2000)
 
 
@@ -35,6 +36,7 @@ def test_simple_scale_up() -> None:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
             assert layer.map_projection == target_projection
             assert layer.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
+            assert layer.dimensions == (500, 500)
             assert layer.window == Window(0, 0, 500, 500)
 
 
@@ -52,6 +54,7 @@ def test_scaling_up_pixels() -> None:
             assert layer.area == Area(0, 0, 4, -4, target_projection)
             assert layer.map_projection == target_projection
             assert layer.geo_transform == (0.0, 0.5, 0.0, 0.0, 0.0, -0.5)
+            assert layer.dimensions == (8, 8)
             assert layer.window == Window(0, 0, 8, 8)
 
             actual_raster = layer.read_array(0, 0, 8, 8)
@@ -119,6 +122,7 @@ def test_scaling_down_pixels() -> None:
             assert layer.area == Area(0, 0, 8, -8, target_projection)
             assert layer.map_projection == target_projection
             assert layer.geo_transform == (0.0, 2.0, 0.0, 0.0, 0.0, -2.0)
+            assert layer.dimensions == (4, 4)
             assert layer.window == Window(0, 0, 4, 4)
 
             actual_raster = layer.read_array(0, 0, 4, 4)
@@ -188,6 +192,7 @@ def test_reprojected_up_in_operation() -> None:
 
     rescaled = ReprojectedRasterLayer(raster2, raster1.map_projection, ResamplingMethod.Nearest)
 
+    assert raster1.dimensions == rescaled.dimensions
     assert raster1.window == rescaled.window
     assert raster1.area == rescaled.area
 
@@ -212,6 +217,7 @@ def test_reprojected_down_in_operation() -> None:
 
     rescaled = ReprojectedRasterLayer(raster1, raster2.map_projection, ResamplingMethod.Nearest)
 
+    assert raster2.dimensions == rescaled.dimensions
     assert raster2.window == rescaled.window
     assert raster2.area == rescaled.area
 
@@ -232,10 +238,12 @@ def test_reprojected_up_with_window_set() -> None:
         target_projection = MapProjection("epsg:4326", 0.5, -0.5)
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
+            assert layer.dimensions == (8, 8)
             assert layer.window == Window(0, 0, 8, 8)
 
             layer.set_window_for_intersection(Area(1.0, -1.0, 3.0, -3.0))
             assert layer.area == Area(1.0, -1.0, 3.0, -3.0, target_projection)
+            assert layer.dimensions == (4, 4)
             assert layer.window == Window(2, 2, 4, 4)
 
             actual_raster = layer.read_array(0, 0, 4, 4)
@@ -269,6 +277,7 @@ def test_reprojected_up_with_window_set_2() -> None:
 
             layer.set_window_for_intersection(Area(0.5, -0.5, 3.5, -3.5))
             assert layer.area == Area(0.5, -0.5, 3.5, -3.5, target_projection)
+            assert layer.dimensions == (6, 6)
             assert layer.window == Window(1, 1, 6, 6)
 
             actual_raster = layer.read_array(0, 0, 6, 6)
@@ -290,6 +299,7 @@ def test_reprojected_down_with_window_set() -> None:
 
             layer.set_window_for_intersection(Area(2.0, -2.0, 6.0, -6.0))
             assert layer.area == Area(2.0, -2.0, 6.0, -6.0, target_projection)
+            assert layer.dimensions == (2, 2)
             assert layer.window == Window(1, 1, 2, 2)
 
             actual_raster = layer.read_array(0, 0, 2, 2)

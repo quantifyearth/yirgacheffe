@@ -165,26 +165,31 @@ def test_find_intersection_different_pixel_pitch() -> None:
 )
 def test_set_intersection_self(scale) -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), scale))
+    old_dimensions = layer.dimensions
     old_window = layer.window
 
     # note that the area we passed to gdal_dataset_of_region isn't pixel aligned, so we must
     # use the area from loading the dataset
     layer.set_window_for_intersection(layer.area)
+    assert layer.dimensions == old_dimensions
     assert layer.window == old_window
 
     # reset should not do much here
     layer.reset_window()
+    assert layer.dimensions == old_dimensions
     assert layer.window == old_window
 
 
 def test_set_intersection_subset() -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
+    assert layer.dimensions == (1000, 1000)
     assert layer.window == Window(0, 0, 1000, 1000)
     origin_before_pixel = layer.read_array(0, 0, 1, 1)
 
     intersection = Area(-1.0, 1.0, 1.0, -1.0)
 
     layer.set_window_for_intersection(intersection)
+    assert layer.dimensions == (100, 100)
     assert layer.window == Window(450, 450, 100, 100)
     origin_after_pixel = layer.read_array(0, 0, 1, 1)
 
@@ -194,6 +199,7 @@ def test_set_intersection_subset() -> None:
     assert origin_before_pixel[0][0] != origin_after_pixel[0][0]
 
     layer.reset_window()
+    assert layer.dimensions == (1000, 1000)
     assert layer.window == Window(0, 0, 1000, 1000)
 
 

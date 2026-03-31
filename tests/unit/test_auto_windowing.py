@@ -26,6 +26,7 @@ def test_add_windows() -> None:
     calc = layer1 + layer2
 
     assert calc.area == layer2.area
+    assert calc.dimensions == layer2.dimensions
     assert calc.window == layer2.window
 
     result = RasterLayer.empty_raster_layer_like(calc)
@@ -53,6 +54,7 @@ def test_multiply_windows() -> None:
     calc = layer1 * layer2
 
     assert calc.area == layer1.area
+    assert calc.dimensions == layer1.dimensions
     assert calc.window == layer1.window
 
     result = RasterLayer.empty_raster_layer_like(calc)
@@ -385,6 +387,7 @@ def test_parallel_save_windows() -> None:
         calc = layer1 + layer2
 
         assert calc.area == layer2.area
+        assert calc.dimensions == layer2.dimensions
         assert calc.window == layer2.window
 
         result = RasterLayer.empty_raster_layer_like(calc)
@@ -425,6 +428,7 @@ def test_multiple_subexpressions_by_constant() -> None:
 
         expected_window = Window(0, 10, 14, 14)
         assert expected_success.window == expected_window
+        assert expected_success.dimensions == (14, 14)
 
         result = expected_success.sum()
         expected = (14 * 14) + (16 * 2)

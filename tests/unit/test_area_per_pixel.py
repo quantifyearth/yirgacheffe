@@ -10,6 +10,7 @@ def test_simple_wgs84_layer() -> None:
     with yg.area_raster(projection) as area_raster:
         assert area_raster.map_projection == projection
         assert area_raster.window == Window(0, 0, 36, 18)
+        assert area_raster.dimensions == (36, 18)
         assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
 
         # I don't want to test specific values, just trends
@@ -72,6 +73,7 @@ def test_simple_mollweide_layer() -> None:
     with yg.area_raster(projection) as area_raster:
         assert area_raster.map_projection == projection
         assert area_raster.window == Window(0, 0, 36082, 18041)
+        assert area_raster.dimensions == (36082, 18041)
         assert area_raster.area == yg.Area(
             left=-18041000.0,
             top=9020000.0,
@@ -133,6 +135,7 @@ def test_with_no_bounds_in_tiff_geographic() -> None:
     with yg.area_raster(projection) as area_raster:
         assert area_raster.map_projection == projection
         assert area_raster.window == Window(0, 0, 36, 18)
+        assert area_raster.dimensions == (36, 18)
         assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
 
 
@@ -171,4 +174,5 @@ def test_with_no_bounds_in_tiff_nongeographic() -> None:
     with yg.area_raster(projection) as area_raster:
         assert area_raster.map_projection == projection
         assert area_raster.window == expected_window
+        assert area_raster.dimensions == (expected_window.xsize, expected_window.ysize)
         assert area_raster.area == expected_area

@@ -131,14 +131,17 @@ def test_find_union_with_vector_bound() -> None:
 def test_set_union_self(scale) -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), scale))
     old_window = layer.window
+    old_dimensions = layer.dimensions
 
     # note that the area we passed to gdal_dataset_of_region isn't pixel aligned, so we must
     # use the area from loading the dataset
     layer.set_window_for_union(layer.area)
+    assert layer.dimensions == old_dimensions
     assert layer.window == old_window
 
     # reset should not do much here
     layer.reset_window()
+    assert layer.dimensions == old_dimensions
     assert layer.window == old_window
 
 
@@ -171,6 +174,7 @@ def test_set_union_superset(
     origin_area = Area(-1, 1, 1, -1)
 
     layer = RasterLayer(gdal_dataset_of_region(origin_area, pixel_density))
+    assert layer.dimensions == (100, 100)
     assert layer.window == Window(0, 0, 100, 100)
 
     # The make_dataset... function fills rows with the yoffset, and so the first row
@@ -188,6 +192,10 @@ def test_set_union_superset(
         -1 - left_padding, 1 + top_padding, 1 + right_padding, -1 - bottom_padding
     )
     layer.set_window_for_union(superset)
+    assert layer.dimensions == (
+        round((2 + left_padding + right_padding) / pixel_density),
+        round((2 + top_padding + bottom_padding) / pixel_density),
+    )
     assert layer.window == Window(
         round((0 - left_padding) / pixel_density),
         round((0 - top_padding) / pixel_density),
@@ -214,4 +222,5 @@ def test_set_union_superset(
     )
 
     layer.reset_window()
+    assert layer.dimensions == (100, 100)
     assert layer.window == Window(0, 0, 100, 100)

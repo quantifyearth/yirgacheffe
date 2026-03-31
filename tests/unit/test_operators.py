@@ -2046,12 +2046,14 @@ def test_very_slightly_missaligned_layers() -> None:
                 data2, (-180.000823370733258, 90.000411685366629), projection
             ) as layer2,
         ):
+            assert layer1.dimensions == layer2.dimensions
             assert layer1.window == layer2.window
             expected_area = layer1.area | layer2.area
             diff = layer1 + layer2
             diff.to_geotiff(tmp / "test.tif")
 
         with yg.read_raster(tmp / "test.tif") as r:
+            assert r.dimensions == (4, 4)
             assert r.window == Window(0, 0, 4, 4)
             assert r.area == expected_area
 
