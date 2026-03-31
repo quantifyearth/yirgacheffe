@@ -210,6 +210,9 @@ def backend_to_dtype(val):
 def astype_op(data, datatype):
     return data.astype(dtype_to_backend(datatype))
 
+def as_area_op(data, new_area):
+    return data
+
 operator_map: dict[op, Callable] = {
     op.ADD: mx.array.__add__,
     op.SUB: mx.array.__sub__,
@@ -258,4 +261,5 @@ operator_map: dict[op, Callable] = {
     op.POS: lambda x: x,
     op.LSHIFT: mx.array.__lshift__,
     op.RSHIFT: mx.array.__rshift__,
+    op.ASAREA: as_area_op,
 }

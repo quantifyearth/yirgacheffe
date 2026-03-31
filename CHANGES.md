@@ -3,6 +3,7 @@
 ### Added
 
 * Added a `dimensions` property to layers to give the raster equivalent width and height.
+* Added an `as_area` operator to redefine the area of a layer for use in a calculation. Useful for overriding the
 
 ### Changed
 

@@ -71,7 +71,8 @@ def test_find_intersection_with_constant() -> None:
     assert intersection == layers[0].area
 
     for layer in layers:
-        layer.set_window_for_intersection(intersection)
+        updated_layer = layer.as_area(intersection)
+        assert updated_layer.area == intersection
 
 
 def test_find_intersection_with_vector_unbound() -> None:

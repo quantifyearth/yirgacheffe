@@ -379,6 +379,29 @@ class LayerMathMixin:
             datatype=datatype
         )
 
+    def as_area(self, area_or_layer: Any) -> LayerOperation:
+        if area_or_layer is None:
+            raise ValueError("Expected layer or area value, not None")
+
+        # This is a bit lazy, avoiding circular import hell for now
+        try:
+            area = area_or_layer.area
+        except AttributeError:
+            area = area_or_layer
+
+        if not isinstance(area, Area):
+            raise ValueError("Expected layer or area value")
+
+        # TODO: validate area is same projection as underlying
+        # perhaps wobble area if necessary?
+
+        return LayerOperation(
+            self,
+            op.ASAREA,
+            window_op=WindowOperation.NONE,
+            new_area=area,
+        )
+
     def latlng_for_pixel(self, x: int, y: int) -> tuple[float, float]:
         """Get geo coords for pixel. This is relative to the set view window.
 
@@ -619,6 +642,9 @@ class LayerOperation(LayerMathMixin):
         return self._get_operation_area(self.map_projection, top_level=True)
 
     def _get_operation_area(self, projection: MapProjection | None, force_union: bool = False, top_level=True) -> Area:
+        if self.operator == op.ASAREA:
+            return self.kwargs["new_area"]
+
         lhs_area = self.lhs._get_operation_area(projection, force_union, top_level=False)
         try:
             rhs_area = self.rhs._get_operation_area(projection, force_union, top_level=False)

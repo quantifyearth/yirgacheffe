@@ -132,6 +132,9 @@ def backend_to_dtype(val):
 def astype_op(data, datatype):
     return data.astype(dtype_to_backend(datatype))
 
+def as_area_op(data, new_area):
+    return data
+
 operator_map: dict[op, Callable] = {
     op.ADD: np.ndarray.__add__,
     op.SUB: np.ndarray.__sub__,
@@ -184,4 +187,5 @@ operator_map: dict[op, Callable] = {
     op.POS: np.ndarray.__pos__,
     op.LSHIFT: np.ndarray.__lshift__,
     op.RSHIFT: np.ndarray.__rshift__,
+    op.ASAREA: as_area_op,
 }
