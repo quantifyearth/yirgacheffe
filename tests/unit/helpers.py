@@ -70,7 +70,7 @@ def gdal_dataset_of_layer(
         driver = gdal.GetDriverByName("mem")
         filename = "mem"
     dataset = driver.Create(
-        filename, layer.window.xsize, layer.window.ysize, 1, gdal.GDT_Float32, []
+        filename, layer._virtual_window.xsize, layer._virtual_window.ysize, 1, gdal.GDT_Float32, []
     )
     dataset.SetGeoTransform(layer.geo_transform)
     dataset.SetProjection(layer.map_projection.projection)

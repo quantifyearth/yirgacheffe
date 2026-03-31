@@ -135,10 +135,10 @@ class GroupLayer(YirgacheffeLayer):
                 (layer.area.top - self._underlying_area.top) / scale.ystep,
             )
             adjusted_layer_window = Window(
-                layer.window.xoff + xoff,
-                layer.window.yoff + yoff,
-                layer.window.xsize,
-                layer.window.ysize,
+                layer._virtual_window.xoff + xoff,
+                layer._virtual_window.yoff + yoff,
+                layer._virtual_window.xsize,
+                layer._virtual_window.ysize,
             )
             intersection = Window.find_intersection_no_throw([target_window, adjusted_layer_window])
             if intersection is not None:
@@ -268,10 +268,10 @@ class TiledGroupLayer(GroupLayer):
                 (layer.area.top - self._underlying_area.top) / map_projection.ystep,
             )
             adjusted_layer_window = Window(
-                layer.window.xoff + xoff,
-                layer.window.yoff + yoff,
-                layer.window.xsize,
-                layer.window.ysize,
+                layer._virtual_window.xoff + xoff,
+                layer._virtual_window.yoff + yoff,
+                layer._virtual_window.xsize,
+                layer._virtual_window.ysize,
             )
             intersection = Window.find_intersection_no_throw([target_window, adjusted_layer_window])
             if intersection is None:

@@ -36,7 +36,7 @@ def test_pickle_raster_layer() -> None:
         assert restore.map_projection == MapProjection(WGS_84_PROJECTION, 0.02, -0.02)
         assert restore.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
         assert restore.dimensions == (1000, 1000)
-        assert restore.window == Window(0, 0, 1000, 1000)
+        assert restore._virtual_window == Window(0, 0, 1000, 1000)
 
 
 def test_pickle_raster_mem_layer_fails() -> None:
@@ -62,7 +62,7 @@ def test_pickle_dyanamic_vector_layer() -> None:
         assert restore.area == area
         assert restore.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert restore.dimensions == (20, 10)
-        assert restore.window == Window(0, 0, 20, 10)
+        assert restore._virtual_window == Window(0, 0, 20, 10)
         assert restore.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
 
         del layer
@@ -100,7 +100,7 @@ def test_pickle_uniform_area_layer() -> None:
             math.ceil((restore.area.right - restore.area.left) / pixel_scale),
             math.ceil((restore.area.top - restore.area.bottom) / pixel_scale),
         )
-        assert restore.window == Window(
+        assert restore._virtual_window == Window(
             0,
             0,
             math.ceil((restore.area.right - restore.area.left) / pixel_scale),
@@ -124,7 +124,7 @@ def test_pickle_group_layer() -> None:
 
         assert restore.area == area
         assert restore.dimensions == (100, 100)
-        assert restore.window == Window(0, 0, 100, 100)
+        assert restore._virtual_window == Window(0, 0, 100, 100)
 
         result = restore.read_array(0, 0, 100, 100)
         assert (expected == result).all()
@@ -225,7 +225,7 @@ def test_pickle_rescaled_raster_layer() -> None:
         assert restore.map_projection == projection
         assert restore.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
         assert restore.dimensions == (2000, 2000)
-        assert restore.window == Window(0, 0, 2000, 2000)
+        assert restore._virtual_window == Window(0, 0, 2000, 2000)
 
         expected = restore.read_array(0, 0, 100, 100)
         assert expected.sum() != 0  # just check there is meaningful data

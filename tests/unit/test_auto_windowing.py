@@ -21,13 +21,13 @@ def test_add_windows() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
 
     assert layer1.area != layer2.area
-    assert layer1.window != layer2.window
+    assert layer1._virtual_window != layer2._virtual_window
 
     calc = layer1 + layer2
 
     assert calc.area == layer2.area
     assert calc.dimensions == layer2.dimensions
-    assert calc.window == layer2.window
+    assert calc._virtual_window == layer2._virtual_window
 
     result = RasterLayer.empty_raster_layer_like(calc)
     calc.save(result)
@@ -49,13 +49,13 @@ def test_multiply_windows() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
 
     assert layer1.area != layer2.area
-    assert layer1.window != layer2.window
+    assert layer1._virtual_window != layer2._virtual_window
 
     calc = layer1 * layer2
 
     assert calc.area == layer1.area
     assert calc.dimensions == layer1.dimensions
-    assert calc.window == layer1.window
+    assert calc._virtual_window == layer1._virtual_window
 
     result = RasterLayer.empty_raster_layer_like(calc)
     calc.save(result)
@@ -75,7 +75,7 @@ def test_add_windows_offset() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((-0.04, 0.04), 0.02, data2))
 
     assert layer1.area != layer2.area
-    assert layer1.window != layer2.window
+    assert layer1._virtual_window != layer2._virtual_window
 
     calc = layer1 + layer2
 
@@ -101,7 +101,7 @@ def test_multiply_windows_offset() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((-0.04, 0.04), 0.02, data2))
 
     assert layer1.area != layer2.area
-    assert layer1.window != layer2.window
+    assert layer1._virtual_window != layer2._virtual_window
 
     calc = layer1 * layer2
 
@@ -252,7 +252,7 @@ def test_vector_layers_add() -> None:
                 layer2_total = vector_layer.sum()
                 assert (
                     layer2_total
-                    == ((vector_layer.window.xsize * vector_layer.window.ysize) / 2)
+                    == ((vector_layer._virtual_window.xsize * vector_layer._virtual_window.ysize) / 2)
                     * burn_value
                 )
 
@@ -284,7 +284,7 @@ def test_vector_layers_add_unbound_rhs() -> None:
                 calc = raster_layer + vector_layer
 
                 layer2_total = (
-                    (calc.window.xsize * calc.window.ysize) / 2
+                    (calc._virtual_window.xsize * calc._virtual_window.ysize) / 2
                 ) * burn_value
 
                 assert calc.area != vector_layer.area
@@ -313,7 +313,7 @@ def test_vector_layers_add_unbound_lhs() -> None:
                 calc = vector_layer + raster_layer
 
                 layer2_total = (
-                    (calc.window.xsize * calc.window.ysize) / 2
+                    (calc._virtual_window.xsize * calc._virtual_window.ysize) / 2
                 ) * burn_value
 
                 assert calc.area != vector_layer.area
@@ -343,7 +343,7 @@ def test_vector_layers_multiply() -> None:
         layer2_total = layer2.sum()
         assert (
             layer2_total
-            == ((layer2.window.xsize * layer2.window.ysize) / 2) * burn_value
+            == ((layer2._virtual_window.xsize * layer2._virtual_window.ysize) / 2) * burn_value
         )
 
         calc = layer1 * layer2
@@ -382,13 +382,13 @@ def test_parallel_save_windows() -> None:
         layer2 = RasterLayer.layer_from_file(layer2_filename)
 
         assert layer1.area != layer2.area
-        assert layer1.window != layer2.window
+        assert layer1._virtual_window != layer2._virtual_window
 
         calc = layer1 + layer2
 
         assert calc.area == layer2.area
         assert calc.dimensions == layer2.dimensions
-        assert calc.window == layer2.window
+        assert calc._virtual_window == layer2._virtual_window
 
         result = RasterLayer.empty_raster_layer_like(calc)
         calc.parallel_save(result)
@@ -427,7 +427,7 @@ def test_multiple_subexpressions_by_constant() -> None:
         expected_success = (layer1 + 1) * (layer2 + 1)
 
         expected_window = Window(0, 10, 14, 14)
-        assert expected_success.window == expected_window
+        assert expected_success._virtual_window == expected_window
         assert expected_success.dimensions == (14, 14)
 
         result = expected_success.sum()

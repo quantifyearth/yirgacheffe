@@ -166,31 +166,31 @@ def test_find_intersection_different_pixel_pitch() -> None:
 def test_set_intersection_self(scale) -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), scale))
     old_dimensions = layer.dimensions
-    old_window = layer.window
+    old_window = layer._virtual_window
 
     # note that the area we passed to gdal_dataset_of_region isn't pixel aligned, so we must
     # use the area from loading the dataset
     layer.set_window_for_intersection(layer.area)
     assert layer.dimensions == old_dimensions
-    assert layer.window == old_window
+    assert layer._virtual_window == old_window
 
     # reset should not do much here
     layer.reset_window()
     assert layer.dimensions == old_dimensions
-    assert layer.window == old_window
+    assert layer._virtual_window == old_window
 
 
 def test_set_intersection_subset() -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     assert layer.dimensions == (1000, 1000)
-    assert layer.window == Window(0, 0, 1000, 1000)
+    assert layer._virtual_window == Window(0, 0, 1000, 1000)
     origin_before_pixel = layer.read_array(0, 0, 1, 1)
 
     intersection = Area(-1.0, 1.0, 1.0, -1.0)
 
     layer.set_window_for_intersection(intersection)
     assert layer.dimensions == (100, 100)
-    assert layer.window == Window(450, 450, 100, 100)
+    assert layer._virtual_window == Window(450, 450, 100, 100)
     origin_after_pixel = layer.read_array(0, 0, 1, 1)
 
     # The default data is populated as a mod of row value, so given
@@ -200,7 +200,7 @@ def test_set_intersection_subset() -> None:
 
     layer.reset_window()
     assert layer.dimensions == (1000, 1000)
-    assert layer.window == Window(0, 0, 1000, 1000)
+    assert layer._virtual_window == Window(0, 0, 1000, 1000)
 
 
 def test_set_intersection_distinct() -> None:
@@ -275,8 +275,9 @@ def test_find_intersection_nearly_same() -> None:
     for layer in layers:
         layer.set_window_for_intersection(intersection)
     for other in layers[1:]:
-        assert layers[0].window.xsize == other.window.xsize
-        assert layers[0].window.ysize == other.window.ysize
+        assert layers[0].dimensions == other.dimensions
+        assert layers[0]._virtual_window.xsize == other._virtual_window.xsize
+        assert layers[0]._virtual_window.ysize == other._virtual_window.ysize
 
 
 def test_intersection_stability() -> None:
@@ -325,11 +326,11 @@ def test_intersection_stability() -> None:
                 layer.set_window_for_intersection(intersection)
 
             if first is None:
-                first = scratch.window
+                first = scratch._virtual_window
             else:
                 offset = (
-                    scratch.window.xoff - first.xoff,
-                    scratch.window.yoff - first.yoff,
+                    scratch._virtual_window.xoff - first.xoff,
+                    scratch._virtual_window.yoff - first.yoff,
                 )
                 offsets.append(offset)
         relative_offsets[scratch.name] = offsets

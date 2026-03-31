@@ -41,7 +41,7 @@ def test_basic_dynamic_vector_layer() -> None:
             )
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.dimensions == (20, 10)
-            assert layer.window == Window(0, 0, 20, 10)
+            assert layer._virtual_window == Window(0, 0, 20, 10)
             assert layer.map_projection.epsg == 4326
 
             # The astype here is to catch escaping MLX types...
@@ -76,7 +76,7 @@ def test_multi_area_vector() -> None:
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
 
         xsize, ysize = layer.dimensions
         for yoffset in range(ysize):
@@ -105,7 +105,7 @@ def test_empty_layer_from_vector():
         empty = RasterLayer.empty_raster_layer_like(source)
         assert empty.map_projection == source.map_projection
         assert empty.dimensions == source.dimensions
-        assert empty.window == source.window
+        assert empty._virtual_window == source._virtual_window
         assert empty.area == source.area
 
 
@@ -124,7 +124,7 @@ def test_vector_layers_with_default_burn_value() -> None:
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte
 
         # The default burn value is 1, so check that if we sum the area
@@ -149,7 +149,7 @@ def test_vector_layers_with_fixed_burn_value() -> None:
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
@@ -173,7 +173,7 @@ def test_vector_layers_with_default_burn_value_and_filter() -> None:
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (10, 10)
-        assert layer.window == Window(0, 0, 10, 10)
+        assert layer._virtual_window == Window(0, 0, 10, 10)
 
         # Because we picked one later, all pixels should be burned
         total = layer.sum()
@@ -212,7 +212,7 @@ def test_vector_layers_with_field_value() -> None:
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half
@@ -250,7 +250,7 @@ def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
 
         # The default burn value is 1, so check that if we sum the area
@@ -295,7 +295,7 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
@@ -328,7 +328,7 @@ def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
 
         # The default burn value is 1, so check that if we sum the area
@@ -489,7 +489,7 @@ def test_vector_layers_with_empty_features() -> None:
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte
 
         # The default burn value is 1, so check that if we sum the area

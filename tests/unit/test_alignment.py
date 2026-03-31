@@ -158,8 +158,8 @@ def test_vector_layer_consistency() -> None:
             # Unprojected shape first
             with yg.read_shape(filename) as range_layer:
                 calc = raster1 * range_layer
-                assert calc.window.xsize == 2
-                assert calc.window.ysize == 2
+                assert calc._virtual_window.xsize == 2
+                assert calc._virtual_window.ysize == 2
                 result = calc.read_array(0, 0, 2, 2)
                 assert (result == expected).all()
 
@@ -167,8 +167,8 @@ def test_vector_layer_consistency() -> None:
             with yg.read_shape_like(filename, raster1) as range_layer:
                 assert range_layer.sum() == 4
                 calc = raster1 * range_layer
-                assert calc.window.xsize == 2
-                assert calc.window.ysize == 2
+                assert calc._virtual_window.xsize == 2
+                assert calc._virtual_window.ysize == 2
                 result = calc.read_array(0, 0, 2, 2)
                 assert (result == expected).all()
 

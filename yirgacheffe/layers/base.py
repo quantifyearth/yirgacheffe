@@ -80,7 +80,7 @@ class YirgacheffeLayer(LayerMathMixin):
         return self.area
 
     @property
-    def window(self) -> Window:
+    def _virtual_window(self) -> Window:
         if self._window is None:
             raise AttributeError("Layer has no window")
         return self._window
@@ -215,14 +215,14 @@ class YirgacheffeLayer(LayerMathMixin):
             return
 
         if offset < 0:
-            if (offset * -2 >= self.window.xsize) or (offset * -2 >= self.window.ysize):
+            if (offset * -2 >= self._virtual_window.xsize) or (offset * -2 >= self._virtual_window.ysize):
                 raise ValueError(f"Can not shrink window by {offset}, would make size 0 or fewer pixels.")
 
         new_window = Window(
-            xoff=self.window.xoff - offset,
-            yoff=self.window.yoff - offset,
-            xsize=self.window.xsize + (2 * offset),
-            ysize=self.window.ysize + (2 * offset),
+            xoff=self._virtual_window.xoff - offset,
+            yoff=self._virtual_window.yoff - offset,
+            xsize=self._virtual_window.xsize + (2 * offset),
+            ysize=self._virtual_window.ysize + (2 * offset),
         )
         if self.map_projection is None:
             raise ValueError("Can not offset Window without explicit pixel scale")
@@ -295,7 +295,7 @@ class YirgacheffeLayer(LayerMathMixin):
         return self._read_array_with_window(x, y, width, height, target_window)
 
     def _read_array(self, x: int, y: int, width: int, height: int) -> Any:
-        return self._read_array_with_window(x, y, width, height, self.window)
+        return self._read_array_with_window(x, y, width, height, self._virtual_window)
 
     def read_array(self, x: int, y: int, width: int, height: int) -> Any:
         """Reads data from the layer based on the current reference window.

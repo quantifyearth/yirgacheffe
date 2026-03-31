@@ -195,10 +195,10 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                 )
 
                 with RasterLayer.layer_from_file(warped_data_path) as warped:
-                    if (warped.window.xsize != xsize) or \
-                        (warped.window.ysize != ysize):
+                    if (warped._virtual_window.xsize != xsize) or \
+                        (warped._virtual_window.ysize != ysize):
                         raise RuntimeError(
                             f"gdal warp violated request constraints: "
-                            f"expected {xsize}x{ysize}, got {warped.window.xsize}x{warped.window.ysize}"
+                            f"expected {xsize}x{ysize}, got {warped._virtual_window.xsize}x{warped._virtual_window.ysize}"
                         )
                     return warped._read_array(0, 0, xsize, ysize)

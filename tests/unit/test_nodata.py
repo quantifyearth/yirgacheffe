@@ -82,8 +82,8 @@ def test_group_layer_with_nodata_read_from_empty_area() -> None:
         with RasterLayer(dataset2) as layer2:
             with GroupLayer([layer1, layer2]) as group:
 
-                assert group.window.xsize == 4
-                assert group.window.ysize == 20
+                assert group._virtual_window.xsize == 4
+                assert group._virtual_window.ysize == 20
 
                 actual = group.read_array(0, 0, 4, 2)
                 expected = np.array([[1.0, 2.0, 3.0, 4.0], [0.0, 0.0, 0.0, 0.0]])

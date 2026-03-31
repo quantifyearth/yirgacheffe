@@ -162,7 +162,7 @@ class LayerMathMixin:
             return cache_data
 
         try:
-            window = self.window if target_window is None else target_window
+            window = self._virtual_window if target_window is None else target_window
             result = self._read_array_for_area(area, projection, 0, index, window.xsize, step)
         except AttributeError:
             result = self._read_array_for_area(
@@ -426,7 +426,7 @@ class LayerMathMixin:
         )
 
     @property
-    def window(self) -> Window:
+    def _virtual_window(self) -> Window:
         raise NotImplementedError("Must be overridden by subclass")
 
     @property
@@ -475,7 +475,7 @@ class LayerMathMixin:
         if ax is None:
             ax = plt.gca()
 
-        window = self.window
+        window = self._virtual_window
 
         raw_data = self.read_array(
             0,
@@ -513,7 +513,7 @@ class LayerOperation(LayerMathMixin):
     ):
         self.ystep = constants.YSTEP
         self.kwargs = kwargs
-        self.window_op = window_op
+        self._virtual_window_op = window_op
         self.buffer_padding = buffer_padding
 
         if lhs is None:
@@ -606,7 +606,7 @@ class LayerOperation(LayerMathMixin):
                 return value
         frozen_kwargs = tuple(sorted((k, _make_hashable(v)) for (k, v) in self.kwargs.items()))
 
-        terms = [self.operator, self.window_op, frozen_kwargs, self.buffer_padding] + child_hashes
+        terms = [self.operator, self._virtual_window_op, frozen_kwargs, self.buffer_padding] + child_hashes
 
         try:
             return hash(tuple(terms))
@@ -633,7 +633,7 @@ class LayerOperation(LayerMathMixin):
         if force_union:
             all_areas = [x for x in all_areas if not x.is_world]
 
-        window_op = WindowOperation.UNION if force_union else self.window_op
+        window_op = WindowOperation.UNION if force_union else self._virtual_window_op
         match window_op:
             case WindowOperation.NONE:
                 area = all_areas[0]
@@ -650,7 +650,7 @@ class LayerOperation(LayerMathMixin):
             return area
 
     @property
-    def window(self) -> Window:
+    def _virtual_window(self) -> Window:
         projection = self.map_projection
         if projection is None:
             # This can happen if your source layers are say just constants
@@ -827,7 +827,7 @@ class LayerOperation(LayerMathMixin):
         # first chunk returned
         res = None
 
-        computation_window = self.window
+        computation_window = self._virtual_window
         projection = self.map_projection
         if projection is None:
             raise ValueError("No map projection")
@@ -855,7 +855,7 @@ class LayerOperation(LayerMathMixin):
 
     def min(self) -> float:
         res = float('inf')
-        computation_window = self.window
+        computation_window = self._virtual_window
         projection = self.map_projection
         if projection is None:
             raise ValueError("No map projection")
@@ -883,7 +883,7 @@ class LayerOperation(LayerMathMixin):
 
     def max(self) -> float:
         res = float('-inf')
-        computation_window = self.window
+        computation_window = self._virtual_window
         projection = self.map_projection
         if projection is None:
             raise ValueError("No map projection")
@@ -920,7 +920,7 @@ class LayerOperation(LayerMathMixin):
             and the second list being the corresponding counts.
         """
         res : dict[int|float,int] = {}
-        computation_window = self.window
+        computation_window = self._virtual_window
         projection = self.map_projection
         if projection is None:
             raise ValueError("No map projection")
@@ -986,7 +986,7 @@ class LayerOperation(LayerMathMixin):
 
         projection = self.map_projection
 
-        destination_window = destination_layer.window
+        destination_window = destination_layer._virtual_window
         destination_projection = destination_layer.map_projection
         assert destination_projection is not None
 
@@ -999,7 +999,7 @@ class LayerOperation(LayerMathMixin):
         # If we're calculating purely from a constant layer, then we don't have a window or area
         # so we should use the destination raster details.
         try:
-            computation_window = self.window
+            computation_window = self._virtual_window
             computation_area = self._get_operation_area(projection)
         except (AttributeError, IndexError):
             computation_window = destination_window
@@ -1145,7 +1145,7 @@ class LayerOperation(LayerMathMixin):
     ) -> float | None:
         assert (destination_layer is not None) or and_sum
         try:
-            computation_window = self.window
+            computation_window = self._virtual_window
         except (AttributeError, IndexError):
             # This is most likely because the calculation is on a constant layer (or combination of only constant
             # layers) and there's no real benefit to parallel saving then, so to keep this code from getting yet
@@ -1176,7 +1176,7 @@ class LayerOperation(LayerMathMixin):
             except AttributeError as exc:
                 raise ValueError("Layer must be a raster backed layer") from exc
 
-            destination_window = destination_layer.window
+            destination_window = destination_layer._virtual_window
 
             if (computation_window.xsize != destination_window.xsize) \
                     or (computation_window.ysize != destination_window.ysize):
@@ -1442,7 +1442,7 @@ class ShaderStyleOperation(LayerOperation):
 
     def _eval(self, cse_cache, area, projection, index, step, target_window=None):
         if target_window is None:
-            target_window = self.window
+            target_window = self._virtual_window
         lhs_data = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
         if self.rhs is not None:
             rhs_data = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
@@ -1461,7 +1461,7 @@ class ShaderStyleOperation(LayerOperation):
         else:
             result = np.empty_like(lhs_data)
 
-        window = self.window
+        window = self._virtual_window
         for yoffset in range(step):
             for xoffset in range(window.xsize):
                 try:

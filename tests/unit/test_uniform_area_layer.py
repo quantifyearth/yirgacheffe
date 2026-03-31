@@ -50,7 +50,7 @@ def test_open_uniform_area_layer(pixel_scale: float) -> None:
             ceil((layer.area.right - layer.area.left) / pixel_scale),
             ceil((layer.area.top - layer.area.bottom) / pixel_scale),
         )
-        assert layer.window == Window(
+        assert layer._virtual_window == Window(
             0,
             0,
             ceil((layer.area.right - layer.area.left) / pixel_scale),
@@ -80,11 +80,11 @@ def test_set_intersection() -> None:
             -10, 10, 10, -10, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.dimensions == (20, 20)
-        assert layer.window == Window(170, 80, 20, 20)
+        assert layer._virtual_window == Window(170, 80, 20, 20)
 
         layer.reset_window()
         assert layer.area == Area(
             -180, 90, 180, -90, MapProjection("epsg:4326", 1.0, -1.0)
         )
         assert layer.dimensions == (360, 180)
-        assert layer.window == Window(0, 0, 360, 180)
+        assert layer._virtual_window == Window(0, 0, 360, 180)

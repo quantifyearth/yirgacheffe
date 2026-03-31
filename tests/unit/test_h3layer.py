@@ -27,7 +27,7 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
             assert layer.map_projection.epsg == 4326
 
             # without getting too deep, we'd expect a mix of zeros and ones in the data
-            window = layer.window
+            window = layer._virtual_window
             one_count = 0
             for yoffset in range(window.ysize):
                 data = layer.read_array(0, yoffset, window.xsize, 1)
@@ -62,7 +62,7 @@ def test_h3_layer_magnifications(lat: float, lng: float) -> None:
             MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120),
         )
         on_cell_count = h3_layer.sum()
-        total_count = h3_layer.window.xsize * h3_layer.window.ysize
+        total_count = h3_layer._virtual_window.xsize * h3_layer._virtual_window.ysize
         assert 0 < on_cell_count < total_count
 
 
@@ -89,7 +89,7 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
         on_cell_count = h3_layer.sum()
         assert on_cell_count > 0.0
 
-        before_window = h3_layer.window
+        before_window = h3_layer._virtual_window
         abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
         expanded_area = Area(
             left=h3_layer.area.left - (12 * abs_xstep),
@@ -98,26 +98,26 @@ def test_h3_layer_not_clipped(lat: float, lng: float) -> None:
             bottom=h3_layer.area.bottom - (12 * abs_ystep),
         )
         h3_layer.set_window_for_union(expanded_area)
-        assert h3_layer.window > before_window
+        assert h3_layer._virtual_window > before_window
 
         expanded_on_cell_count = h3_layer.sum()
         assert expanded_on_cell_count == on_cell_count
 
         # whilst we're here, check that we do have an empty border (i.e., does window for union do the right thing)
-        assert np.sum(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2)) == 0.0
+        assert np.sum(h3_layer.read_array(0, 0, h3_layer._virtual_window.xsize, 2)) == 0.0
         assert (
             np.sum(
                 h3_layer.read_array(
-                    0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2
+                    0, h3_layer._virtual_window.ysize - 2, h3_layer._virtual_window.xsize, 2
                 )
             )
             == 0.0
         )
-        assert np.sum(h3_layer.read_array(0, 0, 2, h3_layer.window.ysize)) == 0.0
+        assert np.sum(h3_layer.read_array(0, 0, 2, h3_layer._virtual_window.ysize)) == 0.0
         assert (
             np.sum(
                 h3_layer.read_array(
-                    h3_layer.window.xsize - 2, 0, 2, h3_layer.window.ysize
+                    h3_layer._virtual_window.xsize - 2, 0, 2, h3_layer._virtual_window.ysize
                 )
             )
             == 0.0
@@ -147,7 +147,7 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
         on_cell_count = h3_layer.sum()
         assert on_cell_count > 0.0
 
-        before_window = h3_layer.window
+        before_window = h3_layer._virtual_window
         abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
         expanded_area = Area(
             left=h3_layer.area.left + (2 * abs_xstep),
@@ -156,7 +156,7 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
             bottom=h3_layer.area.bottom + (2 * abs_ystep),
         )
         h3_layer.set_window_for_intersection(expanded_area)
-        assert h3_layer.window < before_window
+        assert h3_layer._virtual_window < before_window
 
         shrunk_on_cell_count = h3_layer.sum()
         assert shrunk_on_cell_count < on_cell_count
@@ -164,28 +164,28 @@ def test_h3_layer_clipped(lat: float, lng: float) -> None:
         # whilst we're here, check that we do have an filled border (i.e., does window for
         # intersection do the right thing)
         assert (
-            np.sum(demote_array(h3_layer.read_array(0, 0, h3_layer.window.xsize, 5)))
+            np.sum(demote_array(h3_layer.read_array(0, 0, h3_layer._virtual_window.xsize, 5)))
             > 0.0
         )
         assert (
             np.sum(
                 demote_array(
                     h3_layer.read_array(
-                        0, h3_layer.window.ysize - 5, h3_layer.window.xsize, 5
+                        0, h3_layer._virtual_window.ysize - 5, h3_layer._virtual_window.xsize, 5
                     )
                 )
             )
             > 0.0
         )
         assert (
-            np.sum(demote_array(h3_layer.read_array(0, 0, 5, h3_layer.window.ysize)))
+            np.sum(demote_array(h3_layer.read_array(0, 0, 5, h3_layer._virtual_window.ysize)))
             > 0.0
         )
         assert (
             np.sum(
                 demote_array(
                     h3_layer.read_array(
-                        h3_layer.window.xsize - 5, 0, 5, h3_layer.window.ysize
+                        h3_layer._virtual_window.xsize - 5, 0, 5, h3_layer._virtual_window.ysize
                     )
                 )
             )
@@ -207,7 +207,7 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
 
     # Just sanity check this test has caught a cell that wraps the entire planet and is testing
     # what we think it is testing:
-    assert h3_layer.window.xsize == (360 / 0.01)
+    assert h3_layer._virtual_window.xsize == (360 / 0.01)
 
     area = h3_layer.sum()
     assert area > 0.0  # sanity check
@@ -221,7 +221,7 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
         # We're happy if they're within 10% for now
         assert abs((neighbour_area - area) / area) < 0.1
 
-    before_window = h3_layer.window
+    before_window = h3_layer._virtual_window
     _, abs_ystep = abs(projection.xstep), abs(projection.ystep)
     expanded_area = Area(
         left=h3_layer.area.left,
@@ -230,25 +230,25 @@ def test_h3_layer_wrapped_on_projection(lat: float, lng: float) -> None:
         bottom=h3_layer.area.bottom - (22 * abs_ystep),
     )
     h3_layer.set_window_for_union(expanded_area)
-    assert h3_layer.window.xsize == before_window.xsize
-    assert h3_layer.window.xoff == 0
+    assert h3_layer._virtual_window.xsize == before_window.xsize
+    assert h3_layer._virtual_window.xoff == 0
     assert before_window.xoff == 0
-    assert h3_layer.window.yoff < 0
+    assert h3_layer._virtual_window.yoff < 0
     assert before_window.yoff == 0
-    assert h3_layer.window.ysize > before_window.ysize
+    assert h3_layer._virtual_window.ysize > before_window.ysize
 
     expanded_area = h3_layer.sum()
     assert expanded_area == area
 
     # whilst we're here, check that we do have an empty border (i.e., does window for union do the right thing)
     assert (
-        np.sum(demote_array(h3_layer.read_array(0, 0, h3_layer.window.xsize, 2))) == 0.0
+        np.sum(demote_array(h3_layer.read_array(0, 0, h3_layer._virtual_window.xsize, 2))) == 0.0
     )
     assert (
         np.sum(
             demote_array(
                 h3_layer.read_array(
-                    0, h3_layer.window.ysize - 2, h3_layer.window.xsize, 2
+                    0, h3_layer._virtual_window.ysize - 2, h3_layer._virtual_window.xsize, 2
                 )
             )
         )

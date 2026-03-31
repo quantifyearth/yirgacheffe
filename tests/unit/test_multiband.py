@@ -57,8 +57,8 @@ def test_stack_tifs_with_area_match() -> None:
             layer.set_window_for_intersection(intersection)
 
         layer = source_layers[-1]
-        assert layer.window.xsize == 100 - (bands - 1)
-        assert layer.window.ysize == 100 - (bands - 1)
+        assert layer._virtual_window.xsize == 100 - (bands - 1)
+        assert layer._virtual_window.ysize == 100 - (bands - 1)
 
         target_path = os.path.join(tempdir, "target.tif")
         target = RasterLayer.empty_raster_layer_like(

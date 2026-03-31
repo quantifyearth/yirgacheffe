@@ -72,8 +72,8 @@ class H3CellLayer(YirgacheffeLayer):
             xsize=width,
             ysize=height,
         )
-        self._raster_xsize = self.window.xsize
-        self._raster_ysize = self.window.ysize
+        self._raster_xsize = self._virtual_window.xsize
+        self._raster_ysize = self._virtual_window.ysize
 
         # see comment in read_array for why we're doing this
         sorted_lats = [x[0] for x in self.cell_boundary]
@@ -137,8 +137,8 @@ class H3CellLayer(YirgacheffeLayer):
 
             subset = np.zeros((intersection.ysize, intersection.xsize))
 
-            start_x = self.area.left + ((intersection.xoff - self.window.xoff) * self.map_projection.xstep)
-            start_y = self.area.top + ((intersection.yoff - self.window.yoff) * self.map_projection.ystep)
+            start_x = self.area.left + ((intersection.xoff - self._virtual_window.xoff) * self.map_projection.xstep)
+            start_y = self.area.top + ((intersection.yoff - self._virtual_window.yoff) * self.map_projection.ystep)
 
             for ypixel in range(intersection.ysize):
                 # The latlng_to_cell is quite expensive, so ideally we want to avoid
@@ -197,12 +197,12 @@ class H3CellLayer(YirgacheffeLayer):
                 backend.promote(subset),
                 (
                     (
-                        (intersection.yoff - self.window.yoff) - yoffset,
-                        (ysize - ((intersection.yoff - self.window.yoff) + intersection.ysize)) + yoffset,
+                        (intersection.yoff - self._virtual_window.yoff) - yoffset,
+                        (ysize - ((intersection.yoff - self._virtual_window.yoff) + intersection.ysize)) + yoffset,
                     ),
                     (
-                        (intersection.xoff - self.window.xoff) - xoffset,
-                        xsize - ((intersection.xoff - self.window.xoff) + intersection.xsize) + xoffset,
+                        (intersection.xoff - self._virtual_window.xoff) - xoffset,
+                        xsize - ((intersection.xoff - self._virtual_window.xoff) + intersection.xsize) + xoffset,
                     )
                 ),
                 'constant'

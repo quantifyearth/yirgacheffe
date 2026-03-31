@@ -87,7 +87,7 @@ class UniformAreaLayer(RasterLayer):
             xsize=int((self.area.right - self.area.left) / transform[1]),
             ysize=dataset.RasterYSize,
         )
-        self._raster_xsize = self.window.xsize
+        self._raster_xsize = self._virtual_window.xsize
 
     def _read_array_with_window(
         self,

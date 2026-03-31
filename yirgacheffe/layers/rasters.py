@@ -294,7 +294,7 @@ class RasterLayer(YirgacheffeLayer):
         # so sanity check that the calculated window matches the
         # dataset's dimensions
         assert self.dimensions == (dataset.RasterXSize, dataset.RasterYSize)
-        assert self.window == Window(0, 0, dataset.RasterXSize, dataset.RasterYSize)
+        assert self._virtual_window == Window(0, 0, dataset.RasterXSize, dataset.RasterYSize)
 
         self._dataset = dataset
         self._dataset_path = Path(dataset.GetDescription())
