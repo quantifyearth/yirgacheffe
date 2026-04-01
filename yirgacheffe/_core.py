@@ -18,6 +18,7 @@ from ._layers import RasterLayer
 from ._layers import VectorLayer
 from ._layers import AreaPerPixelLayer
 from ._layers import find_union
+from ._layers import H3CellLayer
 from ._datatypes import MapProjection
 from ._backends.enumeration import dtype as DataType
 
@@ -287,6 +288,28 @@ def area_raster(
         projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
 
     return AreaPerPixelLayer(projection)
+
+def h3_tile(
+    cell_id: str,
+    projection: MapProjection | tuple[str, tuple[float, float]],
+) -> YirgacheffeLayer:
+    """Create a layer that represents an H3 tile.
+
+    Args:
+        cell_id: The H3 cell identifier.
+        projection: the map projection and pixel scale to use when rasterizing.
+
+    Returns:
+        A geospatial layer where the pixels within the tile are 1 and those outside are 0.
+    """
+    if projection is None:
+        raise ValueError("Projection must not be none")
+
+    if not isinstance(projection, MapProjection):
+        projection_name, scale_tuple = projection
+        projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
+
+    return H3CellLayer(cell_id, projection)
 
 def to_geotiff(
     filename: Path | str,

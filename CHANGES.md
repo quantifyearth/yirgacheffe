@@ -4,6 +4,7 @@
 
 * Added a `dimensions` property to layers to give the raster equivalent width and height.
 * Added an `as_area` operator to redefine the area of a layer for use in a calculation. Useful for overriding the default behaviour of operators in terms of the area they take, and for explicit clipping or padding of inputs.
+* Added `h3_tile` to generate a layer for rasterizing H3 tiles.
 
 ### Changed
 

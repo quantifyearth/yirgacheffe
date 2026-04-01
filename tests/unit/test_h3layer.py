@@ -21,9 +21,7 @@ demote_array = backend.demote_array
 )
 def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
     if is_valid:
-        with H3CellLayer(
-            cell_id, MapProjection("epsg:4326", 0.001, -0.001)
-        ) as layer:
+        with yg.h3_tile(cell_id, MapProjection("epsg:4326", 0.001, -0.001)) as layer:
             assert layer.zoom == expected_zoom
             assert layer.projection.epsg == 4326
 
@@ -37,10 +35,7 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
             assert one_count != 0
     else:
         with pytest.raises(ValueError):
-            with H3CellLayer(
-                cell_id, MapProjection("epsg:4326", 0.001, -0.001)
-            ) as _layer:
-                pass
+            _ =  yg.h3_tile(cell_id, MapProjection("epsg:4326", 0.001, -0.001))
 
 
 @pytest.mark.parametrize(
@@ -58,10 +53,7 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
 def test_h3_layer_magnifications(lat: float, lng: float) -> None:
     for zoom in range(6, 10):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
-        h3_layer = H3CellLayer(
-            cell_id,
-            MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120),
-        )
+        h3_layer = yg.h3_tile(cell_id, MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120))
         on_cell_count = h3_layer.sum()
         total_count = h3_layer._virtual_window.xsize * h3_layer._virtual_window.ysize
         assert 0 < on_cell_count < total_count
