@@ -17,7 +17,6 @@ from ._core import read_raster, read_rasters, read_shape, read_raster_like, read
     read_narrow_raster, from_array, area_raster, to_geotiff, h3_tile
 from ._datatypes.area import Area
 from ._datatypes.mapprojection import MapProjection
-from ._datatypes.pixelscale import PixelScale
 from ._backends.enumeration import dtype as DataType
 
 from ._operators.functions import where, minimum, maximum, clip, log, log2, log10, exp, exp2, nan_to_num, isin, \

@@ -100,7 +100,6 @@ class GroupLayer(YirgacheffeLayer):
 
         projection = self.projection
         assert projection is not None
-        scale = projection.scale
 
         target_window = Window(
             window.xoff + xoffset,
@@ -113,8 +112,8 @@ class GroupLayer(YirgacheffeLayer):
         for layer in self.layers:
             # Normally this is hidden with set_window_for_...
             xoff, yoff = projection.round_down_pixels(
-                ((layer.area.left - self._underlying_area.left) / scale.xstep),
-                (layer.area.top - self._underlying_area.top) / scale.ystep,
+                ((layer.area.left - self._underlying_area.left) / projection.xstep),
+                (layer.area.top - self._underlying_area.top) / projection.ystep,
             )
             adjusted_layer_window = Window(
                 layer._virtual_window.xoff + xoff,

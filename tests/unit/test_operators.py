@@ -10,7 +10,7 @@ import torch
 from osgeo import gdal
 
 import yirgacheffe as yg
-from yirgacheffe import Area, PixelScale, DataType
+from yirgacheffe import Area, DataType
 from yirgacheffe._layers import ConstantLayer, RasterLayer, VectorLayer
 from yirgacheffe._datatypes import Window
 from yirgacheffe._operators import LayerOperation
@@ -62,17 +62,6 @@ def test_error_of_pixel_scale_wrong_three_param() -> None:
 
     with pytest.raises(ValueError):
         _ = yg.where(layer1, layer2, layer3)
-
-
-def test_incompatible_source_and_destination_projections() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-
-    with pytest.raises(ValueError):
-        _ = RasterLayer.empty_raster_layer(
-            layer1.area, PixelScale(1.0, -1.0), layer1.datatype
-        )
 
 
 @pytest.mark.parametrize(

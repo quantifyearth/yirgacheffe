@@ -2,24 +2,21 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe._layers import RasterLayer, ConstantLayer
-from yirgacheffe import DataType
-from yirgacheffe import Area, PixelScale
+from yirgacheffe._layers import RasterLayer
 
 
 def test_constant_default_behaviour() -> None:
     c = yg.constant(42)
     assert c.projection is None
-    assert c.area == Area.world()
+    assert c.area == yg.Area.world()
     with pytest.raises(AttributeError):
         _ = c.dimensions
 
 
 def test_constant_save() -> None:
-    area = Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0)
-    scale = PixelScale(0.1, -0.1)
-    with RasterLayer.empty_raster_layer(area, scale, DataType.Float32) as result:
-        with ConstantLayer(42.0) as c:
+    area = yg.Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0, projection=yg.MapProjection("epsg:4326", 0.1, -0.1))
+    with RasterLayer.empty_raster_layer(area, yg.DataType.Float32) as result:
+        with yg.constant(42.0) as c:
             c.save(result)
 
         expected = np.full((20, 20), 42.0)
@@ -29,12 +26,11 @@ def test_constant_save() -> None:
 
 
 def test_constant_parallel_save(monkeypatch) -> None:
-    area = Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0)
-    scale = PixelScale(0.1, -0.1)
-    with RasterLayer.empty_raster_layer(area, scale, DataType.Float32) as result:
+    area = yg.Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0, projection=yg.MapProjection("epsg:4326", 0.1, -0.1))
+    with RasterLayer.empty_raster_layer(area, yg.DataType.Float32) as result:
         with monkeypatch.context() as m:
             m.setattr(yg.constants, "YSTEP", 1)
-            with ConstantLayer(42.0) as c:
+            with yg.constant(42.0) as c:
                 c.parallel_save(result)
 
         expected = np.full((20, 20), 42.0)

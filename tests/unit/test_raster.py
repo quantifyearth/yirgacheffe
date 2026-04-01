@@ -12,7 +12,7 @@ from tests.unit.helpers import (
     gdal_multiband_dataset_with_data,
     gdal_dataset_with_data,
 )
-from yirgacheffe import Area, MapProjection, PixelScale, DataType
+from yirgacheffe import Area, MapProjection, DataType
 from yirgacheffe._datatypes import Window
 from yirgacheffe._layers import RasterLayer, InvalidRasterBand
 
@@ -77,36 +77,6 @@ def test_open_file() -> None:
             assert layer.dimensions == (1000, 1000)
             assert layer._virtual_window == Window(0, 0, 1000, 1000)
             del layer
-
-
-@pytest.mark.parametrize(
-    "initial_area",
-    [
-        Area(left=10.0, top=10.0, right=10.1, bottom=9.9),
-        Area(left=-10.0, top=10.0, right=-9.9, bottom=9.9),
-        Area(left=10.0, top=-10.0, right=10.1, bottom=-10.1),
-        Area(left=-10.0, top=-10.0, right=-9.9, bottom=-10.1),
-        Area(left=-0.1, top=0.1, right=0.1, bottom=-0.1),
-    ],
-)
-def test_empty_layers_are_pixel_aligned(initial_area):
-    scale = PixelScale(0.000898315284120, -0.000898315284120)
-    projection = MapProjection("epsg:4326", scale.xstep, scale.ystep)
-
-    expanded_area = initial_area.grow(0.1)
-
-    initial_layer = RasterLayer.empty_raster_layer(
-        initial_area, scale, gdal.GDT_Float64
-    )
-
-    pixel_width = (initial_layer.area.right - initial_layer.area.left) / scale.xstep
-    assert projection.round_up_pixels(pixel_width, 0)[0] == initial_layer._virtual_window.xsize
-
-    expanded_layer = RasterLayer.empty_raster_layer(
-        expanded_area, scale, gdal.GDT_Float64
-    )
-    pixel_width = (expanded_layer.area.right - expanded_layer.area.left) / scale.xstep
-    assert projection.round_up_pixels(pixel_width, 0)[0] == expanded_layer._virtual_window.xsize
 
 
 def test_empty_layer_from_raster():

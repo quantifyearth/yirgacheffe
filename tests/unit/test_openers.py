@@ -289,15 +289,15 @@ def test_open_uniform_area_layer() -> None:
         assert dataset.RasterYSize == ceil(180 / pixel_scale)
         dataset.Close()
 
+        expected_projection = MapProjection("epsg:4326", pixel_scale, -pixel_scale)
         with yg.read_narrow_raster(path) as layer:
-            assert layer.projection is not None
-            assert layer.projection.scale == (pixel_scale, -pixel_scale)
+            assert layer.projection == expected_projection
             assert layer.area == Area(
                 floor(-180 / pixel_scale) * pixel_scale,
                 ceil(90 / pixel_scale) * pixel_scale,
                 ceil(180 / pixel_scale) * pixel_scale,
                 floor(-90 / pixel_scale) * pixel_scale,
-                MapProjection("epsg:4326", pixel_scale, -pixel_scale),
+                expected_projection,
             )
             assert layer.dimensions == (
                 ceil((layer.area.right - layer.area.left) / pixel_scale),
@@ -323,11 +323,8 @@ def test_incorrect_tiff_for_uniform_area() -> None:
 
 def test_constant() -> None:
     with yg.constant(42.0) as layer:
-        area = Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0)
-        projection = MapProjection("epsg:4326", 0.1, -0.1)
-        with RasterLayer.empty_raster_layer(
-            area, projection.scale, DataType.Float32
-        ) as result:
+        area = Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0, projection=MapProjection("epsg:4326", 0.1, -0.1))
+        with RasterLayer.empty_raster_layer(area, DataType.Float32) as result:
             layer.save(result)
 
             expected = np.full((20, 20), 42.0)

@@ -1,6 +1,5 @@
 from __future__ import annotations
 import errno
-import math
 import os
 from pathlib import Path
 from typing import Any
@@ -8,7 +7,7 @@ from typing import Any
 import numpy as np
 from osgeo import gdal
 
-from .._datatypes import Area, MapProjection, PixelScale, Window
+from .._datatypes import Area, MapProjection, Window
 from .base import YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
@@ -25,10 +24,8 @@ class RasterLayer(YirgacheffeLayer):
     @staticmethod
     def empty_raster_layer(
         area: Area,
-        scale: PixelScale,
         datatype: int | DataType,
         filename: Path | str | None = None,
-        projection: str="epsg:4326",
         name: str | None = None,
         compress: bool=True,
         nodata: float | int | None = None,
@@ -37,7 +34,11 @@ class RasterLayer(YirgacheffeLayer):
         bands: int=1,
         sparse: bool=False,
     ) -> RasterLayer:
-        abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
+        if area.projection is None:
+            raise ValueError("Require projected area")
+        pixel_friendly_area = area
+        map_projection = area.projection
+        # abs_xstep, abs_ystep = abs(scale.xstep), abs(scale.ystep)
 
         # This used to the the GDAL type, so we support that for legacy reasons
         if isinstance(datatype, int):
@@ -53,20 +54,20 @@ class RasterLayer(YirgacheffeLayer):
         if sparse:
             options.append("SPARSE_OK=YES")
 
-        map_projection = MapProjection(projection, scale.xstep, scale.ystep)
-        # If the area is projected, use that, otherwise we need to project it
-        if area.projection is not None:
-            if area.projection != map_projection:
-                raise ValueError("Area projection does not match provided projection.")
-            pixel_friendly_area = area
-        else:
-            pixel_friendly_area = Area(
-                left=math.floor(area.left / abs_xstep) * abs_xstep,
-                right=math.ceil(area.right / abs_xstep) * abs_xstep,
-                top=math.ceil(area.top / abs_ystep) * abs_ystep,
-                bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
-                projection=map_projection,
-            )
+        # map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+        # # If the area is projected, use that, otherwise we need to project it
+        # if area.projection is not None:
+        #     if area.projection != map_projection:
+        #         raise ValueError("Area projection does not match provided projection.")
+        #     pixel_friendly_area = area
+        # else:
+        #     pixel_friendly_area = Area(
+        #         left=math.floor(area.left / abs_xstep) * abs_xstep,
+        #         right=math.ceil(area.right / abs_xstep) * abs_xstep,
+        #         top=math.ceil(area.top / abs_ystep) * abs_ystep,
+        #         bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
+        #         projection=map_projection,
+            # )
 
         width, height = pixel_friendly_area.pixel_dimensions
 

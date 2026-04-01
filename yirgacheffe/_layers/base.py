@@ -165,14 +165,14 @@ class YirgacheffeLayer(LayerMathMixin):
         # Note we can't assume that we weren't already on an intersection when making the offset!
         # But remember that window is always relative to underlying area, and new_window
         # here is based off the existing window
-        scale = self.projection.scale
-        new_left = self._underlying_area.left + (new_window.xoff * scale.xstep)
-        new_top = self._underlying_area.top + (new_window.yoff * scale.ystep)
+        projection = self.projection
+        new_left = self._underlying_area.left + (new_window.xoff * projection.xstep)
+        new_top = self._underlying_area.top + (new_window.yoff * projection.ystep)
         new_area = Area(
             left=new_left,
             top=new_top,
-            right=new_left + (new_window.xsize * scale.xstep),
-            bottom=new_top + (new_window.ysize * scale.ystep),
+            right=new_left + (new_window.xsize * projection.xstep),
+            bottom=new_top + (new_window.ysize * projection.ystep),
             projection=self._underlying_area.projection,
         )
         self._window = new_window

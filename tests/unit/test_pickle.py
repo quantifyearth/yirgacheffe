@@ -88,13 +88,14 @@ def test_pickle_uniform_area_layer() -> None:
         p = pickle.dumps(layer)
         restore = pickle.loads(p)
 
-        assert restore.projection.scale == (pixel_scale, -pixel_scale)
+        expected_projection = yg.MapProjection(WGS_84_PROJECTION, pixel_scale, -pixel_scale)
+        assert restore.projection == expected_projection
         assert restore.area == Area(
             math.floor(-180 / pixel_scale) * pixel_scale,
             math.ceil(90 / pixel_scale) * pixel_scale,
             math.ceil(180 / pixel_scale) * pixel_scale,
             math.floor(-90 / pixel_scale) * pixel_scale,
-            yg.MapProjection(WGS_84_PROJECTION, pixel_scale, -pixel_scale),
+            expected_projection,
         )
         assert restore.dimensions == (
             math.ceil((restore.area.right - restore.area.left) / pixel_scale),

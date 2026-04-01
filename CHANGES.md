@@ -20,6 +20,7 @@
 * Removed mutable layer properies `set_window_for_intersection`, `set_window_for_union`, and `reset_window`. Use the immutable `as_area` operator instead.
 * Removed `window` property from the public API.
 * Removed `Window` class from the public API.
+* Removed `PixelScale` class, deprecated for a long time, use `MapProjection` instead.
 * Removed `RasteredVectorLayer` class (use `VectorLayer` instead).
 * Removed old `projection` and `pixel_size` properties from layers that are now combined in the `MapProjection` object.
 * Removed `layers` from the public API, core methods should be used to access layers instead.

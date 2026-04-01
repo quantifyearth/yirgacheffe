@@ -30,9 +30,8 @@ def test_scale_from_projection(name) -> None:
     assert projection.name == pyproj.CRS.from_string(name).to_wkt()
     assert projection.xstep == 0.1
     assert projection.ystep == -0.1
-    scale = projection.scale
-    assert scale.xstep == 0.1
-    assert scale.ystep == -0.1
+    assert projection.xstep == 0.1
+    assert projection.ystep == -0.1
 
 
 @pytest.mark.parametrize("crsname", [

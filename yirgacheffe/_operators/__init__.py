@@ -31,7 +31,7 @@ from dill import dumps, loads # type: ignore
 from pyproj import Transformer
 
 from .. import constants, __version__
-from .._datatypes import Area, PixelScale, MapProjection, Window
+from .._datatypes import Area, MapProjection, Window
 from .._backends import backend
 from .._backends.enumeration import operators as op
 from .._backends.enumeration import dtype as DataType
@@ -426,10 +426,9 @@ class LayerMathMixin:
         area = self.area # type: ignore[attr-defined]
         if projection is None:
             raise ValueError("Map has not projection space")
-        pixel_scale = projection.scale
         coord_in_raster_space = (
-            (y * pixel_scale.ystep) + area.top,
-            (x * pixel_scale.xstep) + area.left,
+            (y * projection.ystep) + area.top,
+            (x * projection.xstep) + area.left,
         )
         transformer = Transformer.from_crs(projection.name, "EPSG:4326")
         return transformer.transform(*coord_in_raster_space)

@@ -6,25 +6,22 @@ from osgeo import gdal
 
 import yirgacheffe as yg
 from yirgacheffe._layers import RasterLayer
-from yirgacheffe import Area, PixelScale
-
 
 def test_simple_two_band_image() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         target_path = os.path.join(tempdir, "target.tif")
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
 
         # Create an output raster layer with a number of bands
         bands = 4
         target = RasterLayer.empty_raster_layer(
-            Area(-1, 1, 1, -1),
-            PixelScale(1.0, -1.0),
+            yg.Area(-1, 1, 1, -1, projection),
             gdal.GDT_Byte,
             filename=target_path,
             bands=bands,
         )
 
         # Create a set of rasters in turn to fill each band
-        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         for i in range(bands):
             data1 = np.full((2, 2), i + 1)
             layer1 = yg.from_array(data1, (-1.0, 1.0), projection)

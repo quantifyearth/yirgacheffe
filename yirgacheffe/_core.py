@@ -388,10 +388,8 @@ def to_geotiff(
         try:
             with RasterLayer.empty_raster_layer(
                 union_area,
-                projection.scale,
                 first_layer.datatype,
                 tempory_file.name,
-                projection.name,
                 nodata=nodata,
                 sparse=sparse,
                 threads=gdal_tiff_threads,

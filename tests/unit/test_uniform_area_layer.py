@@ -39,14 +39,14 @@ def test_open_uniform_area_layer(pixel_scale: float) -> None:
 
         layer = UniformAreaLayer.layer_from_file(path)
         projection = layer.projection
-        assert projection is not None
-        assert projection.scale == (pixel_scale, -pixel_scale)
+        expected_projection = MapProjection("epsg:4326", pixel_scale, -pixel_scale)
+        assert projection == expected_projection
         assert layer.area == Area(
             floor(-180 / pixel_scale) * pixel_scale,
             ceil(90 / pixel_scale) * pixel_scale,
             ceil(180 / pixel_scale) * pixel_scale,
             floor(-90 / pixel_scale) * pixel_scale,
-            MapProjection("epsg:4326", pixel_scale, -pixel_scale),
+            expected_projection,
         )
         assert layer.dimensions == (
             ceil((layer.area.right - layer.area.left) / pixel_scale),

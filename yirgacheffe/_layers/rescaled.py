@@ -5,7 +5,7 @@ from typing import Any
 
 from skimage import transform
 
-from .._datatypes import Area, MapProjection, PixelScale, Window
+from .._datatypes import Area, MapProjection, Window
 from .rasters import RasterLayer, YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
@@ -19,7 +19,7 @@ class RescaledRasterLayer(YirgacheffeLayer):
     def layer_from_file(
         cls,
         filename: Path | str,
-        pixel_scale: PixelScale,
+        target_projection: MapProjection,
         band: int = 1,
         nearest_neighbour: bool = True,
     ) -> RescaledRasterLayer:
@@ -27,7 +27,8 @@ class RescaledRasterLayer(YirgacheffeLayer):
         source_projection = src.projection
         if source_projection is None:
             raise ValueError("Source raster must have projection and scale")
-        target_projection = MapProjection(source_projection.name, pixel_scale.xstep, pixel_scale.ystep)
+        if source_projection.name != target_projection.name:
+            raise ValueError("Source and destinatio must have same map projection: use ReprojectedLayer instead.")
         return RescaledRasterLayer(src, target_projection, nearest_neighbour, src.name)
 
     def __init__(
