@@ -327,8 +327,10 @@ def test_vector_layers_multiply() -> None:
         make_vectors_with_multiple_ids(areas, path)
 
         burn_value = 2
+        projection = layer1.projection
+        assert projection is not None
         layer2 = VectorLayer.layer_from_file(
-            path, None, layer1.projection.scale, layer1.projection.name, burn_value=burn_value
+            path, None, projection.scale, projection.name, burn_value=burn_value
         )
         layer2_total = layer2.sum()
         assert (

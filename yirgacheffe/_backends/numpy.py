@@ -132,7 +132,7 @@ def backend_to_dtype(val):
 def astype_op(data, datatype):
     return data.astype(dtype_to_backend(datatype))
 
-def as_area_op(data, new_area):
+def as_area_op(data, new_area): # pylint: disable=W0613
     return data
 
 operator_map: dict[op, Callable] = {

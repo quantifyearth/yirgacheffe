@@ -53,10 +53,10 @@ class RasterLayer(YirgacheffeLayer):
         if sparse:
             options.append("SPARSE_OK=YES")
 
-        projection = MapProjection(projection, scale.xstep, scale.ystep)
+        map_projection = MapProjection(projection, scale.xstep, scale.ystep)
         # If the area is projected, use that, otherwise we need to project it
         if area.projection is not None:
-            if area.projection != projection:
+            if area.projection != map_projection:
                 raise ValueError("Area projection does not match provided projection.")
             pixel_friendly_area = area
         else:
@@ -65,7 +65,7 @@ class RasterLayer(YirgacheffeLayer):
                 right=math.ceil(area.right / abs_xstep) * abs_xstep,
                 top=math.ceil(area.top / abs_ystep) * abs_ystep,
                 bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
-                projection=projection,
+                projection=map_projection,
             )
 
         width, height = pixel_friendly_area.pixel_dimensions
@@ -89,7 +89,7 @@ class RasterLayer(YirgacheffeLayer):
             options
         )
         dataset.SetGeoTransform(pixel_friendly_area.geo_transform)
-        dataset.SetProjection(projection._gdal_projection)
+        dataset.SetProjection(map_projection._gdal_projection)
         if nodata is not None:
             dataset.GetRasterBand(1).SetNoDataValue(nodata)
         return RasterLayer(dataset, name=name)

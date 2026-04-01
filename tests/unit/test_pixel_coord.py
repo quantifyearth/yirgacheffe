@@ -192,7 +192,9 @@ def test_latlng_for_pixel_with_intersection(
 ) -> None:
     pixel_width, pixel_height = area.pixel_dimensions
     data = np.zeros((pixel_height, pixel_width))
-    with yg.from_array(data, (area.left, area.top), area.projection) as layer:
+    projection = area.projection
+    assert projection is not None
+    with yg.from_array(data, (area.left, area.top), projection) as layer:
         clipped_layer = layer.as_area(window)
         result = clipped_layer.latlng_for_pixel(*pixel)
         assert math.isclose(result[0], expected[0])
@@ -227,7 +229,9 @@ def test_pixel_for_latlng_with_intersection(
 ) -> None:
     pixel_width, pixel_height = area.pixel_dimensions
     data = np.zeros((pixel_height, pixel_width))
-    with yg.from_array(data, (area.left, area.top), area.projection) as layer:
+    projection = area.projection
+    assert projection is not None
+    with yg.from_array(data, (area.left, area.top), projection) as layer:
         clipped_layer = layer.as_area(window)
         result = clipped_layer.pixel_for_latlng(*coord)
         assert result == expected

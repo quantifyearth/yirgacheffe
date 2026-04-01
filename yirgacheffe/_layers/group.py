@@ -7,7 +7,7 @@ import numpy as np
 from numpy import ma
 
 from .static import find_union
-from .._datatypes import Area, Window
+from .._datatypes import Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 from .._backends import backend

@@ -9,7 +9,7 @@ from yirgacheffe import Area, PixelScale
 
 def test_constant_default_behaviour() -> None:
     c = yg.constant(42)
-    assert c.projection == None
+    assert c.projection is None
     assert c.area == Area.world()
     with pytest.raises(AttributeError):
         _ = c.dimensions

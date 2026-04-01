@@ -1,5 +1,3 @@
-import pyproj
-
 YSTEP = 512
 MINIMUM_CHUNKS_PER_THREAD = 1
 

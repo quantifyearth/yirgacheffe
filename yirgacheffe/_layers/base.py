@@ -1,14 +1,11 @@
 from __future__ import annotations
-import operator
 import uuid
 from collections.abc import Callable
-from copy import deepcopy
-from functools import reduce
-from typing import Any, Sequence
+from typing import Any
 
 from .. import __version__
 from .._operators import LayerMathMixin
-from .._datatypes import Area, MapProjection, PixelScale, Window
+from .._datatypes import Area, MapProjection, Window
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
 

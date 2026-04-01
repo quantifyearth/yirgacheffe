@@ -392,12 +392,15 @@ class LayerMathMixin:
         if not isinstance(new_area, Area):
             raise TypeError("Expected layer or area value")
 
+        self_projection = self.projection # type: ignore
         if new_area.projection is None:
-            new_area = new_area.project_like(self._underlying_area)
-        elif not self.area.is_world and (new_area.projection != self.projection):
+            new_area = new_area.project_like(self.area)
+        elif not self.area.is_world and (new_area.projection != self_projection):
             # If a layer has a global reach (like a constant layer) those are projection agnostic so
             # can always be specialised.
-            raise ValueError(f"Differeing map projection used on as_area: {new_area.projection} applied to {self.projection}")
+            raise ValueError(
+                f"Differeing map projection used on as_area: {new_area.projection} applied to {self_projection}"
+            )
 
         # TODO: unlike set_window_for_blah, as_area probably should work on vectors that do not have
         # a map projection set?

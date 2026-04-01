@@ -167,8 +167,6 @@ def test_find_intersection_different_pixel_pitch() -> None:
 )
 def test_set_intersection_self(scale) -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), scale))
-    old_dimensions = layer.dimensions
-    old_window = layer._virtual_window
 
     # note that the area we passed to gdal_dataset_of_region isn't pixel aligned, so we must
     # use the area from loading the dataset

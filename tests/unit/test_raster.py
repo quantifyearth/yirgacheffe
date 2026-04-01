@@ -157,8 +157,6 @@ def test_empty_layer_from_raster_new_datatype():
 
 def test_empty_layer_from_raster_with_window():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
-    original_window = source._virtual_window
-    original_dimensions = source.dimensions
 
     clipped_source = source.as_area(Area(-1, 1, 1, -1, source.projection))
     assert clipped_source.dimensions < source.dimensions

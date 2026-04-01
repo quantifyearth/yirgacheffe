@@ -10,7 +10,6 @@ from osgeo import gdal, ogr
 from .. import __version__
 from .._datatypes import Area, MapProjection, PixelScale
 from .base import YirgacheffeLayer
-from .rasters import RasterLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
 
@@ -119,13 +118,13 @@ class VectorLayer(YirgacheffeLayer):
         if (projection is None) ^ (scale is None):
             raise ValueError("Either both projection and scale must be provide, or neither")
         if projection is not None and scale is not None:
-            projection = MapProjection(projection, scale.xstep, scale.ystep)
+            map_projection = MapProjection(projection, scale.xstep, scale.ystep)
         else:
-            projection = None
+            map_projection = None
         return cls._future_layer_from_file(
             filename,
             where_filter,
-            projection,
+            map_projection,
             datatype,
             burn_value,
             anchor
