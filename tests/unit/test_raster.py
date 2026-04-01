@@ -41,7 +41,7 @@ def test_make_basic_layer() -> None:
 
     with RasterLayer(dataset) as layer:
         assert layer.area == area
-        assert layer.map_projection == projection
+        assert layer.projection == projection
         assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
         assert layer.dimensions == (1000, 1000)
         assert layer._virtual_window == Window(0, 0, 1000, 1000)
@@ -72,7 +72,7 @@ def test_open_file() -> None:
         assert os.path.exists(path)
         with RasterLayer.layer_from_file(path) as layer:
             assert layer.area == area
-            assert layer.map_projection == projection
+            assert layer.projection == projection
             assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.dimensions == (1000, 1000)
             assert layer._virtual_window == Window(0, 0, 1000, 1000)
@@ -112,7 +112,7 @@ def test_empty_layers_are_pixel_aligned(initial_area):
 def test_empty_layer_from_raster():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     empty = RasterLayer.empty_raster_layer_like(source)
-    assert empty.map_projection == source.map_projection
+    assert empty.projection == source.projection
     assert empty.dimensions == source.dimensions
     assert empty._virtual_window == source._virtual_window
     assert empty.datatype == source.datatype
@@ -124,7 +124,7 @@ def test_empty_layer_from_raster():
 def test_empty_layer_from_raster_with_no_data_value(nodata):
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     empty = RasterLayer.empty_raster_layer_like(source, nodata=nodata)
-    assert empty.map_projection == source.map_projection
+    assert empty.projection == source.projection
     assert empty.dimensions == source.dimensions
     assert empty._virtual_window == source._virtual_window
     assert empty.datatype == source.datatype
@@ -136,7 +136,7 @@ def test_empty_layer_from_raster_with_new_smaller_area():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     smaller_area = Area(-1, 1, 1, -1)
     empty = RasterLayer.empty_raster_layer_like(source, area=smaller_area)
-    assert empty.map_projection == source.map_projection
+    assert empty.projection == source.projection
     assert empty.dimensions == (100, 100)
     assert empty._virtual_window == Window(0, 0, 100, 100)
     assert empty.datatype == source.datatype
@@ -149,7 +149,7 @@ def test_empty_layer_from_raster_new_datatype():
     source = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     assert source.datatype == DataType.Byte
     empty = RasterLayer.empty_raster_layer_like(source, datatype=gdal.GDT_Float64)
-    assert empty.map_projection == source.map_projection
+    assert empty.projection == source.projection
     assert empty.dimensions == source.dimensions
     assert empty._virtual_window == source._virtual_window
     assert empty.datatype == DataType.Float64
@@ -160,11 +160,11 @@ def test_empty_layer_from_raster_with_window():
     original_window = source._virtual_window
     original_dimensions = source.dimensions
 
-    clipped_source = source.as_area(Area(-1, 1, 1, -1, source.map_projection))
+    clipped_source = source.as_area(Area(-1, 1, 1, -1, source.projection))
     assert clipped_source.dimensions < source.dimensions
 
     empty = RasterLayer.empty_raster_layer_like(clipped_source)
-    assert empty.map_projection == source.map_projection
+    assert empty.projection == source.projection
     assert empty.area == clipped_source.area
     assert empty.dimensions == clipped_source.dimensions
 

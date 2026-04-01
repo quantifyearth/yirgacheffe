@@ -8,7 +8,7 @@ from yirgacheffe._datatypes import Window
 def test_simple_wgs84_layer() -> None:
     projection = yg.MapProjection("epsg:4326", 10.0, -10.0)
     with yg.area_raster(projection) as area_raster:
-        assert area_raster.map_projection == projection
+        assert area_raster.projection == projection
         assert area_raster._virtual_window == Window(0, 0, 36, 18)
         assert area_raster.dimensions == (36, 18)
         assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
@@ -71,7 +71,7 @@ def test_approximate_wgs84_values_2() -> None:
 def test_simple_mollweide_layer() -> None:
     projection = yg.MapProjection("esri:54009", 1000.0, -1000.0)
     with yg.area_raster(projection) as area_raster:
-        assert area_raster.map_projection == projection
+        assert area_raster.projection == projection
         assert area_raster._virtual_window == Window(0, 0, 36082, 18041)
         assert area_raster.dimensions == (36082, 18041)
         assert area_raster.area == yg.Area(
@@ -133,7 +133,7 @@ def test_with_no_bounds_in_tiff_geographic() -> None:
 
     # But this is a geographic CRS, so we can assume it is global
     with yg.area_raster(projection) as area_raster:
-        assert area_raster.map_projection == projection
+        assert area_raster.projection == projection
         assert area_raster._virtual_window == Window(0, 0, 36, 18)
         assert area_raster.dimensions == (36, 18)
         assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
@@ -172,7 +172,7 @@ def test_with_no_bounds_in_tiff_nongeographic() -> None:
 
     # But this is a geographic CRS, so we can assume it is global
     with yg.area_raster(projection) as area_raster:
-        assert area_raster.map_projection == projection
+        assert area_raster.projection == projection
         assert area_raster._virtual_window == expected_window
         assert area_raster.dimensions == (expected_window.xsize, expected_window.ysize)
         assert area_raster.area == expected_area

@@ -394,10 +394,10 @@ class LayerMathMixin:
 
         if new_area.projection is None:
             new_area = new_area.project_like(self._underlying_area)
-        elif not self.area.is_world and (new_area.projection != self.map_projection):
+        elif not self.area.is_world and (new_area.projection != self.projection):
             # If a layer has a global reach (like a constant layer) those are projection agnostic so
             # can always be specialised.
-            raise ValueError(f"Differeing map projection used on as_area: {new_area.projection} applied to {self.map_projection}")
+            raise ValueError(f"Differeing map projection used on as_area: {new_area.projection} applied to {self.projection}")
 
         # TODO: unlike set_window_for_blah, as_area probably should work on vectors that do not have
         # a map projection set?
@@ -419,7 +419,7 @@ class LayerMathMixin:
         Returns:
             A tuple containing the (latitude, longitude).
         """
-        projection = self.map_projection # type: ignore[attr-defined]
+        projection = self.projection # type: ignore[attr-defined]
         area = self.area # type: ignore[attr-defined]
         if projection is None:
             raise ValueError("Map has not projection space")
@@ -442,7 +442,7 @@ class LayerMathMixin:
         Returns:
             A tuple containing the x, y coordinates in pixel space.
         """
-        projection = self.map_projection # type: ignore[attr-defined]
+        projection = self.projection # type: ignore[attr-defined]
         area = self.area # type: ignore[attr-defined]
         if projection is None:
             raise ValueError("Map has not projection space")
@@ -561,9 +561,9 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not ((lhs.map_projection == rhs.map_projection) or \
-                        (lhs.map_projection is None) or \
-                        (rhs.map_projection is None)):
+                if not ((lhs.projection == rhs.projection) or \
+                        (lhs.projection is None) or \
+                        (rhs.projection is None)):
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.rhs = rhs
         else:
@@ -578,9 +578,9 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not ((lhs.map_projection == other.map_projection) or \
-                        (lhs.map_projection is None) or \
-                        (other.map_projection is None)):
+                if not ((lhs.projection == other.projection) or \
+                        (lhs.projection is None) or \
+                        (other.projection is None)):
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.other = other
         else:
@@ -646,7 +646,7 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def area(self) -> Area:
-        return self._get_operation_area(self.map_projection, top_level=True)
+        return self._get_operation_area(self.projection, top_level=True)
 
     def _get_operation_area(self, projection: MapProjection | None, force_union: bool = False, top_level=True) -> Area:
         if self.operator == op.ASAREA:
@@ -684,7 +684,7 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def _virtual_window(self) -> Window:
-        projection = self.map_projection
+        projection = self.projection
         if projection is None:
             # This can happen if your source layers are say just constants
             raise AttributeError("No window without projection")
@@ -704,7 +704,7 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def dimensions(self) -> tuple[int,int]:
-        projection = self.map_projection
+        projection = self.projection
         if projection is None:
             # This can happen if your source layers are say just constants
             raise AttributeError("No dimensions without projection")
@@ -737,15 +737,15 @@ class LayerOperation(LayerMathMixin):
         return numpy_to_dtype(coerced_type)
 
     @property
-    def map_projection(self) -> MapProjection | None:
+    def projection(self) -> MapProjection | None:
         try:
-            projection = self.lhs.map_projection
+            projection = self.lhs.projection
         except AttributeError:
             projection = None
 
         if projection is None:
             try:
-                projection = self.rhs.map_projection
+                projection = self.rhs.projection
             except AttributeError:
                 pass
         return projection
@@ -861,7 +861,7 @@ class LayerOperation(LayerMathMixin):
         res = None
 
         computation_window = self._virtual_window
-        projection = self.map_projection
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection")
 
@@ -889,7 +889,7 @@ class LayerOperation(LayerMathMixin):
     def min(self) -> float:
         res = float('inf')
         computation_window = self._virtual_window
-        projection = self.map_projection
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection")
 
@@ -917,7 +917,7 @@ class LayerOperation(LayerMathMixin):
     def max(self) -> float:
         res = float('-inf')
         computation_window = self._virtual_window
-        projection = self.map_projection
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection")
 
@@ -954,7 +954,7 @@ class LayerOperation(LayerMathMixin):
         """
         res : dict[int|float,int] = {}
         computation_window = self._virtual_window
-        projection = self.map_projection
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection")
 
@@ -1017,10 +1017,10 @@ class LayerOperation(LayerMathMixin):
         except AttributeError as exc:
             raise ValueError("Layer must be a raster backed layer") from exc
 
-        projection = self.map_projection
+        projection = self.projection
 
         destination_window = destination_layer._virtual_window
-        destination_projection = destination_layer.map_projection
+        destination_projection = destination_layer.projection
         assert destination_projection is not None
 
         if projection is None:
@@ -1113,7 +1113,7 @@ class LayerOperation(LayerMathMixin):
             backend.init()
 
             arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf) # type: ignore[var-annotated]
-            projection = self.map_projection
+            projection = self.projection
             # TODO: the `save` method does more sanity checking that parallel save!
             assert projection is not None
 
@@ -1434,7 +1434,7 @@ class LayerOperation(LayerMathMixin):
         return result
 
     def read_array(self, x: int, y: int, width: int, height: int) -> np.ndarray:
-        projection = self.map_projection
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection specified for layers in expression")
 

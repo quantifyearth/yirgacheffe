@@ -15,7 +15,7 @@ A layer object represents some geospatial data. This might come from:
             - datatype
             - dimensions
             - latlng_for_pixel
-            - map_projection
+            - projection
             - pixel_for_latlng
             - read_array
             - show

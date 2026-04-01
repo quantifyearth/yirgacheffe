@@ -57,7 +57,7 @@ def test_open_raster_file() -> None:
 
         with yg.read_raster(path) as layer:
             assert layer.area == area
-            assert layer.map_projection == projection
+            assert layer.projection == projection
             assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.dimensions == (1000, 1000)
             assert layer._virtual_window == Window(0, 0, 1000, 1000)
@@ -74,7 +74,7 @@ def test_open_raster_file_as_path() -> None:
 
         with yg.read_raster(path) as layer:
             assert layer.area == area
-            assert layer.map_projection == projection
+            assert layer.projection == projection
             assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.dimensions == (1000, 1000)
             assert layer._virtual_window == Window(0, 0, 1000, 1000)
@@ -135,7 +135,7 @@ def test_open_gpkg_with_mapprojection() -> None:
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.dimensions == (20, 10)
             assert layer._virtual_window == Window(0, 0, 20, 10)
-            assert layer.map_projection == MapProjection("epsg:4326", 1.0, -1.0)
+            assert layer.projection == MapProjection("epsg:4326", 1.0, -1.0)
 
 
 def test_open_gpkg_with_no_projection() -> None:
@@ -146,7 +146,7 @@ def test_open_gpkg_with_no_projection() -> None:
 
         with yg.read_shape(path) as layer:
             assert layer.area == area
-            assert layer.map_projection is None
+            assert layer.projection is None
             with pytest.raises(AttributeError):
                 _ = layer.geo_transform
             with pytest.raises(AttributeError):
@@ -166,7 +166,7 @@ def test_open_gpkg_direct_scale() -> None:
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.dimensions == (20, 10)
             assert layer._virtual_window == Window(0, 0, 20, 10)
-            assert layer.map_projection == MapProjection("epsg:4326", 1.0, -1.0)
+            assert layer.projection == MapProjection("epsg:4326", 1.0, -1.0)
 
 
 def test_open_gpkg_with_filter() -> None:
@@ -208,7 +208,7 @@ def test_open_shape_like() -> None:
                 assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
                 assert layer.dimensions == (20, 10)
                 assert layer._virtual_window == Window(0, 0, 20, 10)
-                assert layer.map_projection == raster_layer.map_projection
+                assert layer.projection == raster_layer.projection
 
 
 @pytest.mark.parametrize("tiled", [False, True])
@@ -290,8 +290,8 @@ def test_open_uniform_area_layer() -> None:
         dataset.Close()
 
         with yg.read_narrow_raster(path) as layer:
-            assert layer.map_projection is not None
-            assert layer.map_projection.scale == (pixel_scale, -pixel_scale)
+            assert layer.projection is not None
+            assert layer.projection.scale == (pixel_scale, -pixel_scale)
             assert layer.area == Area(
                 floor(-180 / pixel_scale) * pixel_scale,
                 ceil(90 / pixel_scale) * pixel_scale,
@@ -343,7 +343,7 @@ def test_create_simple_float() -> None:
             left=-2.0, right=2.0, top=1.0, bottom=-1.0, projection=projection
         )
 
-        assert layer.map_projection == projection
+        assert layer.projection == projection
         assert layer.area == expected_area
         assert layer.datatype == DataType.Float64
 
@@ -359,7 +359,7 @@ def test_create_simple_direct_projection() -> None:
             left=-2.0, right=2.0, top=1.0, bottom=-1.0, projection=expected_projection
         )
 
-        assert layer.map_projection == expected_projection
+        assert layer.projection == expected_projection
         assert layer.area == expected_area
         assert layer.datatype == DataType.Int64
 
@@ -399,5 +399,5 @@ def test_simple_scale_down() -> None:
             yg.read_raster_like(path, reference, yg.ResamplingMethod.Nearest) as layer
         ):
             assert layer.area == expected_area
-            assert layer.map_projection == target_projection
-            assert layer.map_projection == reference.map_projection
+            assert layer.projection == target_projection
+            assert layer.projection == reference.projection

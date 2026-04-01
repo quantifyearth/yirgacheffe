@@ -73,7 +73,7 @@ def gdal_dataset_of_layer(
         filename, layer._virtual_window.xsize, layer._virtual_window.ysize, 1, gdal.GDT_Float32, []
     )
     dataset.SetGeoTransform(layer.geo_transform)
-    dataset.SetProjection(layer.map_projection.projection)
+    dataset.SetProjection(layer.projection.projection)
     return dataset
 
 

@@ -57,7 +57,7 @@ class YirgacheffeLayer(LayerMathMixin):
         raise NotImplementedError("Must be overridden by subclass")
 
     @property
-    def map_projection(self) -> MapProjection | None:
+    def projection(self) -> MapProjection | None:
         """Returns the [`MapProjection`][yirgacheffe.MapProjection] (projection name and pixel size) of the layer."""
         return self._underlying_area.projection
 
@@ -75,7 +75,7 @@ class YirgacheffeLayer(LayerMathMixin):
         _force_union: bool = False,
         top_level: bool = False, # pylint: disable=W0613
     ) -> Area:
-        self_projection = self.map_projection
+        self_projection = self.projection
         if self_projection is not None and projection is not None and self_projection != projection:
             raise ValueError("Calculation projection does not match layer projection")
         return self.area
@@ -103,15 +103,15 @@ class YirgacheffeLayer(LayerMathMixin):
 
     @property
     def geo_transform(self) -> tuple[float, float, float, float, float, float]:
-        if self.map_projection is None:
+        if self.projection is None:
             raise AttributeError("No geo transform for layers without explicit pixel scale")
         return (
-            self.area.left, self.map_projection.xstep, 0.0,
-            self.area.top, 0.0, self.map_projection.ystep
+            self.area.left, self.projection.xstep, 0.0,
+            self.area.top, 0.0, self.projection.ystep
         )
 
     def _set_window(self, new_area: Area, validation_callable: Callable[[Window],None] | None = None) -> None:
-        if self.map_projection is None:
+        if self.projection is None:
             raise ValueError("Can not set Window without explicit pixel scale")
 
         if new_area.projection is None:
@@ -121,13 +121,13 @@ class YirgacheffeLayer(LayerMathMixin):
         new_area = new_area._grid_aligned
         underlying_area = self._underlying_area._grid_aligned
 
-        xoff, yoff = self.map_projection.round_down_pixels(
-            (new_area.left - underlying_area.left) / abs(self.map_projection.xstep),
-            (underlying_area.top - new_area.top) / abs(self.map_projection.ystep),
+        xoff, yoff = self.projection.round_down_pixels(
+            (new_area.left - underlying_area.left) / abs(self.projection.xstep),
+            (underlying_area.top - new_area.top) / abs(self.projection.ystep),
         )
-        xsize, ysize = self.map_projection.round_up_pixels(
-            (new_area.right - new_area.left) / abs(self.map_projection.xstep),
-            (new_area.top - new_area.bottom) / abs(self.map_projection.ystep),
+        xsize, ysize = self.projection.round_up_pixels(
+            (new_area.right - new_area.left) / abs(self.projection.xstep),
+            (new_area.top - new_area.bottom) / abs(self.projection.ystep),
         )
         new_window = Window(xoff, yoff, xsize, ysize)
 
@@ -140,10 +140,10 @@ class YirgacheffeLayer(LayerMathMixin):
 
     def _reset_window(self) -> None:
         self._active_area = None
-        if self.map_projection:
-            width, height = self.map_projection.round_up_pixels(
-                (self.area.right - self.area.left) / self.map_projection.xstep,
-                (self.area.bottom - self.area.top) / self.map_projection.ystep,
+        if self.projection:
+            width, height = self.projection.round_up_pixels(
+                (self.area.right - self.area.left) / self.projection.xstep,
+                (self.area.bottom - self.area.top) / self.projection.ystep,
             )
             self._window = Window(0, 0, width, height)
 
@@ -162,13 +162,13 @@ class YirgacheffeLayer(LayerMathMixin):
             xsize=self._virtual_window.xsize + (2 * offset),
             ysize=self._virtual_window.ysize + (2 * offset),
         )
-        if self.map_projection is None:
+        if self.projection is None:
             raise ValueError("Can not offset Window without explicit pixel scale")
 
         # Note we can't assume that we weren't already on an intersection when making the offset!
         # But remember that window is always relative to underlying area, and new_window
         # here is based off the existing window
-        scale = self.map_projection.scale
+        scale = self.projection.scale
         new_left = self._underlying_area.left + (new_window.xoff * scale.xstep)
         new_top = self._underlying_area.top + (new_window.yoff * scale.ystep)
         new_area = Area(
@@ -200,8 +200,8 @@ class YirgacheffeLayer(LayerMathMixin):
         width: int,
         height: int,
     ) -> Any:
-        assert self.map_projection is not None
-        assert self.map_projection == target_projection
+        assert self.projection is not None
+        assert self.projection == target_projection
 
         # move the target area to align with our grid offset
         target_offset = target_area._grid_offset
@@ -220,13 +220,13 @@ class YirgacheffeLayer(LayerMathMixin):
                 target_area.projection,
             )
 
-        xoff, yoff = self.map_projection.round_down_pixels(
-            (target_area.left - self._underlying_area.left) / self.map_projection.xstep,
-            (self._underlying_area.top - target_area.top) / (self.map_projection.ystep * -1.0),
+        xoff, yoff = self.projection.round_down_pixels(
+            (target_area.left - self._underlying_area.left) / self.projection.xstep,
+            (self._underlying_area.top - target_area.top) / (self.projection.ystep * -1.0),
         )
-        xsize, ysize = self.map_projection.round_up_pixels(
-            (target_area.right - target_area.left) / self.map_projection.xstep,
-            (target_area.top - target_area.bottom) / (self.map_projection.ystep * -1.0),
+        xsize, ysize = self.projection.round_up_pixels(
+            (target_area.right - target_area.left) / self.projection.xstep,
+            (target_area.top - target_area.bottom) / (self.projection.ystep * -1.0),
         )
 
         target_window = Window(xoff, yoff, xsize, ysize)

@@ -16,14 +16,14 @@ class NaiveH3CellLayer(H3CellLayer):
     def _read_array_with_window(
         self, xoffset, yoffset, xsize, ysize, window
     ):  # pylint: disable=W0237
-        assert self.map_projection is not None
+        assert self.projection is not None
         res = np.zeros((ysize, xsize), dtype=float)
-        start_x = self.area.left + ((xoffset + window.xoff) * self.map_projection.xstep)
-        start_y = self.area.top + ((yoffset + window.yoff) * self.map_projection.ystep)
+        start_x = self.area.left + ((xoffset + window.xoff) * self.projection.xstep)
+        start_y = self.area.top + ((yoffset + window.yoff) * self.projection.ystep)
         for ypixel in range(ysize):
-            lat = start_y + (ypixel * self.map_projection.ystep)
+            lat = start_y + (ypixel * self.projection.ystep)
             for xpixel in range(xsize):
-                lng = start_x + (xpixel * self.map_projection.xstep)
+                lng = start_x + (xpixel * self.projection.xstep)
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:
                     res[ypixel][xpixel] = 1.0

@@ -38,7 +38,7 @@ def test_open_uniform_area_layer(pixel_scale: float) -> None:
         dataset.Close()
 
         layer = UniformAreaLayer.layer_from_file(path)
-        assert layer.map_projection.scale == (pixel_scale, -pixel_scale)
+        assert layer.projection.scale == (pixel_scale, -pixel_scale)
         assert layer.area == Area(
             floor(-180 / pixel_scale) * pixel_scale,
             ceil(90 / pixel_scale) * pixel_scale,
@@ -75,7 +75,7 @@ def test_set_intersection() -> None:
         dataset.Close()
 
         layer = UniformAreaLayer.layer_from_file(path)
-        clipped_area = Area(-10, 10, 10, -10, layer.map_projection)
+        clipped_area = Area(-10, 10, 10, -10, layer.projection)
         clipped_layer = layer.as_area(clipped_area)
         assert clipped_layer.area == Area(
             -10, 10, 10, -10, MapProjection("epsg:4326", 1.0, -1.0)

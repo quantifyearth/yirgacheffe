@@ -8,6 +8,7 @@
 ### Changed
 
 * Moved `find_intersection` and `find_union` to top level of module.
+* Renamed `map_projection` to `projection`.
 
 ### Fixed
 
@@ -19,6 +20,7 @@
 * Removed `window` property from the public API.
 * Removed `Window` class from the public API.
 * Removed `RasteredVectorLayer` class (use `VectorLayer` instead).
+* Removed old `projection` and `pixel_size` properties from layers that are now combined in the `MapProjection` object.
 * Removed `layers` from the public API, core methods should be used to access layers instead.
 * Removed properties from internal `LayerObject` API that was earlier exposed and had to be maintained for backwards compatibility.
 * Remove `WGS_84_PROJECTION` constant - for a while now this has been deprecated since we added more human readable string support (e.g., "epsg:4326").

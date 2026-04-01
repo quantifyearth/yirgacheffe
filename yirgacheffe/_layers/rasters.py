@@ -53,10 +53,10 @@ class RasterLayer(YirgacheffeLayer):
         if sparse:
             options.append("SPARSE_OK=YES")
 
-        map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+        projection = MapProjection(projection, scale.xstep, scale.ystep)
         # If the area is projected, use that, otherwise we need to project it
         if area.projection is not None:
-            if area.projection != map_projection:
+            if area.projection != projection:
                 raise ValueError("Area projection does not match provided projection.")
             pixel_friendly_area = area
         else:
@@ -65,7 +65,7 @@ class RasterLayer(YirgacheffeLayer):
                 right=math.ceil(area.right / abs_xstep) * abs_xstep,
                 top=math.ceil(area.top / abs_ystep) * abs_ystep,
                 bottom=math.floor(area.bottom / abs_ystep) * abs_ystep,
-                projection=map_projection,
+                projection=projection,
             )
 
         width, height = pixel_friendly_area.pixel_dimensions
@@ -89,7 +89,7 @@ class RasterLayer(YirgacheffeLayer):
             options
         )
         dataset.SetGeoTransform(pixel_friendly_area.geo_transform)
-        dataset.SetProjection(map_projection._gdal_projection)
+        dataset.SetProjection(projection._gdal_projection)
         if nodata is not None:
             dataset.GetRasterBand(1).SetNoDataValue(nodata)
         return RasterLayer(dataset, name=name)
@@ -115,7 +115,7 @@ class RasterLayer(YirgacheffeLayer):
             if isinstance(datatype, int):
                 datatype = DataType.of_gdal(datatype)
 
-        projection = layer.map_projection
+        projection = layer.projection
         if projection is None:
             raise ValueError("Can not work out area without explicit pixel scale")
 
@@ -181,7 +181,7 @@ class RasterLayer(YirgacheffeLayer):
         source_dataset = source._dataset
         assert source_dataset is not None
 
-        old_projection = source.map_projection
+        old_projection = source.projection
         assert old_projection is not None
 
         new_projection = MapProjection(old_projection.name, new_pixel_scale.xstep, new_pixel_scale.ystep)
@@ -349,7 +349,7 @@ class RasterLayer(YirgacheffeLayer):
         return hash((
             self.name,
             self._underlying_area,
-            self.map_projection,
+            self.projection,
             self.datatype,
             self._active_area,
             self._ignore_nodata,

@@ -81,10 +81,10 @@ def read_raster_like(
         ...     res = layer1 * layer2
         ...     res.to_geotiff('result_in_esri_54009.tif')
     """
-    if like.map_projection is None:
+    if like.projection is None:
         raise ValueError("Reference layer must have a map projection.")
     original = RasterLayer.layer_from_file(filename, band, ignore_nodata)
-    return ReprojectedRasterLayer(original, like.map_projection, method, original.name)
+    return ReprojectedRasterLayer(original, like.projection, method, original.name)
 
 def read_narrow_raster(
     filename: Path | str,
@@ -322,7 +322,7 @@ def to_geotiff(
     layer_list = list(bands)
     first_layer = layer_list[0]
     for layer in layer_list[1:]:
-        if layer.map_projection != first_layer.map_projection:
+        if layer.projection != first_layer.projection:
             raise ValueError("All layers must have the same map projection")
         if layer.datatype != first_layer.datatype:
             raise TypeError("All layers must have same data type. Use astype to explicitly cast layers.")
@@ -357,7 +357,7 @@ def to_geotiff(
         else:
             gdal_tiff_threads = parallelism
 
-    projection = first_layer.map_projection
+    projection = first_layer.projection
     if projection is None:
         raise ValueError("Can't save layours without projection")
 

@@ -24,7 +24,7 @@ def find_intersection(layers: Sequence[YirgacheffeLayer]) -> Area:
 
     # This only makes sense (currently) if all layers
     # have the same pixel pitch (modulo desired accuracy)
-    projections = [x.map_projection for x in layers if x.map_projection is not None]
+    projections = [x.projection for x in layers if x.projection is not None]
     if not projections:
         raise ValueError("No layers have a projection")
     if not all(projections[0] == x for x in projections[1:]):
@@ -49,7 +49,7 @@ def find_union(layers: Sequence[YirgacheffeLayer]) -> Area:
 
     # This only makes sense (currently) if all layers
     # have the same pixel pitch (modulo desired accuracy)
-    projections = [x.map_projection for x in layers if x.map_projection is not None]
+    projections = [x.projection for x in layers if x.projection is not None]
     if not projections:
         raise ValueError("No layers have a projection")
     if not all(projections[0] == x for x in projections[1:]):

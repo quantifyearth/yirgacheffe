@@ -96,7 +96,7 @@ class AreaPerPixelLayer(YirgacheffeLayer):
         ysize: int,
         window: Window,
     ) -> Any:
-        projection = self.map_projection
+        projection = self.projection
         if projection is None:
             raise RuntimeError("Area Per Pixel layer should always be projected")
 

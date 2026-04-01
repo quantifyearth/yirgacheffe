@@ -233,8 +233,8 @@ def test_vector_layers_add() -> None:
             with VectorLayer.layer_from_file(
                 path,
                 None,
-                raster_layer.map_projection.scale,
-                raster_layer.map_projection.name,
+                raster_layer.projection.scale,
+                raster_layer.projection.name,
                 burn_value=burn_value,
             ) as vector_layer:
                 assert vector_layer.area.projection is not None
@@ -328,7 +328,7 @@ def test_vector_layers_multiply() -> None:
 
         burn_value = 2
         layer2 = VectorLayer.layer_from_file(
-            path, None, layer1.map_projection.scale, layer1.map_projection.name, burn_value=burn_value
+            path, None, layer1.projection.scale, layer1.projection.name, burn_value=burn_value
         )
         layer2_total = layer2.sum()
         assert (

@@ -73,11 +73,11 @@ def test_projection_stability(crsname: str) -> None:
         ds.Close()
 
         with yg.read_raster(tmpdir / "first.tif") as gen1:
-            first_generation_projection = gen1.map_projection
+            first_generation_projection = gen1.projection
             gen1.to_geotiff(tmpdir / "second.tif")
 
         with yg.read_raster(tmpdir / "second.tif") as gen2:
-            second_generation_projection = gen2.map_projection
+            second_generation_projection = gen2.projection
 
         assert first_generation_projection == second_generation_projection
 

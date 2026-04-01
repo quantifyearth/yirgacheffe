@@ -93,7 +93,7 @@ def test_two_raster_areas_side_by_side(klass):
     raster2 = RasterLayer(gdal_dataset_of_region(area2, 0.2))
 
     group = klass([raster1, raster2])
-    assert group.area == Area(-10, 10, 30, -10, raster1.map_projection)
+    assert group.area == Area(-10, 10, 30, -10, raster1.projection)
     assert group.dimensions == (200, 100)
     assert group._virtual_window == Window(0, 0, 200, 100)
     assert group.sum() == raster1.sum() + raster2.sum()
@@ -107,7 +107,7 @@ def test_two_raster_areas_top_to_bottom(klass):
     raster2 = RasterLayer(gdal_dataset_of_region(area2, 0.2))
 
     group = klass([raster1, raster2])
-    assert group.area == Area(-10, 10, 30, -10, raster1.map_projection)
+    assert group.area == Area(-10, 10, 30, -10, raster1.projection)
     assert group.dimensions == (200, 100)
     assert group._virtual_window == Window(0, 0, 200, 100)
     assert group.sum() == raster1.sum() + raster2.sum()
@@ -134,7 +134,7 @@ def test_grid_tiles(klass, dims):
             rasters.append(raster)
 
     group = klass(rasters)
-    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].map_projection)
+    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].projection)
     assert group.dimensions == (5 * dims, 5 * dims)
     assert group._virtual_window == Window(0, 0, 5 * dims, 5 * dims)
     assert group.sum() == np.array([x.sum() for x in rasters]).sum()
@@ -165,7 +165,7 @@ def test_overlapping_tiles(klass, dims):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
     assert group.dimensions == (5 * dims + 2, 5 * dims + 2)
     assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
@@ -471,7 +471,7 @@ def test_multipe_tiles_with_missing_tile(klass, dims, remove):
             rasters.append(raster)
 
     group = klass(rasters)
-    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].map_projection)
+    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].projection)
     assert group.dimensions == (5 * dims, 5 * dims)
     assert group._virtual_window == Window(0, 0, 5 * dims, 5 * dims)
 
@@ -480,7 +480,7 @@ def test_multipe_tiles_with_missing_tile(klass, dims, remove):
         group.area.top - 4.0,
         group.area.right - 4.0,
         group.area.bottom + 4.0,
-        rasters[0].map_projection,
+        rasters[0].projection,
     )
     windowed_group = group.as_area(area)
     assert windowed_group.dimensions == ((5 * dims) - 4, (5 * dims) - 4)
@@ -533,7 +533,7 @@ def test_oversized_tiles_with_missing_tile(klass, dims, remove):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
     assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
     assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
@@ -543,7 +543,7 @@ def test_oversized_tiles_with_missing_tile(klass, dims, remove):
         group.area.top - 4.0,
         group.area.right - 4.0,
         group.area.bottom + 4.0,
-        rasters[0].map_projection,
+        rasters[0].projection,
     )
     windowed_group = group.as_area(area)
     assert windowed_group.dimensions == ((5 * dims) - 2, (5 * dims) - 2)
@@ -581,7 +581,7 @@ def test_read_zero_pixels(klass, size):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
     assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
     assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
@@ -622,14 +622,14 @@ def test_read_tiles_superset(read_area):
 
     group = GroupLayer(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
     assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
     assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
 
     tiled = TiledGroupLayer(rasters)
     assert tiled.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
     assert tiled.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
     assert tiled._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
@@ -673,7 +673,7 @@ def test_oversized_tiles_with_missing_tile_row_slices(klass, dims, remove):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
     assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
     assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
@@ -713,7 +713,7 @@ def test_multipe_tiles_with_missing_tile_row_slices(klass, dims, remove):
             rasters.append(raster)
 
     group = klass(rasters)
-    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].map_projection)
+    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].projection)
     assert group.dimensions == (5 * dims, 5 * dims)
     assert group._virtual_window == Window(0, 0, 5 * dims, 5 * dims)
 

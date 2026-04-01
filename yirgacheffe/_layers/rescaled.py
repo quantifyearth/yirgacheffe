@@ -24,7 +24,7 @@ class RescaledRasterLayer(YirgacheffeLayer):
         nearest_neighbour: bool = True,
     ) -> RescaledRasterLayer:
         src = RasterLayer.layer_from_file(filename, band=band)
-        source_projection = src.map_projection
+        source_projection = src.projection
         if source_projection is None:
             raise ValueError("Source raster must have projection and scale")
         target_projection = MapProjection(source_projection.name, pixel_scale.xstep, pixel_scale.ystep)
@@ -37,9 +37,9 @@ class RescaledRasterLayer(YirgacheffeLayer):
         nearest_neighbour: bool = True,
         name: str | None = None,
     ):
-        if src.map_projection is None:
+        if src.projection is None:
             raise ValueError("Source layer must have a projection")
-        if src.map_projection.name != target_projection.name:
+        if src.projection.name != target_projection.name:
             raise ValueError("Rescaled layer requires target projection is same.")
 
         target_area = Area(
@@ -58,7 +58,7 @@ class RescaledRasterLayer(YirgacheffeLayer):
         self._src = src
         self._nearest_neighbour = nearest_neighbour
 
-        src_projection = src.map_projection
+        src_projection = src.projection
 
         self._x_scale = src_projection.xstep / target_projection.xstep
         self._y_scale = src_projection.ystep / target_projection.ystep
@@ -70,7 +70,7 @@ class RescaledRasterLayer(YirgacheffeLayer):
             self.name,
             self._underlying_area,
             self._nearest_neighbour,
-            self.map_projection,
+            self.projection,
             self._active_area
         ))
 

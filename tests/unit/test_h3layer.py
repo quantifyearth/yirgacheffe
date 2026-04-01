@@ -25,7 +25,7 @@ def test_h3_layer(cell_id: str, is_valid: bool, expected_zoom: int) -> None:
             cell_id, MapProjection("epsg:4326", 0.001, -0.001)
         ) as layer:
             assert layer.zoom == expected_zoom
-            assert layer.map_projection.epsg == 4326
+            assert layer.projection.epsg == 4326
 
             # without getting too deep, we'd expect a mix of zeros and ones in the data
             window = layer._virtual_window

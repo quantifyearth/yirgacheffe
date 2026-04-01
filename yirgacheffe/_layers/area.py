@@ -69,7 +69,7 @@ class UniformAreaLayer(RasterLayer):
 
         transform = dataset.GetGeoTransform()
 
-        projection = self.map_projection
+        projection = self.projection
         assert projection is not None # from raster we should always have one
 
         self._underlying_area = Area(

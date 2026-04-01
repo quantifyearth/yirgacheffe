@@ -50,7 +50,7 @@ def test_find_intersection_overlap() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02)),
     ]
     intersection = yg.find_intersection(layers)
-    assert intersection == Area(-10, 10, -5, -5, layers[0].map_projection)
+    assert intersection == Area(-10, 10, -5, -5, layers[0].projection)
 
 
 def test_find_intersection_distinct() -> None:

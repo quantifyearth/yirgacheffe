@@ -99,7 +99,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
             self.name,
             self._underlying_area,
             self._method,
-            self.map_projection,
+            self.projection,
             self._active_area
         ))
 
@@ -150,7 +150,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
             expand_buffer = 1
 
         # now we want this area in the source projection
-        src_projection = self._src.map_projection
+        src_projection = self._src.projection
         assert src_projection is not None
         src_read_area = read_area.reproject(src_projection)
 

@@ -72,8 +72,8 @@ class VectorLayer(YirgacheffeLayer):
     ) -> VectorLayer:
         if other_layer is None:
             raise ValueError("like layer can not be None")
-        map_projection = other_layer.map_projection
-        if map_projection is None:
+        projection = other_layer.projection
+        if projection is None:
             raise ValueError("Reference layer must have projectione")
 
         vectors = ogr.Open(filename)
@@ -89,7 +89,7 @@ class VectorLayer(YirgacheffeLayer):
 
         vector_layer = VectorLayer(
             layer,
-            map_projection,
+            projection,
             name=str(filename),
             datatype=datatype if datatype is not None else other_layer.datatype,
             burn_value=burn_value,
@@ -119,13 +119,13 @@ class VectorLayer(YirgacheffeLayer):
         if (projection is None) ^ (scale is None):
             raise ValueError("Either both projection and scale must be provide, or neither")
         if projection is not None and scale is not None:
-            map_projection = MapProjection(projection, scale.xstep, scale.ystep)
+            projection = MapProjection(projection, scale.xstep, scale.ystep)
         else:
-            map_projection = None
+            projection = None
         return cls._future_layer_from_file(
             filename,
             where_filter,
-            map_projection,
+            projection,
             datatype,
             burn_value,
             anchor
@@ -273,10 +273,10 @@ class VectorLayer(YirgacheffeLayer):
         _force_union: bool = False,
         top_level: bool = False, # pylint:disable = W0613
     ) -> Area:
-        if self.map_projection is not None and projection is not None and self.map_projection != projection:
+        if self.projection is not None and projection is not None and self.projection != projection:
             raise ValueError("Calculation projection does not match layer projection")
 
-        target_projection = projection if projection is not None else self.map_projection
+        target_projection = projection if projection is not None else self.projection
 
         if target_projection is None:
             if self._active_area is not None:
@@ -352,7 +352,7 @@ class VectorLayer(YirgacheffeLayer):
         return hash((
             self.name,
             self._underlying_area,
-            self.map_projection,
+            self.projection,
             self._active_area,
             self._datatype,
             self.burn_value,
@@ -373,14 +373,14 @@ class VectorLayer(YirgacheffeLayer):
         height: int,
     ) -> Any:
         if target_projection is not None:
-            if self.map_projection is not None and self.map_projection != target_projection:
+            if self.projection is not None and self.projection != target_projection:
                 # This is an internal API, so this should have been caught long before now
                 raise RuntimeError("Inconsistent projection in use in calculation")
             projection = target_projection
         else:
-            if self.map_projection is None:
+            if self.projection is None:
                 raise ValueError("Attempting to rasterize a vector without a map projection")
-            projection = self.map_projection
+            projection = self.projection
 
         # We always need to rasterize on the grid of the reference layer if provided, or 0.0, 0.0 if not
         grid_offset_for_layer = self._underlying_area._grid_offset
