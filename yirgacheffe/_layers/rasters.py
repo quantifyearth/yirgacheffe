@@ -170,65 +170,6 @@ class RasterLayer(YirgacheffeLayer):
         return RasterLayer(dataset)
 
     @classmethod
-    def scaled_raster_from_raster(
-        cls,
-        source: RasterLayer,
-        new_pixel_scale: PixelScale,
-        filename: Path | str | None = None,
-        compress: bool=True,
-        algorithm: int=gdal.GRA_NearestNeighbour,
-    ) -> RasterLayer:
-        source_dataset = source._dataset
-        assert source_dataset is not None
-
-        old_projection = source.projection
-        assert old_projection is not None
-
-        new_projection = MapProjection(old_projection.name, new_pixel_scale.xstep, new_pixel_scale.ystep)
-
-        x_scale = old_projection.xstep / new_pixel_scale.xstep
-        y_scale = old_projection.ystep / new_pixel_scale.ystep
-        new_width, new_height = new_projection.round_down_pixels(
-            source_dataset.RasterXSize * x_scale,
-            source_dataset.RasterYSize * y_scale,
-        )
-
-        # in Yirgacheffe we like to have things aligned to the pixel_scale, so work
-        # out new top left corner
-        new_left = math.floor((source.area.left / new_pixel_scale.xstep)) * new_pixel_scale.xstep
-        new_top = math.ceil((source.area.top / new_pixel_scale.ystep)) * new_pixel_scale.ystep
-
-        # now build a target dataset
-        options = []
-        if filename:
-            driver = gdal.GetDriverByName('GTiff')
-            options.append('BIGTIFF=YES')
-            if compress:
-                options.append('COMPRESS=LZW')
-        else:
-            driver = gdal.GetDriverByName('mem')
-            filename = 'mem'
-            compress = False
-        dataset = driver.Create(
-            filename,
-            new_width,
-            new_height,
-            1,
-            source.datatype.to_gdal(),
-            options
-        )
-        dataset.SetGeoTransform((
-            new_left, new_pixel_scale.xstep, 0.0,
-            new_top, 0.0, new_pixel_scale.ystep
-        ))
-        dataset.SetProjection(source_dataset.GetProjection())
-
-        # now use GDAL to do the re-projection
-        gdal.ReprojectImage(source_dataset, dataset, eResampleAlg=algorithm)
-
-        return RasterLayer(dataset)
-
-    @classmethod
     def layer_from_file(
         cls,
         filename: Path | str,
