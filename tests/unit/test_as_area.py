@@ -155,3 +155,37 @@ def test_infer_projection() -> None:
     with yg.from_array(data1, (0, 0), projection) as layer:
         adjusted_layer = layer.as_area(other_area)
         assert adjusted_layer.area.projection == projection
+
+
+def test_clip_and_pad() -> None:
+    # This tests shows that setting an area doesn't apply a mask or anything, just that the
+    # most recent as_area wins.
+    data = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    projection = yg.MapProjection("esri:54009", 1.0, -1.0)
+
+    target_area = yg.Area(1.0, -1.0, 3.0, -3.0, projection)
+
+    with yg.from_array(data, (0, 0), projection) as layer:
+        clipped = layer.as_area(target_area).as_area(layer.area)
+
+        assert clipped.dimensions == (4, 4)
+        assert clipped.area == layer.area
+
+        read_data = clipped.read_array(0, 0, 4, 4)
+        assert (read_data == data).all()
+
+
+def test_pad_and_clip() -> None:
+    data = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    projection = yg.MapProjection("esri:54009", 1.0, -1.0)
+
+    target_area = yg.Area(-1.0, 1.0, 5.0, -5.0, projection)
+
+    with yg.from_array(data, (0, 0), projection) as layer:
+        clipped = layer.as_area(target_area).as_area(layer.area)
+
+        assert clipped.dimensions == (4, 4)
+        assert clipped.area == layer.area
+
+        read_data = clipped.read_array(0, 0, 4, 4)
+        assert (read_data == data).all()
