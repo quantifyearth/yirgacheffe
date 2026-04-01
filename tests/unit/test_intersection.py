@@ -1,5 +1,6 @@
 import tempfile
 from pathlib import Path
+from unittest.mock import patch, PropertyMock
 
 import pytest
 
@@ -213,58 +214,63 @@ def test_find_intersection_nearly_same() -> None:
     # Yirgacheffe at the time blew up as it knew to ignore the difference
     # when doing a comparison (thanks to layers.py::almost_equal(a,b)), but
     # when you then multiplied this up by the area it rounded poorly.
-    layers = [
-        RasterLayer(
-            gdal_empty_dataset_of_region(
-                Area(
-                    left=-180.00082337073326,
-                    top=90.00041168536663,
-                    right=180.00082337073326,
-                    bottom=-90.00041168536663,
-                ),
-                0.0008983152841195215,
-            )
-        ),
-        RasterLayer(
-            gdal_empty_dataset_of_region(
-                Area(
-                    left=-180.00082337073326,
-                    top=90.00041168536661,
-                    right=180.00082337073326,
-                    bottom=-90.00041168536664,
-                ),
-                0.0008983152841195216,
-            )
-        ),
-        RasterLayer(
-            gdal_empty_dataset_of_region(
-                Area(
-                    left=-180,
-                    top=90.00041168536661,
-                    right=180,
-                    bottom=-90.00041168536664,
-                ),
-                0.0008983152841195215,
-            )
-        ),
-        RasterLayer(
-            gdal_empty_dataset_of_region(
-                Area(
-                    left=-3.6372785853999425,
-                    top=47.767016917771436,
-                    right=3.578888091932174,
-                    bottom=42.068104755317194,
-                ),
-                0.0008983152841195215,
-            )
-        ),
-    ]
 
-    intersection = yg.find_intersection(layers)
-    assert intersection == layers[-1].area
-    clipped_layers = [layer.as_area(intersection) for layer in layers]
-    for other in clipped_layers[1:]:
-        assert clipped_layers[0].dimensions == other.dimensions
+    with patch.object(RasterLayer, '_cse_hash', new_callable=PropertyMock) as MockedRasterLayer:
+
+        MockedRasterLayer.return_value = 32
+
+        layers = [
+            RasterLayer(
+                gdal_empty_dataset_of_region(
+                    Area(
+                        left=-180.00082337073326,
+                        top=90.00041168536663,
+                        right=180.00082337073326,
+                        bottom=-90.00041168536663,
+                    ),
+                    0.0008983152841195215,
+                )
+            ),
+            RasterLayer(
+                gdal_empty_dataset_of_region(
+                    Area(
+                        left=-180.00082337073326,
+                        top=90.00041168536661,
+                        right=180.00082337073326,
+                        bottom=-90.00041168536664,
+                    ),
+                    0.0008983152841195216,
+                )
+            ),
+            RasterLayer(
+                gdal_empty_dataset_of_region(
+                    Area(
+                        left=-180,
+                        top=90.00041168536661,
+                        right=180,
+                        bottom=-90.00041168536664,
+                    ),
+                    0.0008983152841195215,
+                )
+            ),
+            RasterLayer(
+                gdal_empty_dataset_of_region(
+                    Area(
+                        left=-3.6372785853999425,
+                        top=47.767016917771436,
+                        right=3.578888091932174,
+                        bottom=42.068104755317194,
+                    ),
+                    0.0008983152841195215,
+                )
+            ),
+        ]
+
+        intersection = yg.find_intersection(layers)
+        assert intersection == layers[-1].area
+        clipped_layers = [layer.as_area(intersection) for layer in layers]
+        for other in clipped_layers[1:]:
+            assert clipped_layers[0].dimensions == other.dimensions
 
 
 def test_intersection_stability() -> None:
