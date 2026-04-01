@@ -87,7 +87,7 @@ def test_find_intersection_with_vector_unbound() -> None:
                 Area(left=-180.05, top=90.09, right=180.05, bottom=-90.09), 0.13
             )
         )
-        vector = VectorLayer.layer_from_file(path, None, None, None)
+        vector = VectorLayer.layer_from_file(path, None)
         assert vector.area == area
 
         layers = [raster, vector]

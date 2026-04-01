@@ -8,7 +8,7 @@ from typing import Any
 from osgeo import gdal, ogr
 
 from .. import __version__
-from .._datatypes import Area, MapProjection, PixelScale
+from .._datatypes import Area, MapProjection
 from .base import YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
@@ -107,35 +107,8 @@ class VectorLayer(YirgacheffeLayer):
     def layer_from_file(
         cls,
         filename: Path | str,
-        where_filter: str | None,
-        scale: PixelScale | None,
-        projection: str | None,
-        datatype: int | DataType | None = None,
-        burn_value: int | float | str = 1,
-        anchor: tuple[float, float] = (0.0, 0.0)
-    ) -> VectorLayer:
-        # In 2.0 we need to remove this and migrate to the MapProjection version
-        if (projection is None) ^ (scale is None):
-            raise ValueError("Either both projection and scale must be provide, or neither")
-        if projection is not None and scale is not None:
-            map_projection = MapProjection(projection, scale.xstep, scale.ystep)
-        else:
-            map_projection = None
-        return cls._future_layer_from_file(
-            filename,
-            where_filter,
-            map_projection,
-            datatype,
-            burn_value,
-            anchor
-        )
-
-    @classmethod
-    def _future_layer_from_file(
-        cls,
-        filename: Path | str,
-        where_filter: str | None,
         projection: MapProjection | None,
+        where_filter: str | None = None,
         datatype: int | DataType | None = None,
         burn_value: int | float | str = 1,
         anchor: tuple[float, float] = (0.0, 0.0)

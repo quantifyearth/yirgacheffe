@@ -232,9 +232,7 @@ def test_vector_layers_add() -> None:
             burn_value = 2
             with VectorLayer.layer_from_file(
                 path,
-                None,
-                raster_layer.projection.scale,
-                raster_layer.projection.name,
+                raster_layer.projection,
                 burn_value=burn_value,
             ) as vector_layer:
                 assert vector_layer.area.projection is not None
@@ -269,7 +267,7 @@ def test_vector_layers_add_unbound_rhs() -> None:
 
             burn_value = 2
             with VectorLayer.layer_from_file(
-                path, None, None, None, burn_value=burn_value
+                path, None, burn_value=burn_value
             ) as vector_layer:
                 calc = raster_layer + vector_layer
 
@@ -298,7 +296,7 @@ def test_vector_layers_add_unbound_lhs() -> None:
 
             burn_value = 2
             with VectorLayer.layer_from_file(
-                path, None, None, None, burn_value=burn_value
+                path, None, burn_value=burn_value
             ) as vector_layer:
                 calc = vector_layer + raster_layer
 
@@ -327,10 +325,8 @@ def test_vector_layers_multiply() -> None:
         make_vectors_with_multiple_ids(areas, path)
 
         burn_value = 2
-        projection = layer1.projection
-        assert projection is not None
         layer2 = VectorLayer.layer_from_file(
-            path, None, projection.scale, projection.name, burn_value=burn_value
+            path, layer1.projection, burn_value=burn_value
         )
         layer2_total = layer2.sum()
         assert (

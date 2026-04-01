@@ -90,7 +90,7 @@ def test_find_union_with_vector_unbound() -> None:
                 Area(left=59.93, top=70.07, right=170.04, bottom=44.98), 0.13
             )
         )
-        vector = VectorLayer.layer_from_file(path, None, None, None)
+        vector = VectorLayer.layer_from_file(path, None)
         assert vector.area == area
 
         layers = [raster, vector]

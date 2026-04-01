@@ -169,10 +169,10 @@ def read_shape(
             projection_name, scale_tuple = projection
             projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
 
-    return VectorLayer._future_layer_from_file(
+    return VectorLayer.layer_from_file(
         filename,
-        where_filter,
         projection,
+        where_filter,
         datatype,
         burn_value,
     )

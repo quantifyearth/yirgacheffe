@@ -8,7 +8,8 @@ import pyproj
 import pytest
 
 from tests.unit.helpers import gdal_dataset_of_region, make_vectors_with_id
-from yirgacheffe import Area, MapProjection, PixelScale
+import yirgacheffe as yg
+from yirgacheffe import Area
 from yirgacheffe._datatypes import Window
 from yirgacheffe._layers import (
     ConstantLayer,
@@ -25,7 +26,7 @@ WGS_84_PROJECTION = pyproj.CRS.from_epsg(4326).to_wkt(version='WKT1_GDAL')
 def test_pickle_raster_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        projection = MapProjection(WGS_84_PROJECTION, 0.02, -0.02)
+        projection = yg.MapProjection(WGS_84_PROJECTION, 0.02, -0.02)
         area = Area(-10, 10, 10, -10, projection)
         layer = RasterLayer(gdal_dataset_of_region(area, 0.02, filename=path))
 
@@ -33,7 +34,7 @@ def test_pickle_raster_layer() -> None:
         restore = pickle.loads(p)
 
         assert restore.area == area
-        assert restore.projection == MapProjection(WGS_84_PROJECTION, 0.02, -0.02)
+        assert restore.projection == yg.MapProjection(WGS_84_PROJECTION, 0.02, -0.02)
         assert restore.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
         assert restore.dimensions == (1000, 1000)
         assert restore._virtual_window == Window(0, 0, 1000, 1000)
@@ -47,14 +48,13 @@ def test_pickle_raster_mem_layer_fails() -> None:
 
 
 def test_pickle_dyanamic_vector_layer() -> None:
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
-        area = Area(-10.0, 10.0, 10.0, 0.0, MapProjection(WGS_84_PROJECTION, 1.0, -1.0))
+        area = Area(-10.0, 10.0, 10.0, 0.0, projection)
         make_vectors_with_id(42, {area}, path)
 
-        layer = VectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
-        )
+        layer = VectorLayer.layer_from_file(path, projection, "id_no = 42")
 
         p = pickle.dumps(layer)
         restore = pickle.loads(p)
@@ -63,7 +63,7 @@ def test_pickle_dyanamic_vector_layer() -> None:
         assert restore.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
         assert restore.dimensions == (20, 10)
         assert restore._virtual_window == Window(0, 0, 20, 10)
-        assert restore.projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+        assert restore.projection == yg.MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
 
         del layer
 
@@ -94,7 +94,7 @@ def test_pickle_uniform_area_layer() -> None:
             math.ceil(90 / pixel_scale) * pixel_scale,
             math.ceil(180 / pixel_scale) * pixel_scale,
             math.floor(-90 / pixel_scale) * pixel_scale,
-            MapProjection(WGS_84_PROJECTION, pixel_scale, -pixel_scale),
+            yg.MapProjection(WGS_84_PROJECTION, pixel_scale, -pixel_scale),
         )
         assert restore.dimensions == (
             math.ceil((restore.area.right - restore.area.left) / pixel_scale),
@@ -111,7 +111,7 @@ def test_pickle_uniform_area_layer() -> None:
 def test_pickle_group_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10, MapProjection(WGS_84_PROJECTION, 0.2, -0.2))
+        area = Area(-10, 10, 10, -10, yg.MapProjection(WGS_84_PROJECTION, 0.2, -0.2))
         dataset = gdal_dataset_of_region(area, 0.2, filename=path)
         dataset.Close()
 
@@ -209,7 +209,7 @@ def test_pickle_func_calc() -> None:
 def test_pickle_rescaled_raster_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        projection = MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
+        projection = yg.MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
         area = Area(-10, 10, 10, -10)
         raster = RasterLayer(gdal_dataset_of_region(area, 0.02, filename=path))
         layer = RescaledRasterLayer(

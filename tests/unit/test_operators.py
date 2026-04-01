@@ -1861,9 +1861,7 @@ def test_raster_and_vector() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        vector = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), "epsg:4326"
-        )
+        vector = VectorLayer.layer_from_file(path, yg.MapProjection("epsg:4326", 1.0, -1.0))
 
         calc = raster * vector
         assert calc.sum() > 0.0
@@ -1880,9 +1878,7 @@ def test_raster_and_vector_mixed_projection() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        vector = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), "epsg:4326"
-        )
+        vector = VectorLayer.layer_from_file(path, yg.MapProjection("epsg:4326", 1.0, -1.0))
 
         with pytest.raises(ValueError):
             _ = raster * vector
@@ -1898,7 +1894,7 @@ def test_raster_and_vector_no_scale_on_vector() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        vector = VectorLayer.layer_from_file(path, None, None, None)
+        vector = VectorLayer.layer_from_file(path, None)
 
         calc = raster * vector
         assert calc.sum() > 0.0
