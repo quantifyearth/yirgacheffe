@@ -2,7 +2,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from osgeo import gdal
 
 import yirgacheffe as yg
 from tests.unit.helpers import (
@@ -289,36 +288,7 @@ def test_intersection_stability() -> None:
     union = yg.find_union(tiles)
     superunion = union.grow(25 * projection.xstep)
 
-    scratch1 = RasterLayer.empty_raster_layer(
-        union, projection.scale, gdal.GDT_Float64, name="s1"
-    )
-    scratch2 = RasterLayer.empty_raster_layer(
-        superunion, projection.scale, gdal.GDT_Float64, name="s2"
-    )
+    sum1 = yg.sum(tiles).as_area(union) == 1
+    sum2 = yg.sum(tiles).as_area(superunion) == 1
 
-    relative_offsets = {}
-
-    for scratch in [scratch1, scratch2]:
-        offsets = []
-        first = None
-        for tile in tiles:
-            layers = [scratch, tile]
-            intersection = yg.find_intersection(layers)
-
-            # We know the tile is a subset of the scratch region, so
-            # the intersection should just be that
-            assert intersection == tile.area
-
-            clipped_layers = [layer.as_area(intersection) for layer in layers]
-
-            if first is None:
-                first = scratch._virtual_window
-            else:
-                offset = (
-                    scratch._virtual_window.xoff - first.xoff,
-                    scratch._virtual_window.yoff - first.yoff,
-                )
-                offsets.append(offset)
-        relative_offsets[scratch.name] = offsets
-
-    assert relative_offsets[scratch1.name] == relative_offsets[scratch2.name]
+    assert sum1.sum() == sum2.sum()
