@@ -27,6 +27,7 @@
 * Removed properties from internal `LayerObject` API that was earlier exposed and had to be maintained for backwards compatibility.
 * Remove `WGS_84_PROJECTION` constant - for a while now this has been deprecated since we added more human readable string support (e.g., "epsg:4326").
 * Removed `scaled_raster_from_raster` which created an in memory rescaled image. Use `read_raster_like` to generate a dynamically scaled raster instead.
+* Removed `RescaledRasterLayer` as it is superceeded by the `ReprojectedRasterLayer` which does both pixel scaling and map projection conversions.
 
 ## v1.13.1 (18/03/2026)
 

@@ -15,7 +15,7 @@ from yirgacheffe._layers import (
     ConstantLayer,
     GroupLayer,
     RasterLayer,
-    RescaledRasterLayer,
+    ReprojectedRasterLayer,
     UniformAreaLayer,
     VectorLayer,
 )
@@ -213,8 +213,8 @@ def test_pickle_rescaled_raster_layer() -> None:
         projection = yg.MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
         area = Area(-10, 10, 10, -10)
         raster = RasterLayer(gdal_dataset_of_region(area, 0.02, filename=path))
-        layer = RescaledRasterLayer(
-            raster, projection
+        layer = ReprojectedRasterLayer(
+            raster, projection, yg.ResamplingMethod.Nearest,
         )
 
         p = pickle.dumps(layer)
