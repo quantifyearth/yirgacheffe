@@ -52,7 +52,7 @@ def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset
     )
 
     dataset = gdal.GetDriverByName("mem").Create(
-        "mem", width, height, 0, gdal.GDT_Byte, []
+        "mem", width, height, 1, gdal.GDT_Byte, []
     )
     dataset.SetGeoTransform(
         [area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0]

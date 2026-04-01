@@ -236,12 +236,11 @@ def test_rescaled_up_with_window_set() -> None:
         with RescaledRasterLayer(raster, target_projection) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
 
-            layer.set_window_for_intersection(Area(1.0, -1.0, 3.0, -3.0))
-            assert layer.area == Area(1.0, -1.0, 3.0, -3.0, target_projection)
-            assert layer.dimensions == (4, 4)
-            assert layer._virtual_window == Window(2, 2, 4, 4)
+            clipped_layer = layer.as_area(Area(1.0, -1.0, 3.0, -3.0))
+            assert clipped_layer.area == Area(1.0, -1.0, 3.0, -3.0, target_projection)
+            assert clipped_layer.dimensions == (4, 4)
 
-            actual_raster = layer.read_array(0, 0, 4, 4)
+            actual_raster = clipped_layer.read_array(0, 0, 4, 4)
             expected_raster = np.zeros((4, 4))
             expected_raster[0:2, 2:4] = 1
             expected_raster[2:4, 0:2] = 1
@@ -270,12 +269,11 @@ def test_rescaled_up_with_window_set_2() -> None:
             actual_raster = layer.read_array(1, 1, 6, 6)
             assert (actual_raster == expected_raster).all()
 
-            layer.set_window_for_intersection(Area(0.5, -0.5, 3.5, -3.5))
-            assert layer.area == Area(0.5, -0.5, 3.5, -3.5, target_projection)
-            assert layer.dimensions == (6, 6)
-            assert layer._virtual_window == Window(1, 1, 6, 6)
+            clipped_layer = layer.as_area(Area(0.5, -0.5, 3.5, -3.5))
+            assert clipped_layer.area == Area(0.5, -0.5, 3.5, -3.5, target_projection)
+            assert clipped_layer.dimensions == (6, 6)
 
-            actual_raster = layer.read_array(0, 0, 6, 6)
+            actual_raster = clipped_layer.read_array(0, 0, 6, 6)
             assert (actual_raster == expected_raster).all()
 
 
@@ -292,12 +290,11 @@ def test_rescaled_down_with_window_set() -> None:
         with RescaledRasterLayer(raster, target_projection) as layer:
             assert layer.area == Area(0.0, 0.0, 8.0, -8.0, target_projection)
 
-            layer.set_window_for_intersection(Area(2.0, -2.0, 6.0, -6.0))
-            assert layer.area == Area(2.0, -2.0, 6.0, -6.0, target_projection)
-            assert layer.dimensions == (2, 2)
-            assert layer._virtual_window == Window(1, 1, 2, 2)
+            clipped_layer = layer.as_area(Area(2.0, -2.0, 6.0, -6.0))
+            assert clipped_layer.area == Area(2.0, -2.0, 6.0, -6.0, target_projection)
+            assert clipped_layer.dimensions == (2, 2)
 
-            actual_raster = layer.read_array(0, 0, 2, 2)
+            actual_raster = clipped_layer.read_array(0, 0, 2, 2)
             expected_raster = np.zeros((2, 2))
             expected_raster[0:1, 1:2] = 1
             expected_raster[1:2, 0:1] = 1

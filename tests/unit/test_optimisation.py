@@ -14,12 +14,12 @@ class NaiveH3CellLayer(H3CellLayer):
     version that checks for every cell."""
 
     def _read_array_with_window(
-        self, xoffset, yoffset, xsize, ysize, _window
+        self, xoffset, yoffset, xsize, ysize, window
     ):  # pylint: disable=W0237
         assert self.map_projection is not None
         res = np.zeros((ysize, xsize), dtype=float)
-        start_x = self.area.left + (xoffset * self.map_projection.xstep)
-        start_y = self.area.top + (yoffset * self.map_projection.ystep)
+        start_x = self.area.left + ((xoffset + window.xoff) * self.map_projection.xstep)
+        start_y = self.area.top + ((yoffset + window.yoff) * self.map_projection.ystep)
         for ypixel in range(ysize):
             lat = start_y + (ypixel * self.map_projection.ystep)
             for xpixel in range(xsize):
@@ -86,12 +86,14 @@ def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
             right=optimised_layer.area.right + (5 * projection.xstep),
             top=optimised_layer.area.top - (5 * projection.ystep),
             bottom=optimised_layer.area.bottom + (5 * projection.ystep),
+            projection=projection,
         )
-        optimised_layer.set_window_for_union(superset_area)
-        naive_layer.set_window_for_union(superset_area)
 
-        optimised_cell_count = optimised_layer.sum()
-        naive_cell_count = naive_layer.sum()
+        adjusted_optimised_layer = optimised_layer.as_area(superset_area)
+        adjusted_naive_layer = naive_layer.as_area(superset_area)
+
+        optimised_cell_count = adjusted_optimised_layer.sum()
+        naive_cell_count = adjusted_naive_layer.sum()
 
         assert optimised_cell_count == before_cell_count
         assert optimised_cell_count == naive_cell_count
@@ -125,12 +127,14 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
             right=optimised_layer.area.right - (2 * projection.xstep),
             top=optimised_layer.area.top + (2 * projection.ystep),
             bottom=optimised_layer.area.bottom - (2 * projection.ystep),
+            projection=projection
         )
-        optimised_layer.set_window_for_intersection(subset_area)
-        naive_layer.set_window_for_intersection(subset_area)
 
-        optimised_cell_count = optimised_layer.sum()
-        naive_cell_count = naive_layer.sum()
+        adjusted_optimised_layer = optimised_layer.as_area(subset_area)
+        adjusted_naive_layer = naive_layer.as_area(subset_area)
+
+        optimised_cell_count = adjusted_optimised_layer.sum()
+        naive_cell_count = adjusted_naive_layer.sum()
 
         assert optimised_cell_count < before_cell_count
         assert optimised_cell_count == naive_cell_count
@@ -160,14 +164,8 @@ def test_cells_dont_overlap(cell_id):
     projection = MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120)
     layers = [H3CellLayer(x, projection) for x in cluster]
 
-    union = yg.find_union(layers)
-    for layer in layers:
-        layer.set_window_for_union(union)
-
-    calc = layers[0]
-    for layer in layers[1:]:
-        calc += layer
-    calc = yg.where(calc > 1, 1, 0)
+    cell_totals = yg.sum(layers)
+    calc = yg.where(cell_totals > 1, 1, 0)
     assert calc.sum() == 0
 
     # If we didn't get an exception, then there's no over drawing

@@ -26,7 +26,7 @@ class YirgacheffeLayer(LayerMathMixin):
         self._window: Window | None = None
         self.name = name if name is not None else str(uuid.uuid4())
 
-        self.reset_window()
+        self._reset_window()
 
     def close(self) -> None:
         pass
@@ -138,37 +138,7 @@ class YirgacheffeLayer(LayerMathMixin):
         self._window = new_window
         self._active_area = new_area
 
-    def set_window_for_intersection(self, new_area: Area) -> None:
-        def _intersection_validation(new_window: Window) -> None:
-            if (new_window.xoff < 0) or (new_window.yoff < 0):
-                raise ValueError('Window has negative offset')
-            # If there is an underlying raster for this layer, do a sanity check
-            try:
-                raster_xsize, raster_ysize = self._raster_dimensions
-                if ((new_window.xoff + new_window.xsize) > raster_xsize) or \
-                    ((new_window.yoff + new_window.ysize) > raster_ysize):
-                    raise ValueError(f'Window is bigger than dataset: raster is {raster_xsize}x{raster_ysize}'\
-                        f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
-            except AttributeError:
-                pass
-        self._set_window(new_area, _intersection_validation)
-
-    def set_window_for_union(self, new_area: Area) -> None:
-        def _union_validation(new_window: Window) -> None:
-            if (new_window.xoff > 0) or (new_window.yoff > 0):
-                raise ValueError('Window has positive offset')
-            # If there is an underlying raster for this layer, do a sanity check
-            try:
-                raster_xsize, raster_ysize = self._raster_dimensions
-                if ((new_window.xsize - new_window.xoff) < raster_xsize) or \
-                    ((new_window.ysize - new_window.yoff) <raster_ysize):
-                    raise ValueError(f'Window is smaller than dataset: raster is {raster_xsize}x{raster_ysize}'\
-                        f', new window is {new_window.xsize - new_window.xoff}x{new_window.ysize - new_window.yoff}')
-            except AttributeError:
-                pass
-        self._set_window(new_area, _union_validation)
-
-    def reset_window(self) -> None:
+    def _reset_window(self) -> None:
         self._active_area = None
         if self.map_projection:
             width, height = self.map_projection.round_up_pixels(

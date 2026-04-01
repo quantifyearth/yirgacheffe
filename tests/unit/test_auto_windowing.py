@@ -169,25 +169,20 @@ def test_constant_layer_result_rhs_add() -> None:
 
 def test_constant_layer_result_lhs_add() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(1.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
 
-    intersection = yg.find_intersection([layer1, const_layer])
-    const_layer.set_window_for_intersection(intersection)
-    layer1.set_window_for_intersection(intersection)
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.constant(1.0) as const_layer,
+    ):
+        intersection = yg.find_intersection([layer1, const_layer])
+        calc = const_layer.as_area(intersection) + layer1.as_area(intersection)
 
-    calc = const_layer + layer1
+        assert calc.area == layer1.area
 
-    assert calc.area == layer1.area
-
-    result = RasterLayer.empty_raster_layer_like(calc)
-    calc.save(result)
-    actual = result.read_array(0, 0, 4, 2)
-
-    expected = 1.0 + data1
-
-    assert (expected == actual).all()
+        actual = calc.read_array(0, 0, 4, 2)
+        expected = 1.0 + data1
+        assert (expected == actual).all()
 
 
 def test_constant_layer_result_rhs_multiply() -> None:
@@ -210,25 +205,20 @@ def test_constant_layer_result_rhs_multiply() -> None:
 
 def test_constant_layer_result_lhs_multiply() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(2.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
 
-    intersection = yg.find_intersection([layer1, const_layer])
-    const_layer.set_window_for_intersection(intersection)
-    layer1.set_window_for_intersection(intersection)
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.constant(2.0) as const_layer,
+    ):
+        intersection = yg.find_intersection([layer1, const_layer])
+        calc = const_layer.as_area(intersection) * layer1.as_area(intersection)
 
-    calc = const_layer * layer1
+        assert calc.area == layer1.area
 
-    assert calc.area == layer1.area
-
-    result = RasterLayer.empty_raster_layer_like(calc)
-    calc.save(result)
-    actual = result.read_array(0, 0, 4, 2)
-
-    expected = 2.0 * data1
-
-    assert (expected == actual).all()
+        actual = calc.read_array(0, 0, 4, 2)
+        expected = 2.0 * data1
+        assert (expected == actual).all()
 
 
 def test_vector_layers_add() -> None:

@@ -85,7 +85,7 @@ def test_invalid_areas(area: Any) -> None:
     data = np.array([[1, 2], [3, 4]])
     projection = yg.MapProjection("esri:54009", 1.0, -1.0)
     with yg.from_array(data, (1, -1), projection) as layer:
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             _ = layer.as_area(area)
 
 
@@ -129,3 +129,29 @@ def test_add_byte_layers_with_intersection_with_max_save_raster() -> None:
         actual = comp.read_array(0, 0, 2, 2)
 
         assert (expected == actual).all()
+
+
+@pytest.mark.parametrize("other_projection", [
+    yg.MapProjection("epsg:4326", 10.0, -10.0), # same projection, different pixel scale
+    yg.MapProjection("esri:54009", 1.0, -1.0), # different projection, same pixel_scale
+])
+def test_projection_mismatch(other_projection: yg.MapProjection) -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
+
+    other_area = yg.Area(0, 0, 20, -20, other_projection)
+
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        with pytest.raises(ValueError):
+            _ = layer.as_area(other_area)
+
+
+def test_infer_projection() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
+
+    other_area = yg.Area(0, 0, 20, -20) # no explicit projection
+
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        adjusted_layer = layer.as_area(other_area)
+        assert adjusted_layer.area.projection == projection

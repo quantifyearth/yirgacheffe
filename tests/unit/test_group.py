@@ -288,10 +288,9 @@ def test_with_window_adjust(klass):
         # now apply a window over each zone and check we
         # get what we expect
         for idx in range(1, 11):
-            group.reset_window()
             area = Area(idx, 10, idx + 1, -10, MapProjection("epsg:4326", 0.1, -0.1))
-            group.set_window_for_intersection(area)
-            row = group.read_array(0, 0, 10, 1)
+            windowed_group = group.as_area(area)
+            row = windowed_group.read_array(0, 0, 10, 1)
             assert (row == idx).all()
 
 
@@ -328,10 +327,9 @@ def test_multipe_tiles_with_window(klass, dims):
         group.area.bottom + 4.0,
         MapProjection("epsg:4326", 2.0, -2.0),
     )
-    group.set_window_for_intersection(area)
-    assert group.dimensions == (5 * dims - 4, 5 * dims - 4)
-    assert group._virtual_window == Window(2, 2, (5 * dims) - 4, (5 * dims) - 4)
-    assert group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
+    windowed_group = group.as_area(area)
+    assert windowed_group.dimensions == (5 * dims - 4, 5 * dims - 4)
+    assert windowed_group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
         (5 * dims) - 4,
         (5 * dims) - 4,
     )
@@ -376,10 +374,9 @@ def test_overlapping_tiles_with_window(klass, dims):
         group.area.bottom + 4.0,
         MapProjection("epsg:4326", 2.0, -2.0),
     )
-    group.set_window_for_intersection(area)
-    assert group.dimensions == ((5 * dims) - 2, (5 * dims) - 2)
-    assert group._virtual_window == Window(2, 2, (5 * dims) - 2, (5 * dims) - 2)
-    data = group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4)
+    windowed_group = group.as_area(area)
+    assert windowed_group.dimensions == ((5 * dims) - 2, (5 * dims) - 2)
+    data = windowed_group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4)
     assert data.shape == ((5 * dims) - 4, (5 * dims) - 4)
     assert (
         data
@@ -485,10 +482,9 @@ def test_multipe_tiles_with_missing_tile(klass, dims, remove):
         group.area.bottom + 4.0,
         rasters[0].map_projection,
     )
-    group.set_window_for_intersection(area)
-    assert group.dimensions == ((5 * dims) - 4, (5 * dims) - 4)
-    assert group._virtual_window == Window(2, 2, (5 * dims) - 4, (5 * dims) - 4)
-    assert group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
+    windowed_group = group.as_area(area)
+    assert windowed_group.dimensions == ((5 * dims) - 4, (5 * dims) - 4)
+    assert windowed_group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
         (5 * dims) - 4,
         (5 * dims) - 4,
     )
@@ -549,10 +545,9 @@ def test_oversized_tiles_with_missing_tile(klass, dims, remove):
         group.area.bottom + 4.0,
         rasters[0].map_projection,
     )
-    group.set_window_for_intersection(area)
-    assert group.dimensions == ((5 * dims) - 2, (5 * dims) - 2)
-    assert group._virtual_window == Window(2, 2, (5 * dims) - 2, (5 * dims) - 2)
-    assert group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
+    windowed_group = group.as_area(area)
+    assert windowed_group.dimensions == ((5 * dims) - 2, (5 * dims) - 2)
+    assert windowed_group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
         (5 * dims) - 4,
         (5 * dims) - 4,
     )

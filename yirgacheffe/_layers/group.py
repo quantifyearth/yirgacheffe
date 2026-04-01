@@ -87,25 +87,6 @@ class GroupLayer(YirgacheffeLayer):
     def datatype(self) -> DataType:
         return self.layers[0].datatype
 
-    def set_window_for_intersection(self, new_area: Area) -> None:
-        super().set_window_for_intersection(new_area)
-
-        # filter out layers we don't care about
-        self.layers = [layer for layer in self._underlying_layers if layer.area.overlaps(new_area)]
-
-    def set_window_for_union(self, new_area: Area) -> None:
-        super().set_window_for_union(new_area)
-
-        # filter out layers we don't care about
-        self.layers = [layer for layer in self._underlying_layers if layer.area.overlaps(new_area)]
-
-    def reset_window(self) -> None:
-        super().reset_window()
-        try:
-            self.layers = self._underlying_layers
-        except AttributeError:
-            pass # called from Base constructor before we've added the extra field
-
     def _read_array_with_window(
         self,
         xoffset: int,

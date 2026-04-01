@@ -160,17 +160,13 @@ def test_empty_layer_from_raster_with_window():
     original_window = source._virtual_window
     original_dimensions = source.dimensions
 
-    source.set_window_for_intersection(Area(-1, 1, 1, -1))
-    assert source._virtual_window < original_window
-    assert source.dimensions < original_dimensions
+    clipped_source = source.as_area(Area(-1, 1, 1, -1, source.map_projection))
+    assert clipped_source.dimensions < source.dimensions
 
-    empty = RasterLayer.empty_raster_layer_like(source)
+    empty = RasterLayer.empty_raster_layer_like(clipped_source)
     assert empty.map_projection == source.map_projection
-    assert empty._virtual_window.xoff == 0
-    assert empty._virtual_window.yoff == 0
-    assert empty._virtual_window.xsize == source._virtual_window.xsize
-    assert empty._virtual_window.ysize == source._virtual_window.ysize
-    assert empty.dimensions == (source._virtual_window.xsize, source._virtual_window.ysize)
+    assert empty.area == clipped_source.area
+    assert empty.dimensions == clipped_source.dimensions
 
 
 def test_layer_with_positive_offset():

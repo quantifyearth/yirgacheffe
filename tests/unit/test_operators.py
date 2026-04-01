@@ -624,43 +624,30 @@ def test_sum_layer() -> None:
 
 def test_constant_layer_result_rhs() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(1.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
+    with (
+        yg.from_array(data1, (0, 0), yg.MapProjection("epsg:4326", 0.02, -0.02)) as layer1,
+        yg.constant(1.0) as const_layer,
+    ):
+        comp = layer1 + const_layer
+        assert comp.dimensions == (4, 2)
 
-    layers = [layer1, const_layer, result]
-    intersection = yg.find_intersection(layers)
-    for layer in layers:
-        layer.set_window_for_intersection(intersection)
-
-    comp = layer1 + const_layer
-    comp.save(result)
-    result.reset_window()
-    actual = result.read_array(0, 0, 4, 2)
-
-    expected = 1.0 + data1
-
-    assert (expected == actual).all()
+        actual = comp.read_array(0, 0, 4, 2)
+        expected = data1 + 1.0
+        assert (expected == actual).all()
 
 
 def test_constant_layer_result_lhs() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(1.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
+    with (
+        yg.from_array(data1, (0, 0), yg.MapProjection("epsg:4326", 0.02, -0.02)) as layer1,
+        yg.constant(1.0) as const_layer,
+    ):
+        comp = const_layer + layer1
+        assert comp.dimensions == (4, 2)
 
-    intersection = yg.find_intersection([layer1, const_layer])
-    const_layer.set_window_for_intersection(intersection)
-    layer1.set_window_for_intersection(intersection)
-
-    comp = const_layer + layer1
-    comp.save(result)
-
-    actual = result.read_array(0, 0, 4, 2)
-
-    expected = 1.0 + data1
-
-    assert (expected == actual).all()
+        actual = comp.read_array(0, 0, 4, 2)
+        expected = data1 + 1.0
+        assert (expected == actual).all()
 
 
 def test_shader_apply_constant_lhs() -> None:

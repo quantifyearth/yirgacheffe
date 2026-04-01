@@ -53,19 +53,14 @@ def test_stack_tifs_with_area_match() -> None:
             source_layers.append(layer1)
 
         intersection = yg.find_intersection(source_layers)
-        for layer in source_layers:
-            layer.set_window_for_intersection(intersection)
-
-        layer = source_layers[-1]
-        assert layer._virtual_window.xsize == 100 - (bands - 1)
-        assert layer._virtual_window.ysize == 100 - (bands - 1)
+        aligned_layers = [layer.as_area(intersection) for layer in source_layers]
 
         target_path = os.path.join(tempdir, "target.tif")
         target = RasterLayer.empty_raster_layer_like(
-            layer, filename=target_path, bands=bands
+            aligned_layers[0], filename=target_path, bands=bands
         )
         for i in range(bands):
-            source_layers[i].save(target, band=i + 1)
+            aligned_layers[i].save(target, band=i + 1)
 
         # force things to disk
         target.close()

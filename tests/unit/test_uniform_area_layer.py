@@ -75,14 +75,13 @@ def test_set_intersection() -> None:
         dataset.Close()
 
         layer = UniformAreaLayer.layer_from_file(path)
-        layer.set_window_for_intersection(Area(-10, 10, 10, -10))
-        assert layer.area == Area(
+        clipped_area = Area(-10, 10, 10, -10, layer.map_projection)
+        clipped_layer = layer.as_area(clipped_area)
+        assert clipped_layer.area == Area(
             -10, 10, 10, -10, MapProjection("epsg:4326", 1.0, -1.0)
         )
-        assert layer.dimensions == (20, 20)
-        assert layer._virtual_window == Window(170, 80, 20, 20)
+        assert clipped_layer.dimensions == (20, 20)
 
-        layer.reset_window()
         assert layer.area == Area(
             -180, 90, 180, -90, MapProjection("epsg:4326", 1.0, -1.0)
         )

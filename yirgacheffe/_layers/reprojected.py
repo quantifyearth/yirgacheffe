@@ -175,7 +175,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                 raise RuntimeError("Source can not have a custom window framing set")
             self._src._set_window(expanded_src_read_area)
             self._src.to_geotiff(src_data_path)
-            self._src.reset_window()
+            self._src._reset_window()
 
             with VsimemFile(f"/vsimem/warped_{fid}.tif") as warped_data_path:
                 gdal.Warp(

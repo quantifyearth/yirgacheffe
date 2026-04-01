@@ -193,20 +193,23 @@ class H3CellLayer(YirgacheffeLayer):
                         if this_cell == self.cell_id:
                             subset[ypixel][xpixel] = 1.0
 
-            return backend.pad(
-                backend.promote(subset),
-                (
+            if target_window == intersection:
+                return backend.promote(subset)
+            else:
+                return backend.pad(
+                    backend.promote(subset),
                     (
-                        (intersection.yoff - self._virtual_window.yoff) - yoffset,
-                        (ysize - ((intersection.yoff - self._virtual_window.yoff) + intersection.ysize)) + yoffset,
+                        (
+                            (intersection.yoff - window.yoff) - yoffset,
+                            (ysize - ((intersection.yoff - window.yoff) + intersection.ysize)) + yoffset,
+                        ),
+                        (
+                            (intersection.xoff - window.xoff) - xoffset,
+                            xsize - ((intersection.xoff - window.xoff) + intersection.xsize) + xoffset,
+                        )
                     ),
-                    (
-                        (intersection.xoff - self._virtual_window.xoff) - xoffset,
-                        xsize - ((intersection.xoff - self._virtual_window.xoff) + intersection.xsize) + xoffset,
-                    )
-                ),
-                'constant'
-            )
+                    'constant'
+                )
         else:
             # This handles the case where the cell wraps over 180˚ longitude
             res = np.zeros((ysize, xsize))
@@ -217,7 +220,7 @@ class H3CellLayer(YirgacheffeLayer):
             max_width = ceil(max_width_projection / self.map_projection.xstep)
 
             for ypixel in range(yoffset, yoffset + ysize):
-                lat = self.area.top + (ypixel * self.map_projection.ystep)
+                lat = self.area.top + ((ypixel + window.yoff) * self.map_projection.ystep)
 
                 for xpixel in range(xoffset, min(xoffset + xsize, max_width)):
                     lng = self.area.left + (xpixel * self.map_projection.xstep)

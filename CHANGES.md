@@ -3,14 +3,19 @@
 ### Added
 
 * Added a `dimensions` property to layers to give the raster equivalent width and height.
-* Added an `as_area` operator to redefine the area of a layer for use in a calculation. Useful for overriding the
+* Added an `as_area` operator to redefine the area of a layer for use in a calculation. Useful for overriding the default behaviour of operators in terms of the area they take, and for explicit clipping or padding of inputs.
 
 ### Changed
 
 * Moved `find_intersection` and `find_union` to top level of module.
 
+### Fixed
+
+* Fixed a tessellation issue with H3 tiles overlaying each other when summed.
+
 ### Removed
 
+* Removed mutable layer properies `set_window_for_intersection`, `set_window_for_union`, and `reset_window`. Use the immutable `as_area` operator instead.
 * Removed `window` property from the public API.
 * Removed `Window` class from the public API.
 * Removed `RasteredVectorLayer` class (use `VectorLayer` instead).

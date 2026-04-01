@@ -190,11 +190,13 @@ def test_pixel_for_latlng_on_operator() -> None:
 def test_latlng_for_pixel_with_intersection(
     area: Area, window: Area, pixel: tuple[int, int], expected: tuple[float, float]
 ) -> None:
-    layer = YirgacheffeLayer(area)
-    layer.set_window_for_intersection(window)
-    result = layer.latlng_for_pixel(*pixel)
-    assert math.isclose(result[0], expected[0])
-    assert math.isclose(result[1], expected[1])
+    pixel_width, pixel_height = area.pixel_dimensions
+    data = np.zeros((pixel_height, pixel_width))
+    with yg.from_array(data, (area.left, area.top), area.projection) as layer:
+        clipped_layer = layer.as_area(window)
+        result = clipped_layer.latlng_for_pixel(*pixel)
+        assert math.isclose(result[0], expected[0])
+        assert math.isclose(result[1], expected[1])
 
 
 @pytest.mark.parametrize(
@@ -223,7 +225,9 @@ def test_latlng_for_pixel_with_intersection(
 def test_pixel_for_latlng_with_intersection(
     area: Area, window: Area, coord: tuple[float, float], expected: tuple[int, int]
 ) -> None:
-    layer = YirgacheffeLayer(area)
-    layer.set_window_for_intersection(window)
-    result = layer.pixel_for_latlng(*coord)
-    assert result == expected
+    pixel_width, pixel_height = area.pixel_dimensions
+    data = np.zeros((pixel_height, pixel_width))
+    with yg.from_array(data, (area.left, area.top), area.projection) as layer:
+        clipped_layer = layer.as_area(window)
+        result = clipped_layer.pixel_for_latlng(*coord)
+        assert result == expected

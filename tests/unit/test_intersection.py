@@ -96,9 +96,9 @@ def test_find_intersection_with_vector_unbound() -> None:
         expected_area = area.project_like(raster.area)
         assert intersection == expected_area
 
-        raster.set_window_for_intersection(intersection)
+        _ = raster.as_area(intersection)
         with pytest.raises(ValueError):
-            vector.set_window_for_intersection(intersection)
+            _ = vector.as_area(intersection)
 
 
 def test_find_intersection_with_vector_bound() -> None:
@@ -121,7 +121,7 @@ def test_find_intersection_with_vector_bound() -> None:
         assert intersection == vector.area
 
         for layer in layers:
-            layer.set_window_for_intersection(intersection)
+            _ = layer.as_area(intersection)
 
 
 def test_find_intersection_with_vector_awkward_rounding() -> None:
@@ -150,7 +150,7 @@ def test_find_intersection_with_vector_awkward_rounding() -> None:
         assert intersection == vector.area
 
         for layer in layers:
-            layer.set_window_for_intersection(intersection)
+            _ = layer.as_area(intersection)
 
 
 def test_find_intersection_different_pixel_pitch() -> None:
@@ -172,14 +172,8 @@ def test_set_intersection_self(scale) -> None:
 
     # note that the area we passed to gdal_dataset_of_region isn't pixel aligned, so we must
     # use the area from loading the dataset
-    layer.set_window_for_intersection(layer.area)
-    assert layer.dimensions == old_dimensions
-    assert layer._virtual_window == old_window
-
-    # reset should not do much here
-    layer.reset_window()
-    assert layer.dimensions == old_dimensions
-    assert layer._virtual_window == old_window
+    clipped_layer = layer.as_area(layer.area)
+    assert clipped_layer.dimensions == layer.dimensions
 
 
 def test_set_intersection_subset() -> None:
@@ -190,26 +184,23 @@ def test_set_intersection_subset() -> None:
 
     intersection = Area(-1.0, 1.0, 1.0, -1.0)
 
-    layer.set_window_for_intersection(intersection)
-    assert layer.dimensions == (100, 100)
-    assert layer._virtual_window == Window(450, 450, 100, 100)
-    origin_after_pixel = layer.read_array(0, 0, 1, 1)
+    clipped_layer = layer.as_area(intersection)
+    assert clipped_layer.dimensions == (100, 100)
+    origin_after_pixel = clipped_layer.read_array(0, 0, 1, 1)
 
     # The default data is populated as a mod of row value, so given
     # were not a multiple of 256 off, these pixels should not have the same
     # value in them
     assert origin_before_pixel[0][0] != origin_after_pixel[0][0]
 
-    layer.reset_window()
-    assert layer.dimensions == (1000, 1000)
-    assert layer._virtual_window == Window(0, 0, 1000, 1000)
-
 
 def test_set_intersection_distinct() -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
     intersection = Area(-101.0, 1.0, -100.0, -1.0)
-    with pytest.raises(ValueError):
-        layer.set_window_for_intersection(intersection)
+    out_of_area_layer = layer.as_area(intersection)
+    xsize, ysize = out_of_area_layer.dimensions
+    data = out_of_area_layer.read_array(0, 0, xsize, ysize)
+    assert data.sum() == 0
 
 
 def test_find_intersection_nearly_same() -> None:
@@ -274,12 +265,9 @@ def test_find_intersection_nearly_same() -> None:
 
     intersection = yg.find_intersection(layers)
     assert intersection == layers[-1].area
-    for layer in layers:
-        layer.set_window_for_intersection(intersection)
-    for other in layers[1:]:
-        assert layers[0].dimensions == other.dimensions
-        assert layers[0]._virtual_window.xsize == other._virtual_window.xsize
-        assert layers[0]._virtual_window.ysize == other._virtual_window.ysize
+    clipped_layers = [layer.as_area(intersection) for layer in layers]
+    for other in clipped_layers[1:]:
+        assert clipped_layers[0].dimensions == other.dimensions
 
 
 def test_intersection_stability() -> None:
@@ -316,7 +304,6 @@ def test_intersection_stability() -> None:
         offsets = []
         first = None
         for tile in tiles:
-            scratch.reset_window()
             layers = [scratch, tile]
             intersection = yg.find_intersection(layers)
 
@@ -324,8 +311,7 @@ def test_intersection_stability() -> None:
             # the intersection should just be that
             assert intersection == tile.area
 
-            for layer in layers:
-                layer.set_window_for_intersection(intersection)
+            clipped_layers = [layer.as_area(intersection) for layer in layers]
 
             if first is None:
                 first = scratch._virtual_window

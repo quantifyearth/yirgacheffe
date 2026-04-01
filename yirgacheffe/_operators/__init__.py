@@ -381,25 +381,32 @@ class LayerMathMixin:
 
     def as_area(self, area_or_layer: Any) -> LayerOperation:
         if area_or_layer is None:
-            raise ValueError("Expected layer or area value, not None")
+            raise TypeError("Expected layer or area value, not None")
 
         # This is a bit lazy, avoiding circular import hell for now
         try:
-            area = area_or_layer.area
+            new_area = area_or_layer.area
         except AttributeError:
-            area = area_or_layer
+            new_area = area_or_layer
 
-        if not isinstance(area, Area):
-            raise ValueError("Expected layer or area value")
+        if not isinstance(new_area, Area):
+            raise TypeError("Expected layer or area value")
 
-        # TODO: validate area is same projection as underlying
-        # perhaps wobble area if necessary?
+        if new_area.projection is None:
+            new_area = new_area.project_like(self._underlying_area)
+        elif not self.area.is_world and (new_area.projection != self.map_projection):
+            # If a layer has a global reach (like a constant layer) those are projection agnostic so
+            # can always be specialised.
+            raise ValueError(f"Differeing map projection used on as_area: {new_area.projection} applied to {self.map_projection}")
+
+        # TODO: unlike set_window_for_blah, as_area probably should work on vectors that do not have
+        # a map projection set?
 
         return LayerOperation(
             self,
             op.ASAREA,
             window_op=WindowOperation.NONE,
-            new_area=area,
+            new_area=new_area,
         )
 
     def latlng_for_pixel(self, x: int, y: int) -> tuple[float, float]:
