@@ -393,17 +393,18 @@ class LayerMathMixin:
             raise TypeError("Expected layer or area value")
 
         self_projection = self.projection # type: ignore
-        if new_area.projection is None:
-            new_area = new_area.project_like(self.area)
-        elif not self.area.is_world and (new_area.projection != self_projection):
-            # If a layer has a global reach (like a constant layer) those are projection agnostic so
-            # can always be specialised.
-            raise ValueError(
-                f"Differeing map projection used on as_area: {new_area.projection} applied to {self_projection}"
-            )
-
-        # TODO: unlike set_window_for_blah, as_area probably should work on vectors that do not have
-        # a map projection set?
+        if self_projection is not None:
+            if new_area.projection is None:
+                new_area = new_area.project_like(self.area)
+            elif not self.area.is_world and (new_area.projection != self_projection):
+                # If a layer has a global reach (like a constant layer) those are projection agnostic so
+                # can always be specialised.
+                raise ValueError(
+                    f"Differeing map projection used on as_area: {new_area.projection} applied to {self_projection}"
+                )
+        else:
+            if new_area.projection is None:
+                raise ValueError("Applied area and target both lack projection")
 
         return LayerOperation(
             self,
@@ -740,6 +741,9 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def projection(self) -> MapProjection | None:
+        if self.operator == op.ASAREA:
+            return self.kwargs["new_area"].projection
+
         try:
             projection = self.lhs.projection
         except AttributeError:

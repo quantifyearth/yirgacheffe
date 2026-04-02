@@ -17,7 +17,7 @@
 
 ### Removed
 
-* Removed mutable layer properies `set_window_for_intersection`, `set_window_for_union`, and `reset_window`. Use the immutable `as_area` operator instead.
+* Removed mutable layer properties `set_window_for_intersection`, `set_window_for_union`, and `reset_window`. Use the immutable `as_area` operator instead.
 * Removed `window` property from the public API.
 * Removed `Window` class from the public API.
 * Removed `PixelScale` class, deprecated for a long time, use `MapProjection` instead.

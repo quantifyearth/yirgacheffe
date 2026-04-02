@@ -96,9 +96,9 @@ def test_find_intersection_with_vector_unbound() -> None:
         expected_area = area.project_like(raster.area)
         assert intersection == expected_area
 
-        _ = raster.as_area(intersection)
-        with pytest.raises(ValueError):
-            _ = vector.as_area(intersection)
+        for layer in layers:
+            clipped = layer.as_area(intersection)
+            assert clipped.area == expected_area
 
 
 def test_find_intersection_with_vector_bound() -> None:

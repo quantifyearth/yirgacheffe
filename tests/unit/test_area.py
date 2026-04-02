@@ -488,3 +488,12 @@ def test_invalid_reproject(lhs: Area, target: MapProjection) -> None:
 def test_invalid_projected_areas(area_args) -> None:
     with pytest.raises(ValueError):
         _ = Area(*area_args)
+
+
+@pytest.mark.parametrize("projection", [
+    MapProjection("epsg:4326", 0.01, -0.01),
+    MapProjection("esri:54009", 100, -100),
+])
+def test_constant_to_geotiff(projection) -> None:
+    area = Area(0, 0, 100 * projection.xstep, 100 * projection.ystep, projection)
+    assert area.pixel_dimensions == (100, 100)

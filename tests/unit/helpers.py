@@ -255,7 +255,7 @@ def generate_child_tile(
 
 
 def make_vectors_with_empty_feature(
-    areas: set[tuple[Area, int]], filename: str
+    areas: set[tuple[Area, int]], filename: str | Path
 ) -> None:
     srs = ogr.osr.SpatialReference()
     srs.ImportFromEPSG(4326)

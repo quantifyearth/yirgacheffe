@@ -1,5 +1,5 @@
-import os
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -17,7 +17,7 @@ from yirgacheffe._datatypes import Window
 
 def test_basic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
@@ -31,7 +31,7 @@ def test_basic_vector_layer_no_filter_match() -> None:
 
 def test_basic_dynamic_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(-10.0, 10.0, 10.0, 0.0)
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, {area}, path)
@@ -50,7 +50,7 @@ def test_basic_dynamic_vector_layer() -> None:
 
 def test_basic_dynamic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(-10.0, 10.0, 10.0, 0.0)
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, {area}, path)
@@ -61,7 +61,7 @@ def test_basic_dynamic_vector_layer_no_filter_match() -> None:
 
 def test_multi_area_vector() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {Area(-10.0, 10.0, 0.0, 0.0), Area(0.0, 0.0, 10, -10)}
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, areas, path)
@@ -80,7 +80,7 @@ def test_multi_area_vector() -> None:
 
 def test_empty_layer_from_vector():
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(
             left=44.00253688814017,
             top=-12.440948032828079,
@@ -105,7 +105,7 @@ def test_empty_layer_from_vector():
 
 def test_vector_layers_with_default_burn_value() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
@@ -129,7 +129,7 @@ def test_vector_layers_with_default_burn_value() -> None:
 
 def test_vector_layers_with_fixed_burn_value() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
@@ -152,7 +152,7 @@ def test_vector_layers_with_fixed_burn_value() -> None:
 
 def test_vector_layers_with_default_burn_value_and_filter() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
@@ -174,7 +174,7 @@ def test_vector_layers_with_default_burn_value_and_filter() -> None:
 
 def test_vector_layers_with_invalid_burn_value() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
@@ -185,7 +185,7 @@ def test_vector_layers_with_invalid_burn_value() -> None:
 
 def test_vector_layers_with_field_value() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
@@ -220,7 +220,7 @@ def test_vector_layers_with_field_value() -> None:
 )
 def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {
             (Area(-10.0, 10.0, 10.0, -10.0), value),
         }
@@ -259,7 +259,7 @@ def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
 )
 def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {
             (Area(-10.0, 10.0, 10.0, -10.0), value),
         }
@@ -296,7 +296,7 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
 )
 def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {
             (Area(-10.0, 10.0, 10.0, -10.0), value),
         }
@@ -332,7 +332,7 @@ def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None
 )
 def test_read_array_size(size, expect_success):
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(-10.0, 10.0, 10.0, 0.0)
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, {area}, path)
@@ -444,7 +444,7 @@ def test_read_array_size(size, expect_success):
 )
 def test_anchor_offsets(anchor, area, expected):
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, {area}, path)
 
@@ -456,7 +456,7 @@ def test_anchor_offsets(anchor, area, expected):
 
 def test_vector_layers_with_empty_features() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
         projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_empty_feature(areas, path)
@@ -476,3 +476,57 @@ def test_vector_layers_with_empty_features() -> None:
         total = layer.sum()
         xsize, ysize = layer.dimensions
         assert total == (xsize * ysize) / 2
+
+
+@pytest.mark.parametrize("projection", [
+    yg.MapProjection("epsg:4326", 0.01, -0.01),
+    yg.MapProjection("esri:54009", 100, -100),
+])
+def test_projected_vector_layer_to_geotiff(projection) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = yg.Area(0, 0, 100 * projection.xstep, 100 * projection.ystep, projection)
+        make_vectors_with_id(42, {area}, path, projection.name)
+
+        result_path = Path(tempdir) / "test.tif"
+        with yg.read_shape(path, projection, "id_no = 42") as layer:
+            total = layer.sum()
+            assert total == 100 * 100
+            layer.to_geotiff(result_path)
+
+        with yg.read_raster(result_path) as result:
+            assert result.dimensions == (100, 100)
+            assert result.area == area
+            data = result.read_array(0, 0, 100, 100)
+            assert data.sum() == total
+
+
+@pytest.mark.parametrize("projection", [
+    yg.MapProjection("epsg:4326", 0.01, -0.01),
+    yg.MapProjection("esri:54009", 100, -100),
+])
+def test_unprojected_vector_layer_to_geotiff(projection) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = yg.Area(0, 0, 100 * projection.xstep, 100 * projection.ystep, projection)
+        make_vectors_with_id(42, {area}, path, projection.name)
+
+        result_path = Path(tempdir) / "test.tif"
+        with yg.read_shape(path, None, "id_no = 42") as layer:
+
+            # We can't do anything useful with a layer that isn't projected
+            with pytest.raises(AttributeError):
+                _ = layer.sum()
+
+            # So let's fix that
+            projected_layer = layer.as_area(area)
+
+            total = projected_layer.sum()
+            assert projected_layer == 100 * 100
+            projected_layer.to_geotiff(result_path)
+
+        with yg.read_raster(result_path) as result:
+            assert result.dimensions == (100, 100)
+            assert result.area == area
+            data = result.read_array(0, 0, 100, 100)
+            assert data.sum() == total

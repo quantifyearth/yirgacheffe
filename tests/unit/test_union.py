@@ -98,9 +98,9 @@ def test_find_union_with_vector_unbound() -> None:
         aligned_area = vector.area.project_like(raster.area)
         assert union == aligned_area
 
-        _ = raster.as_area(union)
-        with pytest.raises(ValueError):
-            _ = vector.as_area(union)
+        for layer in layers:
+            expanded = layer.as_area(union)
+            assert expanded.area == union
 
 
 def test_find_union_with_vector_bound() -> None:

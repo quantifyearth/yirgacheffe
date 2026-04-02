@@ -1,3 +1,6 @@
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -58,3 +61,24 @@ def test_cse_hash(lhs, rhs, expected_equal) -> None:
 
     are_hashed_same = a._cse_hash == b._cse_hash
     assert expected_equal == are_hashed_same
+
+
+@pytest.mark.parametrize("projection", [
+    yg.MapProjection("epsg:4326", 0.01, -0.01),
+    yg.MapProjection("esri:54009", 100, -100),
+])
+def test_constant_to_geotiff(projection) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.tif"
+        area = yg.Area(0, 0, 100 * projection.xstep, 100 * projection.ystep, projection)
+        with yg.constant(42) as const:
+            assert const.area == yg.Area.world()
+            aread_const = const.as_area(area)
+            assert aread_const.area == area
+            aread_const.to_geotiff(path)
+
+        with yg.read_raster(path) as result:
+            assert result.dimensions == (100, 100)
+            assert result.area == area
+            data = result.read_array(0, 0, 100, 100)
+            assert (data == 42).all()

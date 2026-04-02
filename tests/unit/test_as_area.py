@@ -1,8 +1,12 @@
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
+
 import yirgacheffe as yg
+from tests.unit.helpers import make_vectors_with_id
 
 def test_simple_clip() -> None:
     data = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
@@ -16,6 +20,7 @@ def test_simple_clip() -> None:
 
         assert clipped.dimensions == (2, 2)
         assert clipped.area == target_area
+        assert clipped.projection == projection
 
         read_data = clipped.read_array(0, 0, 2, 2)
         assert (read_data == expected_data).all()
@@ -189,3 +194,79 @@ def test_pad_and_clip() -> None:
 
         read_data = clipped.read_array(0, 0, 4, 4)
         assert (read_data == data).all()
+
+
+def test_apply_area_to_projected_vector() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        projection = yg.MapProjection("esri:54009", 1.0, -1.0)
+        area = yg.Area(0, 0, 100, -100, projection)
+        make_vectors_with_id(42, {area}, path, projection.name)
+
+        target_area = yg.Area(-10, 10, 10, -10, projection)
+
+        with yg.read_shape(path, projection, "id_no = 42") as layer:
+            assert layer.area == area
+            assert layer.dimensions == (100, 100)
+
+            clipped = layer.as_area(target_area)
+            assert clipped.area == target_area
+            assert clipped.dimensions == (20, 20)
+
+            data = clipped.read_array(0, 0, 20, 20)
+            assert data.sum() == 10 * 10
+
+
+def test_apply_area_to_unprojected_vector() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        projection = yg.MapProjection("esri:54009", 1.0, -1.0)
+        area = yg.Area(0, 0, 100, -100, projection)
+        make_vectors_with_id(42, {area}, path, projection.name)
+
+        target_area = yg.Area(-10, 10, 10, -10, projection)
+
+        with yg.read_shape(path, None, "id_no = 42") as layer:
+            assert layer.area.projection is None
+            with pytest.raises(AttributeError):
+                _ = layer.dimensions
+
+            clipped = layer.as_area(target_area)
+            assert clipped.area == target_area
+            assert clipped.dimensions == (20, 20)
+
+            data = clipped.read_array(0, 0, 20, 20)
+            assert data.sum() == 10 * 10
+
+
+def test_can_not_apply_unprojected_area_to_unprojected_layer() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        projection = yg.MapProjection("esri:54009", 1.0, -1.0)
+        area = yg.Area(0, 0, 100, -100, projection)
+        make_vectors_with_id(42, {area}, path, projection.name)
+
+        target_area = yg.Area(-10, 10, 10, -10)
+
+        with yg.read_shape(path, None, "id_no = 42") as layer:
+            with pytest.raises(ValueError):
+                _ = layer.as_area(target_area)
+
+
+def test_can_apply_unprojected_area_to_projected_layer() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        projection = yg.MapProjection("esri:54009", 1.0, -1.0)
+        area = yg.Area(0, 0, 100, -100, projection)
+        make_vectors_with_id(42, {area}, path, projection.name)
+
+        target_area = yg.Area(-10, 10, 10, -10)
+        expected_area = yg.Area(-10, 10, 10, -10, projection)
+
+        with yg.read_shape(path, projection, "id_no = 42") as layer:
+            clipped = layer.as_area(target_area)
+            assert clipped.area == expected_area
+            assert clipped.dimensions == (20, 20)
+
+            data = clipped.read_array(0, 0, 20, 20)
+            assert data.sum() == 10 * 10
