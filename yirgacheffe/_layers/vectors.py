@@ -12,6 +12,7 @@ from .._datatypes import Area, MapProjection
 from .base import YirgacheffeLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
+from ..constants import YSTEP
 
 def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> DataType: # pylint: disable=R0911
     if isinstance(burn_value, str):
@@ -383,20 +384,31 @@ class VectorLayer(YirgacheffeLayer):
             raise MemoryError('Failed to create memory mask')
 
         dataset.SetProjection(projection._gdal_projection)
-        dataset.SetGeoTransform([
+        geotransform = [
             target_area.left + (x * projection.xstep) + rasterize_offset_x,
             projection.xstep,
             0.0,
             target_area.top + (y * projection.ystep) + rasterize_offset_y,
             0.0,
             projection.ystep
-        ])
+        ]
+        dataset.SetGeoTransform(geotransform)
+
+        self.layer.SetSpatialFilterRect(
+            geotransform[0],
+            geotransform[3],
+            geotransform[0] + (geotransform[1] * width),
+            geotransform[3] + (geotransform[5] * height),
+        )
         if isinstance(self.burn_value, (int, float)):
-            gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[self.burn_value], options=["ALL_TOUCHED=TRUE"])
+            gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[self.burn_value],
+                options=["ALL_TOUCHED=TRUE", f"CHUNKYSIZE={YSTEP}"])
         elif isinstance(self.burn_value, str):
             gdal.RasterizeLayer(dataset, [1], self.layer, options=[f"ATTRIBUTE={self.burn_value}", "ALL_TOUCHED=TRUE"])
         else:
+            self.layer.SetSpatialFilter(None)
             raise ValueError("Burn value for layer should be number or field name")
+        self.layer.SetSpatialFilter(None)
 
         res = backend.promote(dataset.ReadAsArray(0, 0, width, height))
         return res

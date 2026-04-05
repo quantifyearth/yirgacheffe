@@ -10,6 +10,7 @@
 
 * Moved `find_intersection` and `find_union` to top level of module.
 * Renamed `map_projection` to `projection`.
+* Vector rasterisation has performance improvements.
 
 ### Fixed
 
