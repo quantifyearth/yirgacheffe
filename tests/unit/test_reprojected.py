@@ -9,35 +9,35 @@ from pyproj import Transformer
 
 import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, gdal_dataset_with_data
-from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.layers import RasterLayer, ReprojectedRasterLayer, ResamplingMethod
-from yirgacheffe.window import Area, MapProjection, Window
+from yirgacheffe._layers import RasterLayer, ReprojectedRasterLayer, ResamplingMethod
+from yirgacheffe import Area, MapProjection
+from yirgacheffe._datatypes import Window
 
 
 def test_simple_scale_down() -> None:
     area = Area(-10, 10, 10, -10)
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
-        target_projection = MapProjection(WGS_84_PROJECTION, 0.01, -0.01)
+        target_projection = MapProjection("epsg:4326", 0.01, -0.01)
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
-            assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
+            assert layer.projection == target_projection
             assert layer.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
-            assert layer.window == Window(0, 0, 2000, 2000)
+            assert layer.dimensions == (2000, 2000)
+            assert layer._virtual_window == Window(0, 0, 2000, 2000)
 
 
 def test_simple_scale_up() -> None:
     area = Area(-10, 10, 10, -10)
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
-        target_projection = MapProjection(WGS_84_PROJECTION, 0.04, -0.04)
+        target_projection = MapProjection("epsg:4326", 0.04, -0.04)
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(-10, 10, 10, -10, target_projection)
-            assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
+            assert layer.projection == target_projection
             assert layer.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
-            assert layer.window == Window(0, 0, 500, 500)
+            assert layer.dimensions == (500, 500)
+            assert layer._virtual_window == Window(0, 0, 500, 500)
 
 
 def test_scaling_up_pixels() -> None:
@@ -49,13 +49,13 @@ def test_scaling_up_pixels() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
+        target_projection = MapProjection("epsg:4326", 0.5, -0.5)
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0, 0, 4, -4, target_projection)
-            assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
+            assert layer.projection == target_projection
             assert layer.geo_transform == (0.0, 0.5, 0.0, 0.0, 0.0, -0.5)
-            assert layer.window == Window(0, 0, 8, 8)
+            assert layer.dimensions == (8, 8)
+            assert layer._virtual_window == Window(0, 0, 8, 8)
 
             actual_raster = layer.read_array(0, 0, 8, 8)
             expected_raster = np.zeros((8, 8))
@@ -117,13 +117,13 @@ def test_scaling_down_pixels() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
+        target_projection = MapProjection("epsg:4326", 2.0, -2.0)
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0, 0, 8, -8, target_projection)
-            assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
+            assert layer.projection == target_projection
             assert layer.geo_transform == (0.0, 2.0, 0.0, 0.0, 0.0, -2.0)
-            assert layer.window == Window(0, 0, 4, 4)
+            assert layer.dimensions == (4, 4)
+            assert layer._virtual_window == Window(0, 0, 4, 4)
 
             actual_raster = layer.read_array(0, 0, 4, 4)
             expected_raster = np.zeros((4, 4))
@@ -182,7 +182,7 @@ def test_reprojected_up_in_operation() -> None:
     data1[4:8, 0:4] = 1
     dataset1 = gdal_dataset_with_data((0, 0), 1.0, data1)
     raster1 = RasterLayer(dataset1)
-    assert raster1.map_projection
+    assert raster1.projection
 
     data2 = np.zeros((4, 4))
     data2[0:2, 0:2] = 1
@@ -190,9 +190,10 @@ def test_reprojected_up_in_operation() -> None:
     dataset2 = gdal_dataset_with_data((0, 0), 2.0, data2)
     raster2 = RasterLayer(dataset2)
 
-    rescaled = ReprojectedRasterLayer(raster2, raster1.map_projection, ResamplingMethod.Nearest)
+    rescaled = ReprojectedRasterLayer(raster2, raster1.projection, ResamplingMethod.Nearest)
 
-    assert raster1.window == rescaled.window
+    assert raster1.dimensions == rescaled.dimensions
+    assert raster1._virtual_window == rescaled._virtual_window
     assert raster1.area == rescaled.area
 
     calc = raster1 + rescaled
@@ -212,11 +213,12 @@ def test_reprojected_down_in_operation() -> None:
     data2[2:4, 2:4] = 1
     dataset2 = gdal_dataset_with_data((0, 0), 2.0, data2)
     raster2 = RasterLayer(dataset2)
-    assert raster2.map_projection
+    assert raster2.projection
 
-    rescaled = ReprojectedRasterLayer(raster1, raster2.map_projection, ResamplingMethod.Nearest)
+    rescaled = ReprojectedRasterLayer(raster1, raster2.projection, ResamplingMethod.Nearest)
 
-    assert raster2.window == rescaled.window
+    assert raster2.dimensions == rescaled.dimensions
+    assert raster2._virtual_window == rescaled._virtual_window
     assert raster2.area == rescaled.area
 
     calc = rescaled + raster2
@@ -233,16 +235,17 @@ def test_reprojected_up_with_window_set() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
+        target_projection = MapProjection("epsg:4326", 0.5, -0.5)
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
-            assert layer.window == Window(0, 0, 8, 8)
+            assert layer.dimensions == (8, 8)
+            assert layer._virtual_window == Window(0, 0, 8, 8)
 
-            layer.set_window_for_intersection(Area(1.0, -1.0, 3.0, -3.0))
-            assert layer.area == Area(1.0, -1.0, 3.0, -3.0, target_projection)
-            assert layer.window == Window(2, 2, 4, 4)
+            clipped_layer = layer.as_area(Area(1.0, -1.0, 3.0, -3.0))
+            assert clipped_layer.area == Area(1.0, -1.0, 3.0, -3.0, target_projection)
+            assert clipped_layer.dimensions == (4, 4)
 
-            actual_raster = layer.read_array(0, 0, 4, 4)
+            actual_raster = clipped_layer.read_array(0, 0, 4, 4)
             expected_raster = np.zeros((4, 4))
             expected_raster[0:2, 2:4] = 1
             expected_raster[2:4, 0:2] = 1
@@ -259,7 +262,7 @@ def test_reprojected_up_with_window_set_2() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_projection = MapProjection(WGS_84_PROJECTION, 0.5, -0.5)
+        target_projection = MapProjection("epsg:4326", 0.5, -0.5)
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 4.0, -4.0, target_projection)
 
@@ -271,11 +274,11 @@ def test_reprojected_up_with_window_set_2() -> None:
             actual_raster = layer.read_array(1, 1, 6, 6)
             assert (actual_raster == expected_raster).all()
 
-            layer.set_window_for_intersection(Area(0.5, -0.5, 3.5, -3.5))
-            assert layer.area == Area(0.5, -0.5, 3.5, -3.5, target_projection)
-            assert layer.window == Window(1, 1, 6, 6)
+            clipped_layer = layer.as_area(Area(0.5, -0.5, 3.5, -3.5))
+            assert clipped_layer.area == Area(0.5, -0.5, 3.5, -3.5, target_projection)
+            assert clipped_layer.dimensions == (6, 6)
 
-            actual_raster = layer.read_array(0, 0, 6, 6)
+            actual_raster = clipped_layer.read_array(0, 0, 6, 6)
             assert (actual_raster == expected_raster).all()
 
 
@@ -288,15 +291,15 @@ def test_reprojected_down_with_window_set() -> None:
     dataset = gdal_dataset_with_data((0, 0), 1.0, data)
     with RasterLayer(dataset) as raster:
 
-        target_projection = MapProjection(WGS_84_PROJECTION, 2.0, -2.0)
+        target_projection = MapProjection("epsg:4326", 2.0, -2.0)
         with ReprojectedRasterLayer(raster, target_projection, ResamplingMethod.Nearest) as layer:
             assert layer.area == Area(0.0, 0.0, 8.0, -8.0, target_projection)
 
-            layer.set_window_for_intersection(Area(2.0, -2.0, 6.0, -6.0))
-            assert layer.area == Area(2.0, -2.0, 6.0, -6.0, target_projection)
-            assert layer.window == Window(1, 1, 2, 2)
+            clipped_layer = layer.as_area(Area(2.0, -2.0, 6.0, -6.0))
+            assert clipped_layer.area == Area(2.0, -2.0, 6.0, -6.0, target_projection)
+            assert clipped_layer.dimensions == (2, 2)
 
-            actual_raster = layer.read_array(0, 0, 2, 2)
+            actual_raster = clipped_layer.read_array(0, 0, 2, 2)
             expected_raster = np.zeros((2, 2))
             expected_raster[0:1, 1:2] = 1
             expected_raster[1:2, 0:1] = 1
@@ -367,8 +370,8 @@ def test_somewhat_aligned_rastered_polygons() -> None:
             yg.read_raster(raster_4326_path) as raster_4326,
             yg.read_raster(raster_54009_path) as raster_54009,
         ):
-            assert raster_4326.map_projection == projection_4326
-            assert raster_54009.map_projection == projection_54009
+            assert raster_4326.projection == projection_4326
+            assert raster_54009.projection == projection_54009
 
             with (
                 ReprojectedRasterLayer(
@@ -450,8 +453,8 @@ def test_vs_gdal_warp(
                     yg.read_raster(warped_raster_path) as warped,
                     ReprojectedRasterLayer(original, dst_projection, method=method) as reprojected,
                 ):
-                    assert reprojected.map_projection == dst_projection
-                    assert warped.map_projection == dst_projection
+                    assert reprojected.projection == dst_projection
+                    assert warped.projection == dst_projection
 
                     # Due to rounding errors on floats and how Yirgacheffe is quite
                     # paranoid about ensuring no data is lost on the edges, the

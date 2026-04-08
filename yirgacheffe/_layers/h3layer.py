@@ -72,8 +72,8 @@ class H3CellLayer(YirgacheffeLayer):
             xsize=width,
             ysize=height,
         )
-        self._raster_xsize = self.window.xsize
-        self._raster_ysize = self.window.ysize
+        self._raster_xsize = self._virtual_window.xsize
+        self._raster_ysize = self._virtual_window.ysize
 
         # see comment in read_array for why we're doing this
         sorted_lats = [x[0] for x in self.cell_boundary]
@@ -88,7 +88,7 @@ class H3CellLayer(YirgacheffeLayer):
         return hash((
             self.cell_id,
             self._underlying_area,
-            self.map_projection,
+            self.projection,
             self._active_area,
         ))
 
@@ -108,7 +108,7 @@ class H3CellLayer(YirgacheffeLayer):
         ysize: int,
         window: Window,
     ) -> Any:
-        assert self.map_projection is not None
+        assert self.projection is not None
 
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
@@ -137,8 +137,8 @@ class H3CellLayer(YirgacheffeLayer):
 
             subset = np.zeros((intersection.ysize, intersection.xsize))
 
-            start_x = self.area.left + ((intersection.xoff - self.window.xoff) * self.map_projection.xstep)
-            start_y = self.area.top + ((intersection.yoff - self.window.yoff) * self.map_projection.ystep)
+            start_x = self.area.left + ((intersection.xoff - self._virtual_window.xoff) * self.projection.xstep)
+            start_y = self.area.top + ((intersection.yoff - self._virtual_window.yoff) * self.projection.ystep)
 
             for ypixel in range(intersection.ysize):
                 # The latlng_to_cell is quite expensive, so ideally we want to avoid
@@ -162,7 +162,7 @@ class H3CellLayer(YirgacheffeLayer):
                 # only a tiny number of cells that have convex edges, so in future it'd be
                 # interesting to see if we can infer when that is.
 
-                lat = start_y + (ypixel * self.map_projection.ystep)
+                lat = start_y + (ypixel * self.projection.ystep)
 
                 if self._raster_safe_bounds[0] < lat < self._raster_safe_bounds[1]:
                     # In "safe" zone, try to be clever
@@ -170,14 +170,14 @@ class H3CellLayer(YirgacheffeLayer):
                     right_most = -1
 
                     for xpixel in range(intersection.xsize):
-                        lng = start_x + (xpixel * self.map_projection.xstep)
+                        lng = start_x + (xpixel * self.projection.xstep)
                         this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                         if this_cell == self.cell_id:
                             left_most = xpixel
                             break
 
                     for xpixel in range(intersection.xsize - 1, left_most - 1, -1):
-                        lng = start_x + (xpixel * self.map_projection.xstep)
+                        lng = start_x + (xpixel * self.projection.xstep)
                         this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                         if this_cell == self.cell_id:
                             right_most = xpixel
@@ -188,25 +188,28 @@ class H3CellLayer(YirgacheffeLayer):
                 else:
                     # Not in safe zone, be diligent.
                     for xpixel in range(intersection.xsize):
-                        lng = start_x + (xpixel * self.map_projection.xstep)
+                        lng = start_x + (xpixel * self.projection.xstep)
                         this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                         if this_cell == self.cell_id:
                             subset[ypixel][xpixel] = 1.0
 
-            return backend.pad(
-                backend.promote(subset),
-                (
+            if target_window == intersection:
+                return backend.promote(subset)
+            else:
+                return backend.pad(
+                    backend.promote(subset),
                     (
-                        (intersection.yoff - self.window.yoff) - yoffset,
-                        (ysize - ((intersection.yoff - self.window.yoff) + intersection.ysize)) + yoffset,
+                        (
+                            (intersection.yoff - window.yoff) - yoffset,
+                            (ysize - ((intersection.yoff - window.yoff) + intersection.ysize)) + yoffset,
+                        ),
+                        (
+                            (intersection.xoff - window.xoff) - xoffset,
+                            xsize - ((intersection.xoff - window.xoff) + intersection.xsize) + xoffset,
+                        )
                     ),
-                    (
-                        (intersection.xoff - self.window.xoff) - xoffset,
-                        xsize - ((intersection.xoff - self.window.xoff) + intersection.xsize) + xoffset,
-                    )
-                ),
-                'constant'
-            )
+                    'constant'
+                )
         else:
             # This handles the case where the cell wraps over 180˚ longitude
             res = np.zeros((ysize, xsize))
@@ -214,19 +217,19 @@ class H3CellLayer(YirgacheffeLayer):
             left = min(x[1] for x in self.cell_boundary if x[1] > 0.0)
             right = max(x[1] for x in self.cell_boundary if x[1] < 0.0) + 360.0
             max_width_projection = right - left
-            max_width = ceil(max_width_projection / self.map_projection.xstep)
+            max_width = ceil(max_width_projection / self.projection.xstep)
 
             for ypixel in range(yoffset, yoffset + ysize):
-                lat = self.area.top + (ypixel * self.map_projection.ystep)
+                lat = self.area.top + ((ypixel + window.yoff) * self.projection.ystep)
 
                 for xpixel in range(xoffset, min(xoffset + xsize, max_width)):
-                    lng = self.area.left + (xpixel * self.map_projection.xstep)
+                    lng = self.area.left + (xpixel * self.projection.xstep)
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
                         res[ypixel - yoffset][xpixel - xoffset] = 1.0
 
                 for xpixel in range(xoffset + xsize - 1, xoffset + xsize - max_width, -1):
-                    lng = self.area.left + (xpixel * self.map_projection.xstep)
+                    lng = self.area.left + (xpixel * self.projection.xstep)
                     this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                     if this_cell == self.cell_id:
                         res[ypixel - yoffset][xpixel - xoffset] = 1.0

@@ -6,7 +6,8 @@ from typing import Any, Sequence
 import numpy as np
 from numpy import ma
 
-from .._datatypes import Area, Window
+from .static import find_union
+from .._datatypes import Window
 from .base import YirgacheffeLayer
 from .rasters import RasterLayer
 from .._backends import backend
@@ -54,14 +55,14 @@ class GroupLayer(YirgacheffeLayer):
     ) -> None:
         if not layers:
             raise GroupLayerEmpty("Expected one or more layers")
-        if not all(x.map_projection == layers[0].map_projection for x in layers):
+        if not all(x.projection == layers[0].projection for x in layers):
             raise ValueError("Not all layers are the same projection/scale")
         for layer in layers:
             if layer._active_area is not None:
                 raise ValueError("Layers can not currently be constrained")
 
         # area/window are superset of all tiles
-        union = YirgacheffeLayer.find_union(layers)
+        union = find_union(layers)
         super().__init__(union, name=name)
 
         # We store them in reverse order so that from the user's perspective
@@ -86,25 +87,6 @@ class GroupLayer(YirgacheffeLayer):
     def datatype(self) -> DataType:
         return self.layers[0].datatype
 
-    def set_window_for_intersection(self, new_area: Area) -> None:
-        super().set_window_for_intersection(new_area)
-
-        # filter out layers we don't care about
-        self.layers = [layer for layer in self._underlying_layers if layer.area.overlaps(new_area)]
-
-    def set_window_for_union(self, new_area: Area) -> None:
-        super().set_window_for_union(new_area)
-
-        # filter out layers we don't care about
-        self.layers = [layer for layer in self._underlying_layers if layer.area.overlaps(new_area)]
-
-    def reset_window(self) -> None:
-        super().reset_window()
-        try:
-            self.layers = self._underlying_layers
-        except AttributeError:
-            pass # called from Base constructor before we've added the extra field
-
     def _read_array_with_window(
         self,
         xoffset: int,
@@ -116,9 +98,8 @@ class GroupLayer(YirgacheffeLayer):
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
-        map_projection = self.map_projection
-        assert map_projection is not None
-        scale = map_projection.scale
+        projection = self.projection
+        assert projection is not None
 
         target_window = Window(
             window.xoff + xoffset,
@@ -130,15 +111,15 @@ class GroupLayer(YirgacheffeLayer):
         contributing_layers = []
         for layer in self.layers:
             # Normally this is hidden with set_window_for_...
-            xoff, yoff = map_projection.round_down_pixels(
-                ((layer.area.left - self._underlying_area.left) / scale.xstep),
-                (layer.area.top - self._underlying_area.top) / scale.ystep,
+            xoff, yoff = projection.round_down_pixels(
+                ((layer.area.left - self._underlying_area.left) / projection.xstep),
+                (layer.area.top - self._underlying_area.top) / projection.ystep,
             )
             adjusted_layer_window = Window(
-                layer.window.xoff + xoff,
-                layer.window.yoff + yoff,
-                layer.window.xsize,
-                layer.window.ysize,
+                layer._virtual_window.xoff + xoff,
+                layer._virtual_window.yoff + yoff,
+                layer._virtual_window.xsize,
+                layer._virtual_window.ysize,
             )
             intersection = Window.find_intersection_no_throw([target_window, adjusted_layer_window])
             if intersection is not None:
@@ -250,8 +231,8 @@ class TiledGroupLayer(GroupLayer):
         if (xsize <= 0) or (ysize <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")
 
-        map_projection = self.map_projection
-        assert map_projection is not None
+        projection = self.projection
+        assert projection is not None
 
         target_window = Window(
             window.xoff + xoffset,
@@ -263,15 +244,15 @@ class TiledGroupLayer(GroupLayer):
         partials: list[TileData] = []
         for layer in self.layers:
             # Normally this is hidden with set_window_for_...
-            xoff, yoff = map_projection.round_down_pixels(
-                (layer.area.left - self._underlying_area.left) / map_projection.xstep,
-                (layer.area.top - self._underlying_area.top) / map_projection.ystep,
+            xoff, yoff = projection.round_down_pixels(
+                (layer.area.left - self._underlying_area.left) / projection.xstep,
+                (layer.area.top - self._underlying_area.top) / projection.ystep,
             )
             adjusted_layer_window = Window(
-                layer.window.xoff + xoff,
-                layer.window.yoff + yoff,
-                layer.window.xsize,
-                layer.window.ysize,
+                layer._virtual_window.xoff + xoff,
+                layer._virtual_window.yoff + yoff,
+                layer._virtual_window.xsize,
+                layer._virtual_window.ysize,
             )
             intersection = Window.find_intersection_no_throw([target_window, adjusted_layer_window])
             if intersection is None:

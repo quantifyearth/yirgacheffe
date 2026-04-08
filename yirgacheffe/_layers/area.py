@@ -7,7 +7,7 @@ from typing import Any
 import numpy
 from osgeo import gdal
 
-from ..window import Area, Window
+from .._datatypes import Area, Window
 from .rasters import RasterLayer
 from .._backends import backend
 
@@ -69,7 +69,7 @@ class UniformAreaLayer(RasterLayer):
 
         transform = dataset.GetGeoTransform()
 
-        projection = self.map_projection
+        projection = self.projection
         assert projection is not None # from raster we should always have one
 
         self._underlying_area = Area(
@@ -87,7 +87,7 @@ class UniformAreaLayer(RasterLayer):
             xsize=int((self.area.right - self.area.left) / transform[1]),
             ysize=dataset.RasterYSize,
         )
-        self._raster_xsize = self.window.xsize
+        self._raster_xsize = self._virtual_window.xsize
 
     def _read_array_with_window(
         self,

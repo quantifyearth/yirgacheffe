@@ -23,9 +23,6 @@ class ConstantLayer(YirgacheffeLayer):
     def datatype(self) -> DataType:
         return DataType.Float64
 
-    def set_window_for_intersection(self, _intersection: Area) -> None:
-        pass
-
     def read_array(self, _x: int, _y: int, width: int, height: int) -> Any:
         return backend.full((height, width), self.value)
 

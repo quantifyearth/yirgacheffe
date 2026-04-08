@@ -5,8 +5,9 @@ from math import ceil, floor
 import pytest
 
 from tests.unit.helpers import gdal_dataset_of_region
-from yirgacheffe.layers import UniformAreaLayer
-from yirgacheffe import Area, MapProjection, Window
+from yirgacheffe._layers import UniformAreaLayer
+from yirgacheffe import Area, MapProjection
+from yirgacheffe._datatypes import Window
 
 # A UniformAreaLayer is a hack for the fact that we have these raster layers
 # that represent the area of each pixel in WSG84, and they're all the same
@@ -37,15 +38,21 @@ def test_open_uniform_area_layer(pixel_scale: float) -> None:
         dataset.Close()
 
         layer = UniformAreaLayer.layer_from_file(path)
-        assert layer.pixel_scale == (pixel_scale, -pixel_scale)
+        projection = layer.projection
+        expected_projection = MapProjection("epsg:4326", pixel_scale, -pixel_scale)
+        assert projection == expected_projection
         assert layer.area == Area(
             floor(-180 / pixel_scale) * pixel_scale,
             ceil(90 / pixel_scale) * pixel_scale,
             ceil(180 / pixel_scale) * pixel_scale,
             floor(-90 / pixel_scale) * pixel_scale,
-            MapProjection("epsg:4326", pixel_scale, -pixel_scale),
+            expected_projection,
         )
-        assert layer.window == Window(
+        assert layer.dimensions == (
+            ceil((layer.area.right - layer.area.left) / pixel_scale),
+            ceil((layer.area.top - layer.area.bottom) / pixel_scale),
+        )
+        assert layer._virtual_window == Window(
             0,
             0,
             ceil((layer.area.right - layer.area.left) / pixel_scale),
@@ -70,14 +77,15 @@ def test_set_intersection() -> None:
         dataset.Close()
 
         layer = UniformAreaLayer.layer_from_file(path)
-        layer.set_window_for_intersection(Area(-10, 10, 10, -10))
-        assert layer.area == Area(
+        clipped_area = Area(-10, 10, 10, -10, layer.projection)
+        clipped_layer = layer.as_area(clipped_area)
+        assert clipped_layer.area == Area(
             -10, 10, 10, -10, MapProjection("epsg:4326", 1.0, -1.0)
         )
-        assert layer.window == Window(170, 80, 20, 20)
+        assert clipped_layer.dimensions == (20, 20)
 
-        layer.reset_window()
         assert layer.area == Area(
             -180, 90, 180, -90, MapProjection("epsg:4326", 1.0, -1.0)
         )
-        assert layer.window == Window(0, 0, 360, 180)
+        assert layer.dimensions == (360, 180)
+        assert layer._virtual_window == Window(0, 0, 360, 180)

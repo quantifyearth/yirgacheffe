@@ -2,10 +2,9 @@ import h3
 import numpy as np
 import pytest
 
-from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.layers import RasterLayer, H3CellLayer
-from yirgacheffe.window import Area, MapProjection
-import yirgacheffe.operators as yo
+import yirgacheffe as yg
+from yirgacheffe._layers import H3CellLayer
+from yirgacheffe import Area, MapProjection
 from yirgacheffe._backends import backend
 
 
@@ -15,16 +14,16 @@ class NaiveH3CellLayer(H3CellLayer):
     version that checks for every cell."""
 
     def _read_array_with_window(
-        self, xoffset, yoffset, xsize, ysize, _window
+        self, xoffset, yoffset, xsize, ysize, window
     ):  # pylint: disable=W0237
-        assert self.map_projection is not None
+        assert self.projection is not None
         res = np.zeros((ysize, xsize), dtype=float)
-        start_x = self.area.left + (xoffset * self.map_projection.xstep)
-        start_y = self.area.top + (yoffset * self.map_projection.ystep)
+        start_x = self.area.left + ((xoffset + window.xoff) * self.projection.xstep)
+        start_y = self.area.top + ((yoffset + window.yoff) * self.projection.ystep)
         for ypixel in range(ysize):
-            lat = start_y + (ypixel * self.map_projection.ystep)
+            lat = start_y + (ypixel * self.projection.ystep)
             for xpixel in range(xsize):
-                lng = start_x + (xpixel * self.map_projection.xstep)
+                lng = start_x + (xpixel * self.projection.xstep)
                 this_cell = h3.latlng_to_cell(lat, lng, self.zoom)
                 if this_cell == self.cell_id:
                     res[ypixel][xpixel] = 1.0
@@ -47,7 +46,7 @@ def test_h3_vs_naive(lat: float, lng: float) -> None:
     for zoom in range(5, 9):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         projection = MapProjection(
-            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+            "epsg:4326", 0.000898315284120, -0.000898315284120
         )
         optimised_layer = H3CellLayer(cell_id, projection)
         naive_layer = NaiveH3CellLayer(cell_id, projection)
@@ -75,7 +74,7 @@ def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
     for zoom in range(7, 9):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         projection = MapProjection(
-            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+            "epsg:4326", 0.000898315284120, -0.000898315284120
         )
         optimised_layer = H3CellLayer(cell_id, projection)
         naive_layer = NaiveH3CellLayer(cell_id, projection)
@@ -87,12 +86,14 @@ def test_h3_vs_naive_for_union(lat: float, lng: float) -> None:
             right=optimised_layer.area.right + (5 * projection.xstep),
             top=optimised_layer.area.top - (5 * projection.ystep),
             bottom=optimised_layer.area.bottom + (5 * projection.ystep),
+            projection=projection,
         )
-        optimised_layer.set_window_for_union(superset_area)
-        naive_layer.set_window_for_union(superset_area)
 
-        optimised_cell_count = optimised_layer.sum()
-        naive_cell_count = naive_layer.sum()
+        adjusted_optimised_layer = optimised_layer.as_area(superset_area)
+        adjusted_naive_layer = naive_layer.as_area(superset_area)
+
+        optimised_cell_count = adjusted_optimised_layer.sum()
+        naive_cell_count = adjusted_naive_layer.sum()
 
         assert optimised_cell_count == before_cell_count
         assert optimised_cell_count == naive_cell_count
@@ -114,7 +115,7 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
     for zoom in range(7, 9):
         cell_id = h3.latlng_to_cell(lat, lng, zoom)
         projection = MapProjection(
-            WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120
+            "epsg:4326", 0.000898315284120, -0.000898315284120
         )
         optimised_layer = H3CellLayer(cell_id, projection)
         naive_layer = NaiveH3CellLayer(cell_id, projection)
@@ -126,12 +127,14 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
             right=optimised_layer.area.right - (2 * projection.xstep),
             top=optimised_layer.area.top + (2 * projection.ystep),
             bottom=optimised_layer.area.bottom - (2 * projection.ystep),
+            projection=projection
         )
-        optimised_layer.set_window_for_intersection(subset_area)
-        naive_layer.set_window_for_intersection(subset_area)
 
-        optimised_cell_count = optimised_layer.sum()
-        naive_cell_count = naive_layer.sum()
+        adjusted_optimised_layer = optimised_layer.as_area(subset_area)
+        adjusted_naive_layer = naive_layer.as_area(subset_area)
+
+        optimised_cell_count = adjusted_optimised_layer.sum()
+        naive_cell_count = adjusted_naive_layer.sum()
 
         assert optimised_cell_count < before_cell_count
         assert optimised_cell_count == naive_cell_count
@@ -158,17 +161,11 @@ def test_h3_vs_naive_for_intersection(lat: float, lng: float) -> None:
 def test_cells_dont_overlap(cell_id):
 
     cluster = h3.grid_disk(cell_id, 1)
-    projection = MapProjection(WGS_84_PROJECTION, 0.000898315284120, -0.000898315284120)
+    projection = MapProjection("epsg:4326", 0.000898315284120, -0.000898315284120)
     layers = [H3CellLayer(x, projection) for x in cluster]
 
-    union = RasterLayer.find_union(layers)
-    for layer in layers:
-        layer.set_window_for_union(union)
-
-    calc = layers[0]
-    for layer in layers[1:]:
-        calc += layer
-    calc = yo.where(calc > 1, 1, 0)
+    cell_totals = yg.sum(layers)
+    calc = yg.where(cell_totals > 1, 1, 0)
     assert calc.sum() == 0
 
     # If we didn't get an exception, then there's no over drawing

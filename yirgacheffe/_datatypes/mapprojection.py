@@ -4,8 +4,6 @@ from functools import lru_cache
 
 import lazy_loader as lazy # type: ignore
 
-from .pixelscale import PixelScale
-
 # Pyproj is relatively slow to import, which was adding reasonably to
 # the import time for yirgacheffe, so make it lazy
 pyproj = lazy.load('pyproj')
@@ -42,8 +40,6 @@ class MapProjection:
     Note: It is very common to find that round errors creep into pixel scale values in
     GeoTIFFs from different sources, and so MapProjection tolerates small amounts of difference between
     pixel scales that are below a single metre in resolution.
-
-    This superceeeds the old PixelScale class, which will be removed in version 2.0.
 
     Args:
         name: The map projection used in WKT format, or as "epsg:xxxx" or "esri:xxxx".
@@ -105,10 +101,6 @@ class MapProjection:
     @property
     def epsg(self) -> int | None:
         return self.crs.to_epsg()
-
-    @property
-    def scale(self) -> PixelScale:
-        return PixelScale(self.xstep, self.ystep)
 
     def round_up_pixels(self, x: float, y: float) -> tuple[int, int]:
         """In general we round up pixels, as we don't want to lose range data,

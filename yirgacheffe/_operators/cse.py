@@ -1,6 +1,6 @@
 
 from .._backends import backend
-from ..window import Window
+from .._datatypes import Window
 
 class CSECacheTable:
 

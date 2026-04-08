@@ -1,5 +1,5 @@
-import os
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -8,241 +8,202 @@ from tests.unit.helpers import (
     make_vectors_with_id,
     make_vectors_with_empty_feature,
 )
-from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.layers import RasterLayer, RasteredVectorLayer, VectorLayer
-from yirgacheffe import Area, MapProjection, PixelScale, Window
-from yirgacheffe.operators import DataType
+import yirgacheffe as yg
+from yirgacheffe import DataType
+from yirgacheffe._layers import RasterLayer, VectorLayer
+from yirgacheffe import Area
+from yirgacheffe._datatypes import Window
 
 
 def test_basic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
         with pytest.raises(ValueError):
-            with RasteredVectorLayer.layer_from_file(
-                path, "id_no = 123", PixelScale(1.0, -1.0), "WGS 84"
-            ) as _layer:
-                pass
+            _ =  VectorLayer.layer_from_file(
+                path,
+                yg.MapProjection("epsg:4326", 1.0, -1.0),
+                "id_no = 123"
+            )
 
 
 def test_basic_dynamic_vector_layer() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(-10.0, 10.0, 10.0, 0.0)
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, {area}, path)
 
-        with VectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
-        ) as layer:
-            assert layer.area == Area(
-                -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
-            )
+        with VectorLayer.layer_from_file(path, projection, "id_no = 42") as layer:
+            assert layer.area == Area(-10.0, 10.0, 10.0, 0.0, projection)
             assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-            assert layer.window == Window(0, 0, 20, 10)
-            assert layer.map_projection.epsg == 4326
+            assert layer.dimensions == (20, 10)
+            assert layer._virtual_window == Window(0, 0, 20, 10)
+            assert layer.projection.epsg == 4326
 
             # The astype here is to catch escaping MLX types...
             res = layer.read_array(0, 0, 20, 20).astype(int)
             assert res.sum() > 0
 
 
-def test_rastered_vector_layer() -> None:
-    with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
-        area = Area(-10.0, 10.0, 10.0, 0.0)
-        make_vectors_with_id(42, {area}, path)
-
-        with RasteredVectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
-        ) as layer:
-            assert layer.area == Area(
-                -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
-            )
-            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-            assert layer.window == Window(0, 0, 20, 10)
-            assert layer.map_projection.epsg == 4326
-
-
 def test_basic_dynamic_vector_layer_no_filter_match() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(-10.0, 10.0, 10.0, 0.0)
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, {area}, path)
 
         with pytest.raises(ValueError):
-            _ = VectorLayer.layer_from_file(
-                path, "id_no = 123", PixelScale(1.0, -1.0), WGS_84_PROJECTION
-            )
+            _ = VectorLayer.layer_from_file(path, projection, "id_no = 123")
 
 
 def test_multi_area_vector() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {Area(-10.0, 10.0, 0.0, 0.0), Area(0.0, 0.0, 10, -10)}
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, areas, path)
 
-        rastered_layer = RasteredVectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
-        )
-        dynamic_layer = VectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
-        )
-
-        for layer in (dynamic_layer, rastered_layer):
-            assert layer.area == Area(
-                -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
-            )
+        with VectorLayer.layer_from_file(path, projection, "id_no = 42") as layer:
+            assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, projection)
             assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-            assert layer.window == Window(0, 0, 20, 20)
+            assert layer.dimensions == (20, 20)
+            assert layer._virtual_window == Window(0, 0, 20, 20)
 
-        window = rastered_layer.window
-        for yoffset in range(window.ysize):
-            vector_raster = rastered_layer.read_array(0, yoffset, window.xsize, 1)
-            dynamic_raster = dynamic_layer.read_array(0, yoffset, window.xsize, 1)
-            assert vector_raster.shape == (1, window.xsize)
-            assert (vector_raster == dynamic_raster).all()
-
-        del rastered_layer
-        del dynamic_layer
+            xsize, ysize = layer.dimensions
+            for yoffset in range(ysize):
+                raster = layer.read_array(0, yoffset, xsize, 1)
+                assert raster.shape == (1, xsize)
 
 
 def test_empty_layer_from_vector():
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(
             left=44.00253688814017,
             top=-12.440948032828079,
             right=50.483612168477286,
             bottom=-25.1535466075739,
         )
+        projection = yg.MapProjection(
+            "epsg:4326",
+            0.00026949458523585647,
+            -0.00026949458523585647,
+        )
         make_vectors_with_id(42, {area}, path)
 
-        source = VectorLayer.layer_from_file(
-            path,
-            "id_no = 42",
-            PixelScale(xstep=0.00026949458523585647, ystep=-0.00026949458523585647),
-            WGS_84_PROJECTION,
-        )
+        source = VectorLayer.layer_from_file(path, projection, "id_no = 42")
 
         empty = RasterLayer.empty_raster_layer_like(source)
-        assert empty.pixel_scale == source.pixel_scale
         assert empty.projection == source.projection
-        assert empty.map_projection == source.map_projection
-        assert empty.window == source.window
+        assert empty.dimensions == source.dimensions
+        assert empty._virtual_window == source._virtual_window
         assert empty.area == source.area
 
 
-@pytest.mark.parametrize("klass", [VectorLayer, RasteredVectorLayer])
-def test_vector_layers_with_default_burn_value(klass) -> None:
+def test_vector_layers_with_default_burn_value() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
 
-        layer = klass.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION
-        )
+        layer = VectorLayer.layer_from_file(path, projection)
 
         assert layer.area == Area(
-            -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
+            -10.0, 10.0, 10.0, -10.0, projection
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.dimensions == (20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) / 2
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) / 2
 
 
-@pytest.mark.parametrize("klass", [VectorLayer, RasteredVectorLayer])
-def test_vector_layers_with_fixed_burn_value(klass) -> None:
+def test_vector_layers_with_fixed_burn_value() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
 
-        layer = klass.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value=5
-        )
+        layer = VectorLayer.layer_from_file(path, projection, burn_value=5)
 
         assert layer.area == Area(
-            -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
+            -10.0, 10.0, 10.0, -10.0, projection
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.dimensions == (20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
         total = layer.sum()
-        assert total == ((layer.window.xsize * layer.window.ysize) / 2) * 5
+        xsize, ysize = layer.dimensions
+        assert total == ((xsize * ysize) / 2) * 5
 
 
-@pytest.mark.parametrize("klass", [VectorLayer, RasteredVectorLayer])
-def test_vector_layers_with_default_burn_value_and_filter(klass) -> None:
+def test_vector_layers_with_default_burn_value_and_filter() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
 
-        layer = klass.layer_from_file(
-            path, "id_no=42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
-        )
+        layer = VectorLayer.layer_from_file(path, projection, "id_no=42")
 
         assert layer.area == Area(
-            -10.0, 10.0, 0.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
+            -10.0, 10.0, 0.0, 0.0, projection
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 10, 10)
+        assert layer.dimensions == (10, 10)
+        assert layer._virtual_window == Window(0, 0, 10, 10)
 
         # Because we picked one later, all pixels should be burned
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize)
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize)
 
 
-@pytest.mark.parametrize("klass", [VectorLayer, RasteredVectorLayer])
-def test_vector_layers_with_invalid_burn_value(klass) -> None:
+def test_vector_layers_with_invalid_burn_value() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
 
         with pytest.raises(ValueError):
-            _ = klass.layer_from_file(
-                path,
-                None,
-                PixelScale(1.0, -1.0),
-                WGS_84_PROJECTION,
-                burn_value="this_is_wrong",
-            )
+            _ = VectorLayer.layer_from_file(path, projection,  burn_value="this_is_wrong")
 
 
-@pytest.mark.parametrize("klass", [VectorLayer, RasteredVectorLayer])
-def test_vector_layers_with_field_value(klass) -> None:
+def test_vector_layers_with_field_value() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
 
-        layer = klass.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value="id_no"
-        )
+        layer = VectorLayer.layer_from_file(path, projection, burn_value="id_no")
 
         assert layer.area == Area(
-            -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
+            -10.0, 10.0, 10.0, -10.0, projection
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.dimensions == (20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half
         total = layer.sum()
-        assert total == (((layer.window.xsize * layer.window.ysize) / 4) * 42) + (
-            ((layer.window.xsize * layer.window.ysize) / 4) * 43
-        )
+        xsize, ysize = layer.dimensions
+        assert total == (((xsize * ysize) / 4) * 42) + (((xsize * ysize) / 4) * 43)
 
 
 @pytest.mark.parametrize(
@@ -259,27 +220,28 @@ def test_vector_layers_with_field_value(klass) -> None:
 )
 def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {
             (Area(-10.0, 10.0, 10.0, -10.0), value),
         }
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
 
-        layer = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value=value
-        )
+        layer = VectorLayer.layer_from_file(path, projection, burn_value=value)
 
         assert layer.area == Area(
-            -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
+            -10.0, 10.0, 10.0, -10.0, projection
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.dimensions == (20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) * value
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) * value
 
 
 @pytest.mark.parametrize(
@@ -297,31 +259,32 @@ def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
 )
 def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {
             (Area(-10.0, 10.0, 10.0, -10.0), value),
         }
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
 
         layer = VectorLayer.layer_from_file(
             path,
-            None,
-            PixelScale(1.0, -1.0),
-            WGS_84_PROJECTION,
+            projection,
             datatype=datatype,
             burn_value="id_no",
         )
 
         assert layer.area == Area(
-            -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
+            -10.0, 10.0, 10.0, -10.0, projection
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.dimensions == (20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) * value
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) * value
 
 
 @pytest.mark.parametrize(
@@ -333,27 +296,28 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
 )
 def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {
             (Area(-10.0, 10.0, 10.0, -10.0), value),
         }
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_multiple_ids(areas, path)
 
-        layer = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION, burn_value="id_no"
-        )
+        layer = VectorLayer.layer_from_file(path, projection, burn_value="id_no")
 
         assert layer.area == Area(
-            -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
+            -10.0, 10.0, 10.0, -10.0, projection
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.dimensions == (20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half, but then multiplied by burn value
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) * value
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) * value
 
 
 @pytest.mark.parametrize(
@@ -368,13 +332,12 @@ def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None
 )
 def test_read_array_size(size, expect_success):
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         area = Area(-10.0, 10.0, 10.0, 0.0)
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, {area}, path)
 
-        source = RasteredVectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION
-        )
+        source = VectorLayer.layer_from_file(path, projection, "id_no = 42")
 
         if expect_success:
             data = source.read_array(0, 0, size[0], size[1])
@@ -390,127 +353,180 @@ def test_read_array_size(size, expect_success):
         (
             (0.0, 0.0),
             Area(-10.0, 10.0, 10.0, -10.0),
-            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(-9.9, 9.9, 9.9, -9.9),
-            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(-9.1, 9.1, 9.1, -9.1),
-            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, 10.0, -10.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(5.0, 10.0, 10.0, 5.0),
-            Area(5.0, 10.0, 10.0, 5.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(5.0, 10.0, 10.0, 5.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(5.0, -5.0, 10.0, -10.0),
-            Area(5.0, -5.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(5.0, -5.0, 10.0, -10.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(-10.0, -5.0, -5.0, -10.0),
-            Area(-10.0, -5.0, -5.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, -5.0, -5.0, -10.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(-10.0, 10.0, -5.0, 5.0),
-            Area(-10.0, 10.0, -5.0, 5.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, -5.0, 5.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(5.1, 9.9, 9.9, 5.1),
-            Area(5.0, 10.0, 10.0, 5.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(5.0, 10.0, 10.0, 5.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(5.1, -5.1, 9.9, -9.9),
-            Area(5.0, -5.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(5.0, -5.0, 10.0, -10.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(-9.9, -5.1, -5.1, -9.9),
-            Area(-10.0, -5.0, -5.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, -5.0, -5.0, -10.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.0, 0.0),
             Area(-9.9, 9.9, -5.1, 5.1),
-            Area(-10.0, 10.0, -5.0, 5.0, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.0, 10.0, -5.0, 5.0, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.1, 0.1),
             Area(-10.0, 10.0, 10.0, -10.0),
-            Area(-10.9, 10.1, 10.1, -10.9, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.9, 10.1, 10.1, -10.9, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.1, 0.1),
             Area(5.0, 10.0, 10.0, 5.0),
-            Area(4.1, 10.1, 10.1, 4.1, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(4.1, 10.1, 10.1, 4.1, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.1, 0.1),
             Area(5.0, -5.0, 10.0, -10.0),
-            Area(4.1, -4.9, 10.1, -10.9, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(4.1, -4.9, 10.1, -10.9, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.1, 0.1),
             Area(-10.0, -5.0, -5.0, -10.0),
-            Area(-10.9, -4.9, -4.9, -10.9, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.9, -4.9, -4.9, -10.9, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (0.1, 0.1),
             Area(-10.0, 10.0, -5.0, 5.0),
-            Area(-10.9, 10.1, -4.9, 4.1, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.9, 10.1, -4.9, 4.1, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (-0.9, -0.9),
             Area(-10.0, 10.0, 10.0, -10.0),
-            Area(-10.9, 10.1, 10.1, -10.9, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.9, 10.1, 10.1, -10.9, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
         (
             (-1000.9, 100.1),
             Area(-10.0, 10.0, 10.0, -10.0),
-            Area(-10.9, 10.1, 10.1, -10.9, MapProjection("epsg:4326", 1.0, -1.0)),
+            Area(-10.9, 10.1, 10.1, -10.9, yg.MapProjection("epsg:4326", 1.0, -1.0)),
         ),
     ],
 )
 def test_anchor_offsets(anchor, area, expected):
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_id(42, {area}, path)
 
-        source = VectorLayer.layer_from_file(
-            path, "id_no = 42", PixelScale(1.0, -1.0), WGS_84_PROJECTION, anchor=anchor
-        )
+        source = VectorLayer.layer_from_file(path, projection, "id_no = 42", anchor=anchor)
 
         final_area = source.area
         assert final_area == expected
 
 
-@pytest.mark.parametrize("klass", [VectorLayer, RasteredVectorLayer])
-def test_vector_layers_with_empty_features(klass) -> None:
+def test_vector_layers_with_empty_features() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
-        path = os.path.join(tempdir, "test.gpkg")
+        path = Path(tempdir) / "test.gpkg"
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         make_vectors_with_empty_feature(areas, path)
 
-        layer = klass.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), WGS_84_PROJECTION
-        )
+        layer = VectorLayer.layer_from_file(path, projection)
 
         assert layer.area == Area(
-            -10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 1.0, -1.0)
+            -10.0, 10.0, 10.0, -10.0, projection
         )
         assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-        assert layer.window == Window(0, 0, 20, 20)
+        assert layer.dimensions == (20, 20)
+        assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte
 
         # The default burn value is 1, so check that if we sum the area
         # we get half and half
         total = layer.sum()
-        assert total == (layer.window.xsize * layer.window.ysize) / 2
+        xsize, ysize = layer.dimensions
+        assert total == (xsize * ysize) / 2
+
+
+@pytest.mark.parametrize("projection", [
+    yg.MapProjection("epsg:4326", 0.01, -0.01),
+    yg.MapProjection("esri:54009", 100, -100),
+])
+def test_projected_vector_layer_to_geotiff(projection) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = yg.Area(0, 0, 100 * projection.xstep, 100 * projection.ystep, projection)
+        make_vectors_with_id(42, {area}, path, projection.name)
+
+        result_path = Path(tempdir) / "test.tif"
+        with yg.read_shape(path, projection, "id_no = 42") as layer:
+            total = layer.sum()
+            assert total == 100 * 100
+            layer.to_geotiff(result_path)
+
+        with yg.read_raster(result_path) as result:
+            assert result.dimensions == (100, 100)
+            assert result.area == area
+            data = result.read_array(0, 0, 100, 100)
+            assert data.sum() == total
+
+
+@pytest.mark.parametrize("projection", [
+    yg.MapProjection("epsg:4326", 0.01, -0.01),
+    yg.MapProjection("esri:54009", 100, -100),
+])
+def test_unprojected_vector_layer_to_geotiff(projection) -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.gpkg"
+        area = yg.Area(0, 0, 100 * projection.xstep, 100 * projection.ystep, projection)
+        make_vectors_with_id(42, {area}, path, projection.name)
+
+        result_path = Path(tempdir) / "test.tif"
+        with yg.read_shape(path, None, "id_no = 42") as layer:
+
+            # We can't do anything useful with a layer that isn't projected
+            with pytest.raises(AttributeError):
+                _ = layer.sum()
+
+            # So let's fix that
+            projected_layer = layer.as_area(area)
+
+            total = projected_layer.sum()
+            assert projected_layer == 100 * 100
+            projected_layer.to_geotiff(result_path)
+
+        with yg.read_raster(result_path) as result:
+            assert result.dimensions == (100, 100)
+            assert result.area == area
+            data = result.read_array(0, 0, 100, 100)
+            assert data.sum() == total

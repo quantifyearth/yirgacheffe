@@ -14,8 +14,8 @@ def test_add_similar_layers() -> None:
     ]
 
     origin = (0.0, 0.0)
-    map_projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
-    layers = [yg.from_array(x, origin, map_projection) for x in data]
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
+    layers = [yg.from_array(x, origin, projection) for x in data]
 
     summed_layers = reduce(operator.add, layers)
     actual = summed_layers.read_array(0, 0, 4, 2)

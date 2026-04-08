@@ -4,8 +4,7 @@ import numpy as np
 from osgeo import gdal, ogr
 
 from yirgacheffe import Area, MapProjection
-from yirgacheffe.layers import YirgacheffeLayer
-from yirgacheffe import WGS_84_PROJECTION
+from yirgacheffe._layers import YirgacheffeLayer
 
 
 def gdal_dataset_of_region(
@@ -26,7 +25,7 @@ def gdal_dataset_of_region(
     dataset.SetGeoTransform(
         [area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0]
     )
-    dataset.SetProjection(WGS_84_PROJECTION)
+    dataset.SetProjection("epsg:4326")
     # the dataset isn't valid until you populate the data
     band = dataset.GetRasterBand(1)
     for yoffset in range(dataset.RasterYSize):
@@ -58,7 +57,7 @@ def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset
     dataset.SetGeoTransform(
         [area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0]
     )
-    dataset.SetProjection(WGS_84_PROJECTION)
+    dataset.SetProjection("epsg:4326")
     return dataset
 
 
@@ -71,10 +70,12 @@ def gdal_dataset_of_layer(
         driver = gdal.GetDriverByName("mem")
         filename = "mem"
     dataset = driver.Create(
-        filename, layer.window.xsize, layer.window.ysize, 1, gdal.GDT_Float32, []
+        filename, layer._virtual_window.xsize, layer._virtual_window.ysize, 1, gdal.GDT_Float32, []
     )
     dataset.SetGeoTransform(layer.geo_transform)
-    dataset.SetProjection(layer.projection)
+    projection = layer.projection
+    assert projection is not None
+    dataset.SetProjection(projection._gdal_projection)
     return dataset
 
 
@@ -125,7 +126,7 @@ def gdal_dataset_with_data(
     dataset.SetGeoTransform(
         [origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0]
     )
-    dataset.SetProjection(WGS_84_PROJECTION)
+    dataset.SetProjection("epsg:4326")
     band = dataset.GetRasterBand(1)
     for index, val in enumerate(data):
         band.WriteArray(np.array([list(val)]), 0, index)
@@ -155,7 +156,7 @@ def gdal_multiband_dataset_with_data(
     dataset.SetGeoTransform(
         [origin[0], pixel_pitch, 0.0, origin[1], 0.0, pixel_pitch * -1.0]
     )
-    dataset.SetProjection(WGS_84_PROJECTION)
+    dataset.SetProjection("epsg:4326")
     for i, data in enumerate(datas):
         band = dataset.GetRasterBand(i + 1)
         for index, val in enumerate(data):
@@ -254,7 +255,7 @@ def generate_child_tile(
 
 
 def make_vectors_with_empty_feature(
-    areas: set[tuple[Area, int]], filename: str
+    areas: set[tuple[Area, int]], filename: str | Path
 ) -> None:
     srs = ogr.osr.SpatialReference()
     srs.ImportFromEPSG(4326)

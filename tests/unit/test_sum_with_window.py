@@ -1,380 +1,94 @@
-import numpy
+import operator
 
-from tests.unit.helpers import gdal_dataset_with_data
-from yirgacheffe.layers import RasterLayer
+import numpy as np
+import pytest
+
+import yirgacheffe as yg
 
 
 def test_sum_sans_window_update() -> None:
-    data1 = numpy.array(
-        [
-            [
-                1,
-                2,
-                3,
-                4,
-            ],
-            [
-                5,
-                6,
-                7,
-                8,
-            ],
-            [
-                9,
-                10,
-                11,
-                12,
-            ],
-            [
-                13,
-                14,
-                15,
-                16,
-            ],
-        ]
-    )
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
-    assert layer1.sum() == numpy.sum(data1)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
+
+    with yg.from_array(data1, (0, 0), projection) as layer1:
+        assert layer1.sum() == np.sum(data1)
 
 
-def test_sum_with_union() -> None:
-    data1 = numpy.array(
-        [
-            [
-                1,
-                2,
-                3,
-                4,
-            ],
-            [
-                5,
-                6,
-                7,
-                8,
-            ],
-            [
-                9,
-                10,
-                11,
-                12,
-            ],
-            [
-                13,
-                14,
-                15,
-                16,
-            ],
-        ]
-    )
-    data2 = numpy.array(
-        [
-            [
-                10,
-                20,
-            ],
-            [
-                50,
-                60,
-            ],
-        ]
-    )
+# In this and subsequent tests we use the add and multiply operators as
+# add normally will trigger an automatic union and multiply will trigger an
+# automatic intersection, so in all cases we check that we both override the
+# default correctly and telling it to do what it would do anyway doesn't break it
+@pytest.mark.parametrize("op", [operator.add, operator.mul])
+def test_sum_with_union_inputs(op) -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    data2 = np.array([[10, 20], [50, 60]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
 
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
-    layer2 = RasterLayer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (1, -1), projection) as layer2,
+    ):
+        layers = [layer1, layer2]
+        union = yg.find_union(layers)
+        comp = op(layer1.as_area(union), layer2.as_area(union))
 
-    layers = [layer1, layer2]
-    window = RasterLayer.find_union(layers)
-    for layer in layers:
-        layer.set_window_for_union(window)
-
-    comp = layer1 + layer2
-    expected = numpy.array(
-        [
-            [
-                1,
-                2,
-                3,
-                4,
-            ],
-            [
-                5,
-                16,
-                27,
-                8,
-            ],
-            [
-                9,
-                60,
-                71,
-                12,
-            ],
-            [
-                13,
-                14,
-                15,
-                16,
-            ],
-        ]
-    )
-    assert comp.sum() == numpy.sum(expected)
+        padded_data2 = np.pad(data2, (1, 1))
+        expected = op(data1, padded_data2)
+        assert comp.sum() == np.sum(expected)
 
 
-def test_sum_with_intersection() -> None:
-    data1 = numpy.array(
-        [
-            [
-                1,
-                2,
-                3,
-                4,
-            ],
-            [
-                5,
-                6,
-                7,
-                8,
-            ],
-            [
-                9,
-                10,
-                11,
-                12,
-            ],
-            [
-                13,
-                14,
-                15,
-                16,
-            ],
-        ]
-    )
-    data2 = numpy.array(
-        [
-            [
-                10,
-                20,
-            ],
-            [
-                50,
-                60,
-            ],
-        ]
-    )
+@pytest.mark.parametrize("op", [operator.add, operator.mul])
+def test_sum_with_union_calc(op) -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    data2 = np.array([[10, 20], [50, 60]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
 
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
-    layer2 = RasterLayer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (1, -1), projection) as layer2,
+    ):
+        layers = [layer1, layer2]
+        union = yg.find_union(layers)
+        comp = op(layer1, layer2)
 
-    layers = [layer1, layer2]
-    window = RasterLayer.find_intersection(layers)
-    for layer in layers:
-        layer.set_window_for_intersection(window)
-
-    comp = layer1 + layer2
-
-    expected = numpy.array(
-        [
-            [
-                0,
-                0,
-                0,
-                0,
-            ],
-            [
-                0,
-                16,
-                27,
-                0,
-            ],
-            [
-                0,
-                60,
-                71,
-                0,
-            ],
-            [
-                0,
-                0,
-                0,
-                0,
-            ],
-        ]
-    )
-    assert comp.sum() == numpy.sum(expected)
+        padded_data2 = np.pad(data2, (1, 1))
+        expected = op(data1, padded_data2)
+        assert comp.as_area(union).sum() == np.sum(expected)
 
 
-def test_save_with_sum_with_union() -> None:
-    data1 = numpy.array(
-        [
-            [
-                1,
-                2,
-                3,
-                4,
-            ],
-            [
-                5,
-                6,
-                7,
-                8,
-            ],
-            [
-                9,
-                10,
-                11,
-                12,
-            ],
-            [
-                13,
-                14,
-                15,
-                16,
-            ],
-        ]
-    )
-    data2 = numpy.array(
-        [
-            [
-                10,
-                20,
-            ],
-            [
-                50,
-                60,
-            ],
-        ]
-    )
+@pytest.mark.parametrize("op", [operator.add, operator.mul])
+def test_sum_with_intersection_inputs(op) -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    data2 = np.array([[10, 20], [50, 60]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
 
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
-    layer2 = RasterLayer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
-    result = RasterLayer.empty_raster_layer_like(layer1)
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (1, -1), projection) as layer2,
+    ):
+        layers = [layer1, layer2]
+        intersection = yg.find_intersection(layers)
+        comp = op(layer1.as_area(intersection), layer2.as_area(intersection))
 
-    layers = [layer1, layer2, result]
-    window = RasterLayer.find_union(layers)
-    for layer in layers:
-        layer.set_window_for_union(window)
-
-    comp = layer1 + layer2
-    actual_sum = comp.save(result, and_sum=True)
-
-    expected = numpy.array(
-        [
-            [
-                1,
-                2,
-                3,
-                4,
-            ],
-            [
-                5,
-                16,
-                27,
-                8,
-            ],
-            [
-                9,
-                60,
-                71,
-                12,
-            ],
-            [
-                13,
-                14,
-                15,
-                16,
-            ],
-        ]
-    )
-    assert actual_sum == numpy.sum(expected)
-
-    result.reset_window()
-    actual = result.read_array(0, 0, 4, 4)
-    assert (actual == expected).all()
+        clipped_data1 = data1[1:3,1:3]
+        expected = op(clipped_data1, data2)
+        assert comp.sum() == np.sum(expected)
 
 
-def test_save_with_sum_with_intersection() -> None:
-    data1 = numpy.array(
-        [
-            [
-                1,
-                2,
-                3,
-                4,
-            ],
-            [
-                5,
-                6,
-                7,
-                8,
-            ],
-            [
-                9,
-                10,
-                11,
-                12,
-            ],
-            [
-                13,
-                14,
-                15,
-                16,
-            ],
-        ]
-    )
-    data2 = numpy.array(
-        [
-            [
-                10,
-                20,
-            ],
-            [
-                50,
-                60,
-            ],
-        ]
-    )
+@pytest.mark.parametrize("op", [operator.add, operator.mul])
+def test_sum_with_intersection_calc(op) -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    data2 = np.array([[10, 20], [50, 60]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
 
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 1.0, data1))
-    layer2 = RasterLayer(gdal_dataset_with_data((1.0, -1.0), 1.0, data2))
-    result = RasterLayer.empty_raster_layer_like(layer1)
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (1, -1), projection) as layer2,
+    ):
+        layers = [layer1, layer2]
+        intersection = yg.find_intersection(layers)
+        comp = op(layer1, layer2)
 
-    layers = [layer1, layer2, result]
-    window = RasterLayer.find_intersection(layers)
-    for layer in layers:
-        layer.set_window_for_intersection(window)
-
-    comp = layer1 + layer2
-    actual_sum = comp.save(result, and_sum=True)
-
-    expected = numpy.array(
-        [
-            [
-                0,
-                0,
-                0,
-                0,
-            ],
-            [
-                0,
-                16,
-                27,
-                0,
-            ],
-            [
-                0,
-                60,
-                71,
-                0,
-            ],
-            [
-                0,
-                0,
-                0,
-                0,
-            ],
-        ]
-    )
-    assert actual_sum == numpy.sum(expected)
-
-    result.reset_window()
-    actual = result.read_array(0, 0, 4, 4)
-    assert (actual == expected).all()
+        clipped_data1 = data1[1:3,1:3]
+        expected = op(clipped_data1, data2)
+        assert comp.as_area(intersection).sum() == np.sum(expected)

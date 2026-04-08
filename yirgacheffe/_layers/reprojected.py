@@ -99,7 +99,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
             self.name,
             self._underlying_area,
             self._method,
-            self.map_projection,
+            self.projection,
             self._active_area
         ))
 
@@ -150,7 +150,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
             expand_buffer = 1
 
         # now we want this area in the source projection
-        src_projection = self._src.map_projection
+        src_projection = self._src.projection
         assert src_projection is not None
         src_read_area = read_area.reproject(src_projection)
 
@@ -175,7 +175,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                 raise RuntimeError("Source can not have a custom window framing set")
             self._src._set_window(expanded_src_read_area)
             self._src.to_geotiff(src_data_path)
-            self._src.reset_window()
+            self._src._reset_window()
 
             with VsimemFile(f"/vsimem/warped_{fid}.tif") as warped_data_path:
                 gdal.Warp(
@@ -195,10 +195,10 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                 )
 
                 with RasterLayer.layer_from_file(warped_data_path) as warped:
-                    if (warped.window.xsize != xsize) or \
-                        (warped.window.ysize != ysize):
+                    if (warped._virtual_window.xsize != xsize) or \
+                        (warped._virtual_window.ysize != ysize):
                         raise RuntimeError(
-                            f"gdal warp violated request constraints: "
-                            f"expected {xsize}x{ysize}, got {warped.window.xsize}x{warped.window.ysize}"
+                            f"gdal warp violated request constraints: expected {xsize}x{ysize}, "
+                            f"got {warped._virtual_window.xsize}x{warped._virtual_window.ysize}"
                         )
                     return warped._read_array(0, 0, xsize, ysize)
