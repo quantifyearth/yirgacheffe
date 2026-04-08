@@ -837,11 +837,8 @@ class LayerOperation(LayerMathMixin):
         if self.operator is None:
             result = lhs_data, lhs_cost
         else:
-            if isinstance(self.operator, op):
-                operator = backend.operator_map[self.operator]
-            else:
-                # Handles things like `numpy_apply` where a custom operator is provided
-                operator = self.operator
+            assert isinstance(self.operator, op)
+            operator = backend.operator_map[self.operator]
 
             if self.other is not None:
                 assert self.rhs is not None
