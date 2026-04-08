@@ -11,7 +11,7 @@ from osgeo import gdal
 
 import yirgacheffe as yg
 from yirgacheffe import Area, DataType
-from yirgacheffe._layers import ConstantLayer, RasterLayer, VectorLayer
+from yirgacheffe._layers import RasterLayer, VectorLayer
 from yirgacheffe._datatypes import Window
 from yirgacheffe._operators import LayerOperation
 from yirgacheffe._backends import backend
@@ -536,43 +536,6 @@ def test_simple_binary_numpy_apply() -> None:
     assert (expected == actual).all()
 
 
-def test_simple_unary_shader_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(pixel):
-        return pixel + 1.0
-
-    comp = layer1.shader_apply(simple_add)
-    comp.save(result)
-
-    expected = data1 + 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
-def test_simple_binary_shader_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
-
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(pixel1, pixel2):
-        return pixel1 + pixel2
-
-    comp = layer1.shader_apply(simple_add, layer2)
-    comp.save(result)
-
-    expected = data1 + data2
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
 @pytest.mark.parametrize(
     "operator",
     [
@@ -637,44 +600,6 @@ def test_constant_layer_result_lhs() -> None:
         actual = comp.read_array(0, 0, 4, 2)
         expected = data1 + 1.0
         assert (expected == actual).all()
-
-
-def test_shader_apply_constant_lhs() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(1.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(pixel1, pixel2):
-        return pixel1 + pixel2
-
-    comp = const_layer.shader_apply(simple_add, layer1)
-    comp.save(result)
-
-    expected = data1 + 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
-def test_shader_apply_constant_rhs() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(1.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(pixel1, pixel2):
-        return pixel1 + pixel2
-
-    comp = layer1.shader_apply(simple_add, const_layer)
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    comp.save(result)
-
-    expected = data1 + 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
 
 
 def test_direct_layer_save() -> None:

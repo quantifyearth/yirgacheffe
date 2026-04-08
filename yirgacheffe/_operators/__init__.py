@@ -313,9 +313,6 @@ class LayerMathMixin:
     def numpy_apply(self, func: Callable, other=None):
         return LayerOperation(self, func, other)
 
-    def shader_apply(self, func: Callable, other=None):
-        return ShaderStyleOperation(self, func, other)
-
     def save(self, destination_layer, and_sum=False, callback=None, band=1):
         return LayerOperation(self).save(destination_layer, and_sum, callback, band)
 
@@ -1482,51 +1479,6 @@ class LayerOperation(LayerMathMixin):
         res = np.vstack(chunks)
 
         return res
-
-    def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
-        raise RuntimeError("Should not be called")
-
-class ShaderStyleOperation(LayerOperation):
-
-    def _eval(self, cse_cache, area, projection, index, step, target_window=None) -> tuple[Any,int]:
-        if target_window is None:
-            target_window = self._virtual_window
-        lhs_data, lhs_cost = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
-        if self.rhs is not None:
-            rhs_data, rhs_cost = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
-        else:
-            rhs_data = None
-            rhs_cost = 0
-
-        # Constant results make this a bit messier. Might in future
-        # be nicer to promote them to arrays sooner?
-        if isinstance(lhs_data, (int, float)):
-            if rhs_data is None:
-                return self.operator(lhs_data, **self.kwargs), lhs_cost + self.cost
-            if isinstance(rhs_data, (int, float)):
-                return self.operator(lhs_data, rhs_data, **self.kwargs), lhs_cost + rhs_cost + self.cost
-            else:
-                result = np.empty_like(rhs_data)
-        else:
-            result = np.empty_like(lhs_data)
-
-        window = self._virtual_window
-        for yoffset in range(step):
-            for xoffset in range(window.xsize):
-                try:
-                    lhs_val = lhs_data[yoffset][xoffset]
-                except TypeError:
-                    lhs_val = lhs_data
-                if rhs_data is not None:
-                    try:
-                        rhs_val = rhs_data[yoffset][xoffset]
-                    except TypeError:
-                        rhs_val = rhs_data
-                    result[yoffset][xoffset] = self.operator(lhs_val, rhs_val, **self.kwargs)
-                else:
-                    result[yoffset][xoffset] = self.operator(lhs_val, **self.kwargs)
-
-        return result, lhs_cost + rhs_cost + self.cost
 
     def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
         raise RuntimeError("Should not be called")

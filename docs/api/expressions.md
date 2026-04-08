@@ -125,7 +125,7 @@ with yg.read_raster('float_data.tif') as float_layer:
 
 ### Apply
 
-You can specify a function that takes either data from one layer or from two layers, and returns the processed data. There's two version of this: one that lets you specify a numpy function that'll be applied to the layer data as an array, or one that is more shader like that lets you do pixel wise processing.
+You can specify a function that takes either data from one layer or from two layers, and returns the processed data. There's two version of this: one that lets you specify a numpy function that'll be applied to the layer data as an array.
 
 Firstly the numpy version looks like this:
 
@@ -152,21 +152,7 @@ with (
     calc.to_geotiff("result.tif")
 ```
 
-If you want to do something specific on the pixel level, then you can also do that, again either on a unary or binary form.
-
-```python
-def is_over_ten(input_pixel):
-    return 1.0 if input_pixel > 10 else 0.0
-
-with yg.read_raster("test1.tif") as layer1:
-    calc = layer1.shader_apply(is_over_ten)
-    calc.to_geotiff(result)
-```
-
-Note:
-
-1. Using `numpy_apply` prevents GPU optimisations occuring, so should be used as a last resort.
-2. In general `numpy_apply` is considerably faster than `shader_apply`.
+Note: Using `numpy_apply` prevents GPU optimisations occurring, so should be used as a last resort.
 
 ## Storing the results of expressions
 
