@@ -55,8 +55,8 @@ class LayerConstant:
     def __str__(self) -> str:
         return str(self.val)
 
-    def _eval(self, _cse_cache, _area, _projection, _index, _step, _target_window):
-        return self.val
+    def _eval(self, _cse_cache, _area, _projection, _index, _step, _target_window) -> tuple[Any,int]:
+        return self.val, 0
 
     @property
     def _cse_hash(self) -> int | None:
@@ -156,10 +156,10 @@ class LayerMathMixin:
         index: int,
         step: int,
         target_window: Window,
-    ):
+    ) -> tuple[Any,int]:
         cache_data = cse_cache.get_data(self._cse_hash, target_window)
         if cache_data is not None:
-            return cache_data
+            return cache_data, 0
 
         try:
             window = self._virtual_window if target_window is None else target_window
@@ -175,7 +175,7 @@ class LayerMathMixin:
             )
 
         cse_cache.set_data(self._cse_hash, target_window, result)
-        return result
+        return result, 1
 
     def nan_to_num(self, nan=0, posinf=None, neginf=None):
         return LayerOperation(
@@ -542,9 +542,12 @@ class LayerOperation(LayerMathMixin):
         other: Any = None,
         window_op: WindowOperation = WindowOperation.NONE,
         buffer_padding: int = 0,
+        cost: int = 1,
         **kwargs
     ):
         self.ystep = constants.YSTEP
+        self.EVALUATION_THRESHOLD = constants.EVALUATION_THRESHOLD
+        self.cost = cost
         self.kwargs = kwargs
         self._virtual_window_op = window_op
         self.buffer_padding = buffer_padding
@@ -823,7 +826,7 @@ class LayerOperation(LayerMathMixin):
         index: int,
         step: int,
         target_window: Window,
-    ):
+    ) -> tuple[Any,int]:
         if self.buffer_padding:
             if target_window:
                 target_window = target_window.grow(self.buffer_padding)
@@ -833,12 +836,12 @@ class LayerOperation(LayerMathMixin):
 
         cache_data = cse_cache.get_data(self._cse_hash, target_window)
         if cache_data is not None:
-            return cache_data
+            return cache_data, 0
 
-        lhs_data = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
+        lhs_data, lhs_cost = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
 
         if self.operator is None:
-            result = lhs_data
+            result = lhs_data, lhs_cost
         else:
             if isinstance(self.operator, op):
                 operator = backend.operator_map[self.operator]
@@ -848,16 +851,22 @@ class LayerOperation(LayerMathMixin):
 
             if self.other is not None:
                 assert self.rhs is not None
-                rhs_data = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
-                other_data = self.other._eval(cse_cache, area, projection, index, step, target_window)
-                result = operator(lhs_data, rhs_data, other_data, **self.kwargs)
+                rhs_data, rhs_cost = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
+                other_data, other_cost = self.other._eval(cse_cache, area, projection, index, step, target_window)
+                cost = lhs_cost + rhs_cost + other_cost + self.cost
+                result = operator(lhs_data, rhs_data, other_data, **self.kwargs), cost
             elif self.rhs is not None:
-                rhs_data = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
-                result = operator(lhs_data, rhs_data, **self.kwargs)
+                rhs_data, rhs_cost = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
+                cost = lhs_cost + rhs_cost + self.cost
+                result = operator(lhs_data, rhs_data, **self.kwargs), cost
             else:
-                result = operator(lhs_data, **self.kwargs)
+                result = operator(lhs_data, **self.kwargs), lhs_cost + self.cost
 
-        cse_cache.set_data(self._cse_hash, target_window, result)
+        value, cost = result
+        cse_cache.set_data(self._cse_hash, target_window, value)
+
+        if cost > self.EVALUATION_THRESHOLD:
+            return backend.eval_op(value), 0
         return result
 
     def sum(self) -> float:
@@ -880,7 +889,7 @@ class LayerOperation(LayerMathMixin):
             step = self.ystep
             if yoffset + step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(
+            chunk, _ = self._eval(
                 cse_cache,
                 self._get_operation_area(projection),
                 projection,
@@ -908,7 +917,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(
+            chunk, _ = self._eval(
                 cse_cache,
                 self._get_operation_area(projection),
                 projection,
@@ -936,7 +945,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(
+            chunk, _ = self._eval(
                 cse_cache,
                 self._get_operation_area(projection),
                 projection,
@@ -973,7 +982,7 @@ class LayerOperation(LayerMathMixin):
             step=self.ystep
             if yoffset+step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(
+            chunk, _ = self._eval(
                 cse_cache,
                 self._get_operation_area(projection),
                 projection,
@@ -1064,7 +1073,7 @@ class LayerOperation(LayerMathMixin):
             step = self.ystep
             if yoffset + step > computation_window.ysize:
                 step = computation_window.ysize - yoffset
-            chunk = self._eval(cse_cache, computation_area, projection, yoffset, step, computation_window)
+            chunk, _ = self._eval(cse_cache, computation_area, projection, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
                 chunk = backend.full((step, destination_window.xsize), chunk)
             band.WriteArray(
@@ -1141,7 +1150,7 @@ class LayerOperation(LayerMathMixin):
                     break
                 yoffset, step = task
 
-                result = self._eval(
+                result, _ = self._eval(
                     cse_cache,
                     self._get_operation_area(projection),
                     projection,
@@ -1466,7 +1475,7 @@ class LayerOperation(LayerMathMixin):
             step = self.ystep
             if yoffset + step > height:
                 step = height - yoffset
-            chunk = self._eval(cse_cache, computation_area, projection, yoffset, step, computation_window)
+            chunk, _ = self._eval(cse_cache, computation_area, projection, yoffset, step, computation_window)
             if isinstance(chunk, (float, int)):
                 chunk = backend.full((step, computation_window.xsize), chunk)
             chunks.append(chunk)
@@ -1479,22 +1488,23 @@ class LayerOperation(LayerMathMixin):
 
 class ShaderStyleOperation(LayerOperation):
 
-    def _eval(self, cse_cache, area, projection, index, step, target_window=None):
+    def _eval(self, cse_cache, area, projection, index, step, target_window=None) -> tuple[Any,int]:
         if target_window is None:
             target_window = self._virtual_window
-        lhs_data = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
+        lhs_data, lhs_cost = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
         if self.rhs is not None:
-            rhs_data = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
+            rhs_data, rhs_cost = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
         else:
             rhs_data = None
+            rhs_cost = 0
 
         # Constant results make this a bit messier. Might in future
         # be nicer to promote them to arrays sooner?
         if isinstance(lhs_data, (int, float)):
             if rhs_data is None:
-                return self.operator(lhs_data, **self.kwargs)
+                return self.operator(lhs_data, **self.kwargs), lhs_cost + self.cost
             if isinstance(rhs_data, (int, float)):
-                return self.operator(lhs_data, rhs_data, **self.kwargs)
+                return self.operator(lhs_data, rhs_data, **self.kwargs), lhs_cost + rhs_cost + self.cost
             else:
                 result = np.empty_like(rhs_data)
         else:
@@ -1516,7 +1526,7 @@ class ShaderStyleOperation(LayerOperation):
                 else:
                     result[yoffset][xoffset] = self.operator(lhs_val, **self.kwargs)
 
-        return result
+        return result, lhs_cost + rhs_cost + self.cost
 
     def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
         raise RuntimeError("Should not be called")
