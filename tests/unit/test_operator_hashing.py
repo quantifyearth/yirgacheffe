@@ -350,18 +350,6 @@ def test_nan_to_num_hashable() -> None:
         assert (expected == actual).all()
 
 
-def test_unary_numpy_apply_hashable() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer:
-
-        def simple_add(chunk):
-            return chunk + 1.0
-
-        comp = layer.numpy_apply(simple_add)
-
-        assert comp._cse_hash is not None
-
-
 def test_cse_cache_table_reset() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     with (

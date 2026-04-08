@@ -480,62 +480,6 @@ def test_power_const_by_float_layer() -> None:
     assert (expected == actual).all()
 
 
-def test_simple_unary_numpy_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(chunk):
-        return chunk + 1.0
-
-    comp = layer1.numpy_apply(simple_add)
-    comp.save(result)
-
-    expected = data1 + 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
-def test_isin_unary_numpy_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(chunk):
-        return np.isin(chunk, [2.0, 3.0])
-
-    comp = layer1.numpy_apply(simple_add)
-    comp.save(result)
-
-    # The * 1.0 is because the numpy result will be bool, but we bounced
-    # our answer via a float gdal dataset
-    expected = np.isin(data1, [2.0, 3.0]) * 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
-def test_simple_binary_numpy_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
-
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(chunk1, chunk2):
-        return chunk1 + chunk2
-
-    comp = layer1.numpy_apply(simple_add, layer2)
-    comp.save(result)
-
-    expected = data1 + data2
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
 @pytest.mark.parametrize(
     "operator",
     [

@@ -310,9 +310,6 @@ class LayerMathMixin:
             weights=weights.astype(np.float32),
         )
 
-    def numpy_apply(self, func: Callable, other=None):
-        return LayerOperation(self, func, other)
-
     def save(self, destination_layer, and_sum=False, callback=None, band=1):
         return LayerOperation(self).save(destination_layer, and_sum, callback, band)
 

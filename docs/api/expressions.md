@@ -123,37 +123,6 @@ with yg.read_raster('float_data.tif') as float_layer:
     int_layer = float_layer.astype(DataType.Int32)
 ```
 
-### Apply
-
-You can specify a function that takes either data from one layer or from two layers, and returns the processed data. There's two version of this: one that lets you specify a numpy function that'll be applied to the layer data as an array.
-
-Firstly the numpy version looks like this:
-
-```python
-def is_over_ten(input_array):
-    return numpy.where(input_array > 10.0, 0.0, 1.0)
-
-with yg.read_raster("test1.tif") as layer1:
-    calc = layer1.numpy_apply(is_over_ten)
-    calc.to_geotiff("result.tif")
-```
-
-or
-
-```python
-def simple_add(first_array, second_array):
-    return first_array + second_array
-
-with (
-    yg.read_raster("test1.tif") as layer1,
-    yg.read_raster("test2.tif") as layer2
-):
-    calc = layer1.numpy_apply(simple_add, layer2)
-    calc.to_geotiff("result.tif")
-```
-
-Note: Using `numpy_apply` prevents GPU optimisations occurring, so should be used as a last resort.
-
 ## Storing the results of expressions
 
 There are three ways to store the result of a computation.

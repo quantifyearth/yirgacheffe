@@ -273,61 +273,6 @@ def test_parallel_equality_to_file(monkeypatch) -> None:
 @pytest.mark.skipif(
     yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
-def test_parallel_unary_numpy_apply_with_function(monkeypatch) -> None:
-    with monkeypatch.context() as m:
-        m.setattr(yg.constants, "YSTEP", 1)
-        m.setattr(LayerOperation, "save", None)
-        with tempfile.TemporaryDirectory() as tempdir:
-            path1 = os.path.join(tempdir, "test1.tif")
-            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-            dataset1.Close()
-            layer1 = RasterLayer.layer_from_file(path1)
-
-            result = RasterLayer.empty_raster_layer_like(layer1)
-
-            def simple_add(chunk):
-                return chunk + 1.0
-
-            comp = layer1.numpy_apply(simple_add)
-            comp.ystep = 1
-            comp.parallel_save(result)
-
-            expected = data1 + 1.0
-            actual = result.read_array(0, 0, 4, 2)
-
-            assert (expected == actual).all()
-
-
-@pytest.mark.skipif(
-    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
-)
-def test_parallel_unary_numpy_apply_with_lambda(monkeypatch) -> None:
-    with monkeypatch.context() as m:
-        m.setattr(yg.constants, "YSTEP", 1)
-        m.setattr(LayerOperation, "save", None)
-        with tempfile.TemporaryDirectory() as tempdir:
-            path1 = os.path.join(tempdir, "test1.tif")
-            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-            dataset1.Close()
-            layer1 = RasterLayer.layer_from_file(path1)
-
-            result = RasterLayer.empty_raster_layer_like(layer1)
-
-            comp = layer1.numpy_apply(lambda a: a + 1.0)
-            comp.ystep = 1
-            comp.parallel_save(result)
-
-            expected = data1 + 1.0
-            actual = result.read_array(0, 0, 4, 2)
-
-            assert (expected == actual).all()
-
-
-@pytest.mark.skipif(
-    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
-)
 def test_parallel_where_simple(monkeypatch) -> None:
     with monkeypatch.context() as m:
         m.setattr(yg.constants, "YSTEP", 1)
