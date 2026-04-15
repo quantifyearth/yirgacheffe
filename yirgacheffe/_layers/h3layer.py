@@ -89,7 +89,6 @@ class H3CellLayer(YirgacheffeLayer):
             self.cell_id,
             self._underlying_area,
             self.projection,
-            self._active_area,
         ))
 
     @property

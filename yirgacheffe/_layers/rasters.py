@@ -293,7 +293,6 @@ class RasterLayer(YirgacheffeLayer):
             self._underlying_area,
             self.projection,
             self.datatype,
-            self._active_area,
             self._ignore_nodata,
             self._band,
         ))

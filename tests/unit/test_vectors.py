@@ -38,7 +38,7 @@ def test_basic_dynamic_vector_layer() -> None:
 
         with VectorLayer.layer_from_file(path, projection, "id_no = 42") as layer:
             assert layer.area == Area(-10.0, 10.0, 10.0, 0.0, projection)
-            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.area.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.dimensions == (20, 10)
             assert layer._virtual_window == Window(0, 0, 20, 10)
             assert layer.projection.epsg == 4326
@@ -68,7 +68,7 @@ def test_multi_area_vector() -> None:
 
         with VectorLayer.layer_from_file(path, projection, "id_no = 42") as layer:
             assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, projection)
-            assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+            assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
             assert layer.dimensions == (20, 20)
             assert layer._virtual_window == Window(0, 0, 20, 20)
 
@@ -115,7 +115,7 @@ def test_vector_layers_with_default_burn_value() -> None:
         assert layer.area == Area(
             -10.0, 10.0, 10.0, -10.0, projection
         )
-        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
         assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte
@@ -139,7 +139,7 @@ def test_vector_layers_with_fixed_burn_value() -> None:
         assert layer.area == Area(
             -10.0, 10.0, 10.0, -10.0, projection
         )
-        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
         assert layer._virtual_window == Window(0, 0, 20, 20)
 
@@ -162,7 +162,7 @@ def test_vector_layers_with_default_burn_value_and_filter() -> None:
         assert layer.area == Area(
             -10.0, 10.0, 0.0, 0.0, projection
         )
-        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (10, 10)
         assert layer._virtual_window == Window(0, 0, 10, 10)
 
@@ -195,7 +195,7 @@ def test_vector_layers_with_field_value() -> None:
         assert layer.area == Area(
             -10.0, 10.0, 10.0, -10.0, projection
         )
-        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
         assert layer._virtual_window == Window(0, 0, 20, 20)
 
@@ -232,7 +232,7 @@ def test_vector_layers_with_guessed_type_burn_value(value, expected) -> None:
         assert layer.area == Area(
             -10.0, 10.0, 10.0, -10.0, projection
         )
-        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
         assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
@@ -276,7 +276,7 @@ def test_vector_layers_with_different_type_burn_value(value, datatype) -> None:
         assert layer.area == Area(
             -10.0, 10.0, 10.0, -10.0, projection
         )
-        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
         assert layer._virtual_window == Window(0, 0, 20, 20)
 
@@ -308,7 +308,7 @@ def test_vector_layers_with_guess_field_type_burn_value(value, expected) -> None
         assert layer.area == Area(
             -10.0, 10.0, 10.0, -10.0, projection
         )
-        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
         assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == expected
@@ -466,7 +466,7 @@ def test_vector_layers_with_empty_features() -> None:
         assert layer.area == Area(
             -10.0, 10.0, 10.0, -10.0, projection
         )
-        assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+        assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
         assert layer.dimensions == (20, 20)
         assert layer._virtual_window == Window(0, 0, 20, 20)
         assert layer.datatype == DataType.Byte

@@ -94,7 +94,6 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
             self._underlying_area,
             self._method,
             self.projection,
-            self._active_area
         ))
 
     def close(self):

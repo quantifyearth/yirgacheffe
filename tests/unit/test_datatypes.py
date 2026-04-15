@@ -92,7 +92,7 @@ def test_float_to_int() -> None:
     # new dataset was what caused the truncation
     result = RasterLayer.empty_raster_layer_like(layer1, datatype=DataType.Float32)
 
-    comp = layer1.astype(DataType.UInt8)
+    comp = layer1.as_type(DataType.UInt8)
     comp.save(result)
 
     expected = backend.promote(np.array([[1, 2, 3, 4], [5, 6, 7, 8]]))
@@ -172,7 +172,7 @@ def test_astype_datatype(ygtype: DataType) -> None:
     data = np.array([[1, 2, 3, 4], [5, 6, 5, 8]])
     with yg.from_array(data, (0, 0), yg.MapProjection("ESRI:54009", 1, -1)) as layer:
         assert layer.datatype == DataType.Int64
-        cast_layer = layer.astype(ygtype)
+        cast_layer = layer.as_type(ygtype)
         assert cast_layer.datatype == ygtype
 
 
@@ -188,7 +188,7 @@ def test_astype_datatype_over_save(ygtype: DataType) -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         filename = Path(tempdir) / "test.tif"
         with yg.from_array(data, (0, 0), yg.MapProjection("ESRI:54009", 1, -1)) as layer:
-            cast_layer = layer.astype(ygtype)
+            cast_layer = layer.as_type(ygtype)
             cast_layer.to_geotiff(filename)
         with yg.read_raster(filename) as layer:
             assert layer.datatype == ygtype

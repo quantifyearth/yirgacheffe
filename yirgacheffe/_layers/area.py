@@ -79,7 +79,6 @@ class UniformAreaLayer(RasterLayer):
             self.area.bottom,
             projection=projection,
         )
-        self._active_area = self._underlying_area
 
         self._window = Window(
             xoff=0,

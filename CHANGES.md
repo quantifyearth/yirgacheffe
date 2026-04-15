@@ -12,6 +12,7 @@
 * Moved `find_intersection` and `find_union` to top level of module.
 * Renamed `map_projection` to `projection`.
 * Vector rasterisation has performance improvements.
+* Renamed `astype` to `as_type` to match similar Yirgacheffe operators for area and projection.
 
 ### Fixed
 
@@ -31,6 +32,7 @@
 * Removed `scaled_raster_from_raster` which created an in memory rescaled image. Use `read_raster_like` to generate a dynamically scaled raster instead.
 * Removed `RescaledRasterLayer` as it is superceeded by the `ReprojectedRasterLayer` which does both pixel scaling and map projection conversions.
 * Removed `numpy_apply` and `shader_apply` operators, which was a backstop for lack of operators in early Yirgacheffe.
+* Removed `geo_transform` from layer, as it duplicated the same function on the layer's area object.
 
 ## v1.13.1 (18/03/2026)
 

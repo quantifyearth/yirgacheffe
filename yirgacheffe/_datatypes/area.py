@@ -406,7 +406,7 @@ class Area:
 
     @property
     def geo_transform(self) -> tuple[float,float,float,float,float,float]:
-        """Returns the GDAL geo transform for the area.__and__()
+        """Returns the GDAL geo transform for the area.
 
         Attempts to call this on an area with no projection will raise a ValueError.
 

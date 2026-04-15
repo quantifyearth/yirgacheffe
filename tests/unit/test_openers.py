@@ -58,7 +58,7 @@ def test_open_raster_file() -> None:
         with yg.read_raster(path) as layer:
             assert layer.area == area
             assert layer.projection == projection
-            assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+            assert layer.area.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.dimensions == (1000, 1000)
             assert layer._virtual_window == Window(0, 0, 1000, 1000)
 
@@ -75,7 +75,7 @@ def test_open_raster_file_as_path() -> None:
         with yg.read_raster(path) as layer:
             assert layer.area == area
             assert layer.projection == projection
-            assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+            assert layer.area.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.dimensions == (1000, 1000)
             assert layer._virtual_window == Window(0, 0, 1000, 1000)
 
@@ -132,7 +132,7 @@ def test_open_gpkg_with_mapprojection() -> None:
             assert layer.area == Area(
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
-            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.area.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.dimensions == (20, 10)
             assert layer._virtual_window == Window(0, 0, 20, 10)
             assert layer.projection == MapProjection("epsg:4326", 1.0, -1.0)
@@ -147,8 +147,8 @@ def test_open_gpkg_with_no_projection() -> None:
         with yg.read_shape(path) as layer:
             assert layer.area == area
             assert layer.projection is None
-            with pytest.raises(AttributeError):
-                _ = layer.geo_transform
+            with pytest.raises(ValueError):
+                _ = layer.area.geo_transform
             with pytest.raises(AttributeError):
                 _ = layer._virtual_window
 
@@ -163,7 +163,7 @@ def test_open_gpkg_direct_scale() -> None:
             assert layer.area == Area(
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
-            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.area.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
             assert layer.dimensions == (20, 10)
             assert layer._virtual_window == Window(0, 0, 20, 10)
             assert layer.projection == MapProjection("epsg:4326", 1.0, -1.0)
@@ -179,7 +179,7 @@ def test_open_gpkg_with_filter() -> None:
             assert layer.area == Area(
                 -10.0, 10.0, 0.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
-            assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+            assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
             assert layer.dimensions == (10, 10)
             assert layer._virtual_window == Window(0, 0, 10, 10)
 
@@ -205,7 +205,7 @@ def test_open_shape_like() -> None:
                 assert layer.area == Area(
                     -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
                 )
-                assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+                assert layer.area.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
                 assert layer.dimensions == (20, 10)
                 assert layer._virtual_window == Window(0, 0, 20, 10)
                 assert layer.projection == raster_layer.projection

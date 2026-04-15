@@ -4,7 +4,6 @@ import numpy as np
 from osgeo import gdal, ogr
 
 from yirgacheffe import Area, MapProjection
-from yirgacheffe._layers import YirgacheffeLayer
 
 
 def gdal_dataset_of_region(
@@ -58,24 +57,6 @@ def gdal_empty_dataset_of_region(area: Area, pixel_pitch: float) -> gdal.Dataset
         [area.left, pixel_pitch, 0.0, area.top, 0.0, pixel_pitch * -1.0]
     )
     dataset.SetProjection("epsg:4326")
-    return dataset
-
-
-def gdal_dataset_of_layer(
-    layer: YirgacheffeLayer, filename: str | None = None
-) -> gdal.Dataset:
-    if filename:
-        driver = gdal.GetDriverByName("GTiff")
-    else:
-        driver = gdal.GetDriverByName("mem")
-        filename = "mem"
-    dataset = driver.Create(
-        filename, layer._virtual_window.xsize, layer._virtual_window.ysize, 1, gdal.GDT_Float32, []
-    )
-    dataset.SetGeoTransform(layer.geo_transform)
-    projection = layer.projection
-    assert projection is not None
-    dataset.SetProjection(projection._gdal_projection)
     return dataset
 
 

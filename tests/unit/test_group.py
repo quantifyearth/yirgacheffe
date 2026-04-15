@@ -736,5 +736,5 @@ def test_two_raster_with_conv2d(klass):
         [1, 10, 1],
         [0, 1, 0],
     ], dtype=np.float32)
-    filtered_group = group.astype(DataType.Float32).conv2d(kernel) > 12
+    filtered_group = group.as_type(DataType.Float32).conv2d(kernel) > 12
     assert 19800 == filtered_group.sum()

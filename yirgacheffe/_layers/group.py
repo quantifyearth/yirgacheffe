@@ -57,9 +57,6 @@ class GroupLayer(YirgacheffeLayer):
             raise GroupLayerEmpty("Expected one or more layers")
         if not all(x.projection == layers[0].projection for x in layers):
             raise ValueError("Not all layers are the same projection/scale")
-        for layer in layers:
-            if layer._active_area is not None:
-                raise ValueError("Layers can not currently be constrained")
 
         # area/window are superset of all tiles
         union = find_union(layers)

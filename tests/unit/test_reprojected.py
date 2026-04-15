@@ -22,9 +22,9 @@ def test_simple_scale_down() -> None:
         layer = raster.as_projection(target_projection, ResamplingMethod.Nearest)
         assert layer.area == Area(-10, 10, 10, -10, target_projection)
         assert layer.projection == target_projection
-        assert layer.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
+        assert layer.area.geo_transform == (-10, 0.01, 0.0, 10, 0.0, -0.01)
         assert layer.dimensions == (2000, 2000)
-        assert layer._virtual_window == Window(0, 0, 2000, 2000)
+
 
 def test_simple_scale_up() -> None:
     area = Area(-10, 10, 10, -10)
@@ -34,9 +34,8 @@ def test_simple_scale_up() -> None:
         layer = raster.as_projection(target_projection, ResamplingMethod.Nearest)
         assert layer.area == Area(-10, 10, 10, -10, target_projection)
         assert layer.projection == target_projection
-        assert layer.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
+        assert layer.area.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
         assert layer.dimensions == (500, 500)
-        assert layer._virtual_window == Window(0, 0, 500, 500)
 
 
 def test_scaling_up_pixels() -> None:
@@ -52,7 +51,7 @@ def test_scaling_up_pixels() -> None:
         layer = raster.as_projection(target_projection, ResamplingMethod.Nearest)
         assert layer.area == Area(0, 0, 4, -4, target_projection)
         assert layer.projection == target_projection
-        assert layer.geo_transform == (0.0, 0.5, 0.0, 0.0, 0.0, -0.5)
+        assert layer.area.geo_transform == (0.0, 0.5, 0.0, 0.0, 0.0, -0.5)
         assert layer.dimensions == (8, 8)
         assert layer._virtual_window == Window(0, 0, 8, 8)
 
@@ -120,7 +119,7 @@ def test_scaling_down_pixels() -> None:
         layer = raster.as_projection(target_projection, ResamplingMethod.Nearest)
         assert layer.area == Area(0, 0, 8, -8, target_projection)
         assert layer.projection == target_projection
-        assert layer.geo_transform == (0.0, 2.0, 0.0, 0.0, 0.0, -2.0)
+        assert layer.area.geo_transform == (0.0, 2.0, 0.0, 0.0, 0.0, -2.0)
         assert layer.dimensions == (4, 4)
         assert layer._virtual_window == Window(0, 0, 4, 4)
 

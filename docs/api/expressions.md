@@ -113,14 +113,14 @@ with yg.read_raster('original.tif') as layer1:
 
 ### Type conversion
 
-Similar to numpy and other Python numerical libraries, Yirgacheffe will automatically deal with simple type conversion where possible, however sometimes explicit conversion is either necessary or desired. Similar to numpy, there is an `astype` operator that lets you set the conversion:
+Similar to numpy and other Python numerical libraries, Yirgacheffe will automatically deal with simple type conversion where possible, however sometimes explicit conversion is either necessary or desired. Similar to numpy, there is an `as_type` operator that lets you set the conversion:
 
 ```python
 from yirgacheffe.operations import DataType
 
 
 with yg.read_raster('float_data.tif') as float_layer:
-    int_layer = float_layer.astype(DataType.Int32)
+    int_layer = float_layer.as_type(DataType.Int32)
 ```
 
 ## Storing the results of expressions

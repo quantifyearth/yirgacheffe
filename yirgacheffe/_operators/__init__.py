@@ -365,7 +365,7 @@ class LayerMathMixin:
     def unique(self, return_counts=False):
         return LayerOperation(self).unique(return_counts)
 
-    def astype(self, datatype):
+    def as_type(self, datatype):
         return LayerOperation(
             self,
             op.ASTYPE,
@@ -408,8 +408,18 @@ class LayerMathMixin:
         )
 
     def as_projection(self, projection: MapProjection, method):
-        from .._layers import ReprojectedRasterLayer
-        return ReprojectedRasterLayer(self, projection, method)
+        # We in theory could just return the ReprojectedRasterLayer here, but
+        # by wrapping it in a LayerOperation we'll get better debugging with
+        # pretty_print, and with a little more effort we should be able
+        # to hook up the CSE cache in future.
+        from .._layers import ReprojectedRasterLayer # type: ignore # pylint: disable=C0415
+        return LayerOperation(
+            ReprojectedRasterLayer(self, projection, method), # type: ignore
+            op.ASPROJECTION, # This is actually a no-op
+            window_op=WindowOperation.NONE,
+            projection=projection,
+            method=method,
+        )
 
     def latlng_for_pixel(self, x: int, y: int) -> tuple[float, float]:
         """Get geo coords for pixel. This is relative to the set view window.
@@ -767,6 +777,8 @@ class LayerOperation(LayerMathMixin):
 
         children = self._children
         for i, child in enumerate(children):
+            if self.operator == op.ASPROJECTION:
+                child = child._src
             child_is_last = i == len(children) - 1
             if hasattr(child, 'pretty_print'):
                 child.pretty_print(new_prefix, child_is_last)
@@ -1407,7 +1419,7 @@ class LayerOperation(LayerMathMixin):
         )
         with context as tempory_file:
             # Local import due to circular dependancy
-            from yirgacheffe._layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
+            from .._layers import RasterLayer # type: ignore # pylint: disable=C0415
             inner_filename = tempory_file if is_vsi_based else tempory_file.name
             try:
                 with RasterLayer.empty_raster_layer_like(

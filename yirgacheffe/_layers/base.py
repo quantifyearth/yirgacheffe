@@ -18,11 +18,15 @@ class YirgacheffeLayer(LayerMathMixin):
         name: str | None = None
     ):
         self._underlying_area = area
-        self._active_area: Area | None = None
         self._window: Window | None = None
         self.name = name if name is not None else str(uuid.uuid4())
 
-        self._reset_window()
+        if self.projection:
+            width, height = self.projection.round_up_pixels(
+                (self.area.right - self.area.left) / self.projection.xstep,
+                (self.area.bottom - self.area.top) / self.projection.ystep,
+            )
+            self._window = Window(0, 0, width, height)
 
     def close(self) -> None:
         pass
@@ -60,10 +64,7 @@ class YirgacheffeLayer(LayerMathMixin):
     @property
     def area(self) -> Area:
         """Returns the geospatial [`Area`][yirgacheffe.Area] of the layer."""
-        if self._active_area is not None:
-            return self._active_area
-        else:
-            return self._underlying_area
+        return self._underlying_area
 
     def _get_operation_area(
         self,
@@ -96,24 +97,6 @@ class YirgacheffeLayer(LayerMathMixin):
     @property
     def nodata(self) -> None:
         return None
-
-    @property
-    def geo_transform(self) -> tuple[float, float, float, float, float, float]:
-        if self.projection is None:
-            raise AttributeError("No geo transform for layers without explicit pixel scale")
-        return (
-            self.area.left, self.projection.xstep, 0.0,
-            self.area.top, 0.0, self.projection.ystep
-        )
-
-    def _reset_window(self) -> None:
-        self._active_area = None
-        if self.projection:
-            width, height = self.projection.round_up_pixels(
-                (self.area.right - self.area.left) / self.projection.xstep,
-                (self.area.bottom - self.area.top) / self.projection.ystep,
-            )
-            self._window = Window(0, 0, width, height)
 
     def _read_array_with_window(
         self,

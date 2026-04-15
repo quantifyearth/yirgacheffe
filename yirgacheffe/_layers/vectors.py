@@ -252,10 +252,7 @@ class VectorLayer(YirgacheffeLayer):
         target_projection = projection if projection is not None else self.projection
 
         if target_projection is None:
-            if self._active_area is not None:
-                return self._active_area
-            else:
-                return self._underlying_area
+            return self._underlying_area
         else:
             # Get the area, but scale it to the pixel resolution that we're using. Note that
             # the pixel scale GDAL uses can have -ve values, but those will mess up the
@@ -283,10 +280,7 @@ class VectorLayer(YirgacheffeLayer):
 
     @property
     def area(self) -> Area:
-        if self._active_area is not None:
-            return self._active_area
-        else:
-            return self._get_operation_area()
+        return self._get_operation_area()
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)
@@ -326,7 +320,6 @@ class VectorLayer(YirgacheffeLayer):
             self.name,
             self._underlying_area,
             self.projection,
-            self._active_area,
             self._datatype,
             self.burn_value,
             self._filter,

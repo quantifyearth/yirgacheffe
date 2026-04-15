@@ -135,6 +135,9 @@ def astype_op(data, datatype):
 def as_area_op(data, new_area): # pylint: disable=W0613
     return data
 
+def as_projection_op(data, projection, method): # pylint: disable=W0613
+    return data
+
 operator_map: dict[op, Callable] = {
     op.ADD: np.ndarray.__add__,
     op.SUB: np.ndarray.__sub__,
@@ -188,4 +191,5 @@ operator_map: dict[op, Callable] = {
     op.LSHIFT: np.ndarray.__lshift__,
     op.RSHIFT: np.ndarray.__rshift__,
     op.ASAREA: as_area_op,
+    op.ASPROJECTION: as_projection_op,
 }

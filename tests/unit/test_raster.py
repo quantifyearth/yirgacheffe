@@ -42,7 +42,7 @@ def test_make_basic_layer() -> None:
     with RasterLayer(dataset) as layer:
         assert layer.area == area
         assert layer.projection == projection
-        assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+        assert layer.area.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
         assert layer.dimensions == (1000, 1000)
         assert layer._virtual_window == Window(0, 0, 1000, 1000)
 
@@ -73,7 +73,7 @@ def test_open_file() -> None:
         with RasterLayer.layer_from_file(path) as layer:
             assert layer.area == area
             assert layer.projection == projection
-            assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+            assert layer.area.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
             assert layer.dimensions == (1000, 1000)
             assert layer._virtual_window == Window(0, 0, 1000, 1000)
             del layer
@@ -86,7 +86,7 @@ def test_empty_layer_from_raster():
     assert empty.dimensions == source.dimensions
     assert empty._virtual_window == source._virtual_window
     assert empty.datatype == source.datatype
-    assert empty.geo_transform == source.geo_transform
+    assert empty.area == source.area
     assert empty._dataset.GetRasterBand(1).GetNoDataValue() is None
 
 
@@ -98,7 +98,7 @@ def test_empty_layer_from_raster_with_no_data_value(nodata):
     assert empty.dimensions == source.dimensions
     assert empty._virtual_window == source._virtual_window
     assert empty.datatype == source.datatype
-    assert empty.geo_transform == source.geo_transform
+    assert empty.area == source.area
     assert empty._dataset.GetRasterBand(1).GetNoDataValue() == nodata
 
 
@@ -112,7 +112,7 @@ def test_empty_layer_from_raster_with_new_smaller_area():
     assert empty.datatype == source.datatype
     expected_geotransform = (-1.0, 0.02, 0.0, 1.0, 0.0, -0.02)
     for i in range(6):
-        assert math.isclose(empty.geo_transform[i], expected_geotransform[i])
+        assert math.isclose(empty.area.geo_transform[i], expected_geotransform[i])
 
 
 def test_empty_layer_from_raster_new_datatype():
