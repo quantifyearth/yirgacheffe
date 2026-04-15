@@ -54,6 +54,8 @@ class operators(Enum):
     POS = 46
     LSHIFT = 47
     RSHIFT = 48
+    ASAREA = 49
+    ASPROJECTION = 50
 
 class dtype(Enum):
     """Represents the type of data returned by a layer.

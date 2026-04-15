@@ -89,9 +89,9 @@ calc = layer1.log10()
 Or via the operators module, as it's sometimes nicer to do it this way when chaining together operations in a single expression:
 
 ```python
-import yirgaceffe.operators as yo
+import yirgaceffe as yg
 
-calc = yo.log10(layer1 / layer2)
+calc = yg.log10(layer1 / layer2)
 ```
 
 ### 2D matrix convolution
@@ -113,60 +113,15 @@ with yg.read_raster('original.tif') as layer1:
 
 ### Type conversion
 
-Similar to numpy and other Python numerical libraries, Yirgacheffe will automatically deal with simple type conversion where possible, however sometimes explicit conversion is either necessary or desired. Similar to numpy, there is an `astype` operator that lets you set the conversion:
+Similar to numpy and other Python numerical libraries, Yirgacheffe will automatically deal with simple type conversion where possible, however sometimes explicit conversion is either necessary or desired. Similar to numpy, there is an `as_type` operator that lets you set the conversion:
 
 ```python
 from yirgacheffe.operations import DataType
 
 
 with yg.read_raster('float_data.tif') as float_layer:
-    int_layer = float_layer.astype(DataType.Int32)
+    int_layer = float_layer.as_type(DataType.Int32)
 ```
-
-### Apply
-
-You can specify a function that takes either data from one layer or from two layers, and returns the processed data. There's two version of this: one that lets you specify a numpy function that'll be applied to the layer data as an array, or one that is more shader like that lets you do pixel wise processing.
-
-Firstly the numpy version looks like this:
-
-```python
-def is_over_ten(input_array):
-    return numpy.where(input_array > 10.0, 0.0, 1.0)
-
-with yg.read_raster("test1.tif") as layer1:
-    calc = layer1.numpy_apply(is_over_ten)
-    calc.to_geotiff("result.tif")
-```
-
-or
-
-```python
-def simple_add(first_array, second_array):
-    return first_array + second_array
-
-with (
-    yg.read_raster("test1.tif") as layer1,
-    yg.read_raster("test2.tif") as layer2
-):
-    calc = layer1.numpy_apply(simple_add, layer2)
-    calc.to_geotiff("result.tif")
-```
-
-If you want to do something specific on the pixel level, then you can also do that, again either on a unary or binary form.
-
-```python
-def is_over_ten(input_pixel):
-    return 1.0 if input_pixel > 10 else 0.0
-
-with yg.read_raster("test1.tif") as layer1:
-    calc = layer1.shader_apply(is_over_ten)
-    calc.to_geotiff(result)
-```
-
-Note:
-
-1. Using `numpy_apply` prevents GPU optimisations occuring, so should be used as a last resort.
-2. In general `numpy_apply` is considerably faster than `shader_apply`.
 
 ## Storing the results of expressions
 
@@ -194,7 +149,7 @@ with (
     RasterLayer.layer_from_file(...) as area_layer,
     VectorLayer(...) as mask_layer
 ):
-    intersection = RasterLayer.find_intersection([area_layer, mask_layer])
+    intersection = yg.find_intersection([area_layer, mask_layer])
     area_layer.set_intersection_window(intersection)
     mask_layer.set_intersection_window(intersection)
 

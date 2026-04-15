@@ -2,13 +2,15 @@ import math
 
 import numpy as np
 import yirgacheffe as yg
+from yirgacheffe._datatypes import Window
 
 
 def test_simple_wgs84_layer() -> None:
     projection = yg.MapProjection("epsg:4326", 10.0, -10.0)
     with yg.area_raster(projection) as area_raster:
-        assert area_raster.map_projection == projection
-        assert area_raster.window == yg.Window(0, 0, 36, 18)
+        assert area_raster.projection == projection
+        assert area_raster._virtual_window == Window(0, 0, 36, 18)
+        assert area_raster.dimensions == (36, 18)
         assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
 
         # I don't want to test specific values, just trends
@@ -32,8 +34,8 @@ def test_windowed_wgs84_layer() -> None:
                 ypos = 9 - y
                 with yg.from_array(np.array([[1]]), (xpos * 10, ypos * 10), projection) as mask:
                     res = mask * area_raster
-                    assert res.window.xsize == 1
-                    assert res.window.ysize == 1
+                    assert res._virtual_window.xsize == 1
+                    assert res._virtual_window.ysize == 1
                     val = res.read_array(0, 0, 1, 1)
                     assert val[0][0] == area_values[y][x]
 
@@ -69,8 +71,9 @@ def test_approximate_wgs84_values_2() -> None:
 def test_simple_mollweide_layer() -> None:
     projection = yg.MapProjection("esri:54009", 1000.0, -1000.0)
     with yg.area_raster(projection) as area_raster:
-        assert area_raster.map_projection == projection
-        assert area_raster.window == yg.Window(0, 0, 36082, 18041)
+        assert area_raster.projection == projection
+        assert area_raster._virtual_window == Window(0, 0, 36082, 18041)
+        assert area_raster.dimensions == (36082, 18041)
         assert area_raster.area == yg.Area(
             left=-18041000.0,
             top=9020000.0,
@@ -91,8 +94,8 @@ def test_windowed_mollweide_layer() -> None:
         for pos in range(10):
             with yg.from_array(np.array([[1]]), ((5 - pos) * 10000, (5 - pos) * 10000), projection) as mask:
                 res = mask * area_raster
-                assert res.window.xsize == 1
-                assert res.window.ysize == 1
+                assert res._virtual_window.xsize == 1
+                assert res._virtual_window.ysize == 1
                 val = res.read_array(0, 0, 1, 1)
                 assert val[0][0] == 100_000_000
 
@@ -130,8 +133,9 @@ def test_with_no_bounds_in_tiff_geographic() -> None:
 
     # But this is a geographic CRS, so we can assume it is global
     with yg.area_raster(projection) as area_raster:
-        assert area_raster.map_projection == projection
-        assert area_raster.window == yg.Window(0, 0, 36, 18)
+        assert area_raster.projection == projection
+        assert area_raster._virtual_window == Window(0, 0, 36, 18)
+        assert area_raster.dimensions == (36, 18)
         assert area_raster.area == yg.Area(-180, 90, 180, -90, projection)
 
 
@@ -153,7 +157,7 @@ def test_with_no_bounds_in_tiff_nongeographic() -> None:
     # don't quite match the version we programatically generate with
     # pyproj in the AreaPerPixelLayer constructor. Really Area and Window
     # need an "is_close" type method.
-    expected_window = yg.Window(
+    expected_window = Window(
         0, 0,
         math.ceil((east - west) / 10),
         math.floor((north - south) / 10),
@@ -168,6 +172,7 @@ def test_with_no_bounds_in_tiff_nongeographic() -> None:
 
     # But this is a geographic CRS, so we can assume it is global
     with yg.area_raster(projection) as area_raster:
-        assert area_raster.map_projection == projection
-        assert area_raster.window == expected_window
+        assert area_raster.projection == projection
+        assert area_raster._virtual_window == expected_window
+        assert area_raster.dimensions == (expected_window.xsize, expected_window.ysize)
         assert area_raster.area == expected_area

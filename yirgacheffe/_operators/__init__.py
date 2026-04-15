@@ -24,7 +24,6 @@ from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
 from typing import Any
 
-import deprecation
 import numpy as np
 import numpy.typing as npt
 from osgeo import gdal
@@ -32,7 +31,7 @@ from dill import dumps, loads # type: ignore
 from pyproj import Transformer
 
 from .. import constants, __version__
-from .._datatypes import Area, PixelScale, MapProjection, Window
+from .._datatypes import Area, MapProjection, Window
 from .._backends import backend
 from .._backends.enumeration import operators as op
 from .._backends.enumeration import dtype as DataType
@@ -163,7 +162,7 @@ class LayerMathMixin:
             return cache_data
 
         try:
-            window = self.window if target_window is None else target_window
+            window = self._virtual_window if target_window is None else target_window
             result = self._read_array_for_area(area, projection, 0, index, window.xsize, step)
         except AttributeError:
             result = self._read_array_for_area(
@@ -311,12 +310,6 @@ class LayerMathMixin:
             weights=weights.astype(np.float32),
         )
 
-    def numpy_apply(self, func: Callable, other=None):
-        return LayerOperation(self, func, other)
-
-    def shader_apply(self, func: Callable, other=None):
-        return ShaderStyleOperation(self, func, other)
-
     def save(self, destination_layer, and_sum=False, callback=None, band=1):
         return LayerOperation(self).save(destination_layer, and_sum, callback, band)
 
@@ -372,12 +365,60 @@ class LayerMathMixin:
     def unique(self, return_counts=False):
         return LayerOperation(self).unique(return_counts)
 
-    def astype(self, datatype):
+    def as_type(self, datatype):
         return LayerOperation(
             self,
             op.ASTYPE,
             window_op=WindowOperation.NONE,
             datatype=datatype
+        )
+
+    def as_area(self, area_or_layer: Any) -> LayerOperation:
+        if area_or_layer is None:
+            raise TypeError("Expected layer or area value, not None")
+
+        # This is a bit lazy, avoiding circular import hell for now
+        try:
+            new_area = area_or_layer.area
+        except AttributeError:
+            new_area = area_or_layer
+
+        if not isinstance(new_area, Area):
+            raise TypeError("Expected layer or area value")
+
+        self_projection = self.projection # type: ignore
+        if self_projection is not None:
+            if new_area.projection is None:
+                new_area = new_area.project_like(self.area)
+            elif not self.area.is_world and (new_area.projection != self_projection):
+                # If a layer has a global reach (like a constant layer) those are projection agnostic so
+                # can always be specialised.
+                raise ValueError(
+                    f"Differeing map projection used on as_area: {new_area.projection} applied to {self_projection}"
+                )
+        else:
+            if new_area.projection is None:
+                raise ValueError("Applied area and target both lack projection")
+
+        return LayerOperation(
+            self,
+            op.ASAREA,
+            window_op=WindowOperation.NONE,
+            new_area=new_area,
+        )
+
+    def as_projection(self, projection: MapProjection, method):
+        # We in theory could just return the ReprojectedRasterLayer here, but
+        # by wrapping it in a LayerOperation we'll get better debugging with
+        # pretty_print, and with a little more effort we should be able
+        # to hook up the CSE cache in future.
+        from .._layers import ReprojectedRasterLayer # type: ignore # pylint: disable=C0415
+        return LayerOperation(
+            ReprojectedRasterLayer(self, projection, method), # type: ignore
+            op.ASPROJECTION, # This is actually a no-op
+            window_op=WindowOperation.NONE,
+            projection=projection,
+            method=method,
         )
 
     def latlng_for_pixel(self, x: int, y: int) -> tuple[float, float]:
@@ -390,14 +431,13 @@ class LayerMathMixin:
         Returns:
             A tuple containing the (latitude, longitude).
         """
-        projection = self.map_projection # type: ignore[attr-defined]
+        projection = self.projection # type: ignore[attr-defined]
         area = self.area # type: ignore[attr-defined]
         if projection is None:
             raise ValueError("Map has not projection space")
-        pixel_scale = projection.scale
         coord_in_raster_space = (
-            (y * pixel_scale.ystep) + area.top,
-            (x * pixel_scale.xstep) + area.left,
+            (y * projection.ystep) + area.top,
+            (x * projection.xstep) + area.left,
         )
         transformer = Transformer.from_crs(projection.name, "EPSG:4326")
         return transformer.transform(*coord_in_raster_space)
@@ -413,7 +453,7 @@ class LayerMathMixin:
         Returns:
             A tuple containing the x, y coordinates in pixel space.
         """
-        projection = self.map_projection # type: ignore[attr-defined]
+        projection = self.projection # type: ignore[attr-defined]
         area = self.area # type: ignore[attr-defined]
         if projection is None:
             raise ValueError("Map has not projection space")
@@ -427,7 +467,11 @@ class LayerMathMixin:
         )
 
     @property
-    def window(self) -> Window:
+    def _virtual_window(self) -> Window:
+        raise NotImplementedError("Must be overridden by subclass")
+
+    @property
+    def dimensions(self) -> tuple[int,int]:
         raise NotImplementedError("Must be overridden by subclass")
 
     @property
@@ -472,7 +516,7 @@ class LayerMathMixin:
         if ax is None:
             ax = plt.gca()
 
-        window = self.window
+        window = self._virtual_window
 
         raw_data = self.read_array(
             0,
@@ -498,39 +542,6 @@ class LayerMathMixin:
 
 class LayerOperation(LayerMathMixin):
 
-    @staticmethod
-    @deprecation.deprecated(
-        deprecated_in="1.10",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use from top level module instead."
-    )
-    def where(cond, a, b):
-        from . import functions # type: ignore # pylint: disable=C0415
-        return functions.where(cond, a, b)
-
-    @staticmethod
-    @deprecation.deprecated(
-        deprecated_in="1.10",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use from top level module instead."
-    )
-    def minimum(a, b):
-        from . import functions # type: ignore # pylint: disable=C0415
-        return functions.minimum(a, b)
-
-    @staticmethod
-    @deprecation.deprecated(
-        deprecated_in="1.10",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use from top level module instead."
-    )
-    def maximum(a, b):
-        from . import functions # type: ignore # pylint: disable=C0415
-        return functions.maximum(a, b)
-
     def __init__(
         self,
         lhs: Any,
@@ -543,7 +554,7 @@ class LayerOperation(LayerMathMixin):
     ):
         self.ystep = constants.YSTEP
         self.kwargs = kwargs
-        self.window_op = window_op
+        self._virtual_window_op = window_op
         self.buffer_padding = buffer_padding
 
         if lhs is None:
@@ -561,9 +572,9 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not ((lhs.map_projection == rhs.map_projection) or \
-                        (lhs.map_projection is None) or \
-                        (rhs.map_projection is None)):
+                if not ((lhs.projection == rhs.projection) or \
+                        (lhs.projection is None) or \
+                        (rhs.projection is None)):
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.rhs = rhs
         else:
@@ -578,9 +589,9 @@ class LayerOperation(LayerMathMixin):
                 else:
                     raise ValueError("Numpy arrays are no allowed")
             else:
-                if not ((lhs.map_projection == other.map_projection) or \
-                        (lhs.map_projection is None) or \
-                        (other.map_projection is None)):
+                if not ((lhs.projection == other.projection) or \
+                        (lhs.projection is None) or \
+                        (other.projection is None)):
                     raise ValueError("Not all layers are at the same pixel scale")
                 self.other = other
         else:
@@ -636,7 +647,7 @@ class LayerOperation(LayerMathMixin):
                 return value
         frozen_kwargs = tuple(sorted((k, _make_hashable(v)) for (k, v) in self.kwargs.items()))
 
-        terms = [self.operator, self.window_op, frozen_kwargs, self.buffer_padding] + child_hashes
+        terms = [self.operator, self._virtual_window_op, frozen_kwargs, self.buffer_padding] + child_hashes
 
         try:
             return hash(tuple(terms))
@@ -646,9 +657,12 @@ class LayerOperation(LayerMathMixin):
 
     @property
     def area(self) -> Area:
-        return self._get_operation_area(self.map_projection, top_level=True)
+        return self._get_operation_area(self.projection, top_level=True)
 
     def _get_operation_area(self, projection: MapProjection | None, force_union: bool = False, top_level=True) -> Area:
+        if self.operator == op.ASAREA:
+            return self.kwargs["new_area"]
+
         lhs_area = self.lhs._get_operation_area(projection, force_union, top_level=False)
         try:
             rhs_area = self.rhs._get_operation_area(projection, force_union, top_level=False)
@@ -663,7 +677,7 @@ class LayerOperation(LayerMathMixin):
         if force_union:
             all_areas = [x for x in all_areas if not x.is_world]
 
-        window_op = WindowOperation.UNION if force_union else self.window_op
+        window_op = WindowOperation.UNION if force_union else self._virtual_window_op
         match window_op:
             case WindowOperation.NONE:
                 area = all_areas[0]
@@ -680,27 +694,8 @@ class LayerOperation(LayerMathMixin):
             return area
 
     @property
-    @deprecation.deprecated(
-        deprecated_in="1.7",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use `map_projection` instead."
-    )
-    def pixel_scale(self) -> PixelScale:
-        # Because we test at construction that pixel scales for RHS/other are roughly equal,
-        # I believe this should be sufficient...
-        try:
-            pixel_scale = self.lhs.pixel_scale
-        except AttributeError:
-            pixel_scale = None
-
-        if pixel_scale is None:
-            return self.rhs.pixel_scale
-        return pixel_scale
-
-    @property
-    def window(self) -> Window:
-        projection = self.map_projection
+    def _virtual_window(self) -> Window:
+        projection = self.projection
         if projection is None:
             # This can happen if your source layers are say just constants
             raise AttributeError("No window without projection")
@@ -717,6 +712,20 @@ class LayerOperation(LayerMathMixin):
             (area.top - area.bottom) / (projection.ystep * -1.0),
         )
         return Window(xoff, yoff, xsize, ysize)
+
+    @property
+    def dimensions(self) -> tuple[int,int]:
+        projection = self.projection
+        if projection is None:
+            # This can happen if your source layers are say just constants
+            raise AttributeError("No dimensions without projection")
+        area = self._get_operation_area(projection)
+        assert area is not None
+        assert not area.is_world
+        return projection.round_up_pixels(
+            (area.right - area.left) / projection.xstep,
+            (area.top - area.bottom) / (projection.ystep * -1.0),
+        )
 
     @property
     def datatype(self) -> DataType:
@@ -739,32 +748,18 @@ class LayerOperation(LayerMathMixin):
         return numpy_to_dtype(coerced_type)
 
     @property
-    @deprecation.deprecated(
-        deprecated_in="1.7",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use `map_projection` instead."
-    )
-    def projection(self):
+    def projection(self) -> MapProjection | None:
+        if self.operator == op.ASAREA:
+            return self.kwargs["new_area"].projection
+
         try:
             projection = self.lhs.projection
         except AttributeError:
             projection = None
 
         if projection is None:
-            projection = self.rhs.projection
-        return projection
-
-    @property
-    def map_projection(self) -> MapProjection | None:
-        try:
-            projection = self.lhs.map_projection
-        except AttributeError:
-            projection = None
-
-        if projection is None:
             try:
-                projection = self.rhs.map_projection
+                projection = self.rhs.projection
             except AttributeError:
                 pass
         return projection
@@ -782,6 +777,8 @@ class LayerOperation(LayerMathMixin):
 
         children = self._children
         for i, child in enumerate(children):
+            if self.operator == op.ASPROJECTION:
+                child = child._src
             child_is_last = i == len(children) - 1
             if hasattr(child, 'pretty_print'):
                 child.pretty_print(new_prefix, child_is_last)
@@ -853,11 +850,8 @@ class LayerOperation(LayerMathMixin):
         if self.operator is None:
             result = lhs_data
         else:
-            if isinstance(self.operator, op):
-                operator = backend.operator_map[self.operator]
-            else:
-                # Handles things like `numpy_apply` where a custom operator is provided
-                operator = self.operator
+            assert isinstance(self.operator, op)
+            operator = backend.operator_map[self.operator]
 
             if self.other is not None:
                 assert self.rhs is not None
@@ -879,8 +873,8 @@ class LayerOperation(LayerMathMixin):
         # first chunk returned
         res = None
 
-        computation_window = self.window
-        projection = self.map_projection
+        computation_window = self._virtual_window
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection")
 
@@ -907,8 +901,8 @@ class LayerOperation(LayerMathMixin):
 
     def min(self) -> float:
         res = float('inf')
-        computation_window = self.window
-        projection = self.map_projection
+        computation_window = self._virtual_window
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection")
 
@@ -935,8 +929,8 @@ class LayerOperation(LayerMathMixin):
 
     def max(self) -> float:
         res = float('-inf')
-        computation_window = self.window
-        projection = self.map_projection
+        computation_window = self._virtual_window
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection")
 
@@ -972,8 +966,8 @@ class LayerOperation(LayerMathMixin):
             and the second list being the corresponding counts.
         """
         res : dict[int|float,int] = {}
-        computation_window = self.window
-        projection = self.map_projection
+        computation_window = self._virtual_window
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection")
 
@@ -1036,10 +1030,10 @@ class LayerOperation(LayerMathMixin):
         except AttributeError as exc:
             raise ValueError("Layer must be a raster backed layer") from exc
 
-        projection = self.map_projection
+        projection = self.projection
 
-        destination_window = destination_layer.window
-        destination_projection = destination_layer.map_projection
+        destination_window = destination_layer._virtual_window
+        destination_projection = destination_layer.projection
         assert destination_projection is not None
 
         if projection is None:
@@ -1051,7 +1045,7 @@ class LayerOperation(LayerMathMixin):
         # If we're calculating purely from a constant layer, then we don't have a window or area
         # so we should use the destination raster details.
         try:
-            computation_window = self.window
+            computation_window = self._virtual_window
             computation_area = self._get_operation_area(projection)
         except (AttributeError, IndexError):
             computation_window = destination_window
@@ -1132,7 +1126,7 @@ class LayerOperation(LayerMathMixin):
             backend.init()
 
             arr = np.ndarray((self.ystep, width), dtype=np_dtype, buffer=shared_mem.buf) # type: ignore[var-annotated]
-            projection = self.map_projection
+            projection = self.projection
             # TODO: the `save` method does more sanity checking that parallel save!
             assert projection is not None
 
@@ -1197,7 +1191,7 @@ class LayerOperation(LayerMathMixin):
     ) -> float | None:
         assert (destination_layer is not None) or and_sum
         try:
-            computation_window = self.window
+            computation_window = self._virtual_window
         except (AttributeError, IndexError):
             # This is most likely because the calculation is on a constant layer (or combination of only constant
             # layers) and there's no real benefit to parallel saving then, so to keep this code from getting yet
@@ -1228,7 +1222,7 @@ class LayerOperation(LayerMathMixin):
             except AttributeError as exc:
                 raise ValueError("Layer must be a raster backed layer") from exc
 
-            destination_window = destination_layer.window
+            destination_window = destination_layer._virtual_window
 
             if (computation_window.xsize != destination_window.xsize) \
                     or (computation_window.ysize != destination_window.ysize):
@@ -1425,7 +1419,7 @@ class LayerOperation(LayerMathMixin):
         )
         with context as tempory_file:
             # Local import due to circular dependancy
-            from yirgacheffe.layers.rasters import RasterLayer # type: ignore # pylint: disable=C0415
+            from .._layers import RasterLayer # type: ignore # pylint: disable=C0415
             inner_filename = tempory_file if is_vsi_based else tempory_file.name
             try:
                 with RasterLayer.empty_raster_layer_like(
@@ -1453,7 +1447,7 @@ class LayerOperation(LayerMathMixin):
         return result
 
     def read_array(self, x: int, y: int, width: int, height: int) -> np.ndarray:
-        projection = self.map_projection
+        projection = self.projection
         if projection is None:
             raise ValueError("No map projection specified for layers in expression")
 
@@ -1486,50 +1480,6 @@ class LayerOperation(LayerMathMixin):
         res = np.vstack(chunks)
 
         return res
-
-    def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
-        raise RuntimeError("Should not be called")
-
-class ShaderStyleOperation(LayerOperation):
-
-    def _eval(self, cse_cache, area, projection, index, step, target_window=None):
-        if target_window is None:
-            target_window = self.window
-        lhs_data = self.lhs._eval(cse_cache, area, projection, index, step, target_window)
-        if self.rhs is not None:
-            rhs_data = self.rhs._eval(cse_cache, area, projection, index, step, target_window)
-        else:
-            rhs_data = None
-
-        # Constant results make this a bit messier. Might in future
-        # be nicer to promote them to arrays sooner?
-        if isinstance(lhs_data, (int, float)):
-            if rhs_data is None:
-                return self.operator(lhs_data, **self.kwargs)
-            if isinstance(rhs_data, (int, float)):
-                return self.operator(lhs_data, rhs_data, **self.kwargs)
-            else:
-                result = np.empty_like(rhs_data)
-        else:
-            result = np.empty_like(lhs_data)
-
-        window = self.window
-        for yoffset in range(step):
-            for xoffset in range(window.xsize):
-                try:
-                    lhs_val = lhs_data[yoffset][xoffset]
-                except TypeError:
-                    lhs_val = lhs_data
-                if rhs_data is not None:
-                    try:
-                        rhs_val = rhs_data[yoffset][xoffset]
-                    except TypeError:
-                        rhs_val = rhs_data
-                    result[yoffset][xoffset] = self.operator(lhs_val, rhs_val, **self.kwargs)
-                else:
-                    result[yoffset][xoffset] = self.operator(lhs_val, **self.kwargs)
-
-        return result
 
     def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
         raise RuntimeError("Should not be called")

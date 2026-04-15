@@ -6,9 +6,9 @@ import numpy as np
 import pytest
 import torch
 
-import yirgacheffe
+import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_with_data
-from yirgacheffe.layers import RasterLayer
+from yirgacheffe._layers import RasterLayer
 from yirgacheffe._operators import LayerOperation
 
 # These tests are marked skip for MLX, because there seems to be a problem with
@@ -23,7 +23,7 @@ from yirgacheffe._operators import LayerOperation
 
 def test_add_byte_layers_with_one_thread_uses_regular_save(monkeypatch) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 4)
+        m.setattr(yg.constants, "YSTEP", 4)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             path1 = os.path.join(tempdir, "test1.tif")
@@ -46,11 +46,11 @@ def test_add_byte_layers_with_one_thread_uses_regular_save(monkeypatch) -> None:
 
 
 @pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
 def test_add_byte_layers(monkeypatch) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             path1 = os.path.join(tempdir, "test1.tif")
@@ -77,11 +77,11 @@ def test_add_byte_layers(monkeypatch) -> None:
 
 
 @pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
 def test_rlimit_nofiles(monkeypatch) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             path1 = os.path.join(tempdir, "test1.tif")
@@ -118,11 +118,11 @@ def test_rlimit_nofiles(monkeypatch) -> None:
 
 
 @pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
 def test_add_byte_layers_and_sum(monkeypatch) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             path1 = os.path.join(tempdir, "test1.tif")
@@ -150,11 +150,11 @@ def test_add_byte_layers_and_sum(monkeypatch) -> None:
 
 
 @pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
 def test_parallel_sum(monkeypatch) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             path1 = os.path.join(tempdir, "test1.tif")
@@ -178,7 +178,7 @@ def test_parallel_sum(monkeypatch) -> None:
 
 
 @pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
 @pytest.mark.parametrize(
     "skip,expected_steps",
@@ -189,7 +189,7 @@ def test_parallel_sum(monkeypatch) -> None:
 )
 def test_parallel_with_different_skip(monkeypatch, skip, expected_steps) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             path1 = os.path.join(tempdir, "test1.tif")
@@ -223,11 +223,11 @@ def test_parallel_with_different_skip(monkeypatch, skip, expected_steps) -> None
 
 
 @pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
 def test_parallel_equality(monkeypatch) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             path1 = os.path.join(tempdir, "test1.tif")
@@ -246,11 +246,11 @@ def test_parallel_equality(monkeypatch) -> None:
 
 
 @pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
 def test_parallel_equality_to_file(monkeypatch) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             path1 = os.path.join(tempdir, "test1.tif")
@@ -271,66 +271,11 @@ def test_parallel_equality_to_file(monkeypatch) -> None:
 
 
 @pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
-)
-def test_parallel_unary_numpy_apply_with_function(monkeypatch) -> None:
-    with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
-        m.setattr(LayerOperation, "save", None)
-        with tempfile.TemporaryDirectory() as tempdir:
-            path1 = os.path.join(tempdir, "test1.tif")
-            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-            dataset1.Close()
-            layer1 = RasterLayer.layer_from_file(path1)
-
-            result = RasterLayer.empty_raster_layer_like(layer1)
-
-            def simple_add(chunk):
-                return chunk + 1.0
-
-            comp = layer1.numpy_apply(simple_add)
-            comp.ystep = 1
-            comp.parallel_save(result)
-
-            expected = data1 + 1.0
-            actual = result.read_array(0, 0, 4, 2)
-
-            assert (expected == actual).all()
-
-
-@pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
-)
-def test_parallel_unary_numpy_apply_with_lambda(monkeypatch) -> None:
-    with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
-        m.setattr(LayerOperation, "save", None)
-        with tempfile.TemporaryDirectory() as tempdir:
-            path1 = os.path.join(tempdir, "test1.tif")
-            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
-            dataset1.Close()
-            layer1 = RasterLayer.layer_from_file(path1)
-
-            result = RasterLayer.empty_raster_layer_like(layer1)
-
-            comp = layer1.numpy_apply(lambda a: a + 1.0)
-            comp.ystep = 1
-            comp.parallel_save(result)
-
-            expected = data1 + 1.0
-            actual = result.read_array(0, 0, 4, 2)
-
-            assert (expected == actual).all()
-
-
-@pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
 def test_parallel_where_simple(monkeypatch) -> None:
     with monkeypatch.context() as m:
-        m.setattr(yirgacheffe.constants, "YSTEP", 1)
+        m.setattr(yg.constants, "YSTEP", 1)
         m.setattr(LayerOperation, "save", None)
         with tempfile.TemporaryDirectory() as tempdir:
             path1 = os.path.join(tempdir, "test1.tif")
@@ -341,7 +286,7 @@ def test_parallel_where_simple(monkeypatch) -> None:
 
             result = RasterLayer.empty_raster_layer_like(layer1)
 
-            comp = LayerOperation.where(layer1 > 0, 1, 2)
+            comp = yg.where(layer1 > 0, 1, 2)
             comp.ystep = 1
             comp.parallel_save(result)
 
@@ -351,7 +296,7 @@ def test_parallel_where_simple(monkeypatch) -> None:
 
 
 @pytest.mark.skipif(
-    yirgacheffe._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
 )
 def test_parallel_conv2d() -> None:
     with tempfile.TemporaryDirectory() as tempdir:

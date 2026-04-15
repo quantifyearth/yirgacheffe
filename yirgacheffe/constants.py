@@ -1,5 +1,3 @@
-import pyproj
-
 YSTEP = 512
 MINIMUM_CHUNKS_PER_THREAD = 1
 
@@ -9,7 +7,3 @@ MINIMUM_CHUNKS_PER_THREAD = 1
 # in theory they can be tweaked if necessary on demand.
 GDAL_CACHE_LIMIT = 1 * 1024 * 1024 * 1024
 MLX_CACHE_LIMIT = 1 * 1024 * 1024 * 1024
-
-# I don't really want this here, but it's just too useful having it exposed
-# This used to be a fixed string, but now it is at least programmatically generated
-WGS_84_PROJECTION = pyproj.CRS.from_epsg(4326).to_wkt(version='WKT1_GDAL')

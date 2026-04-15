@@ -3,19 +3,21 @@ from pathlib import Path
 
 import pytest
 
+import yirgacheffe as yg
 from tests.unit.helpers import gdal_dataset_of_region, make_vectors_with_id
-from yirgacheffe import Area, MapProjection, Window
-from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
+from yirgacheffe import Area, MapProjection
+from yirgacheffe._layers import ConstantLayer, RasterLayer, VectorLayer
+from yirgacheffe._datatypes import Window
 
 
 def test_find_union_empty_list() -> None:
     with pytest.raises(ValueError):
-        _ = RasterLayer.find_union([])
+        _ = yg.find_union([])
 
 
 def test_find_union_single_item() -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02))
-    union = RasterLayer.find_union([layer])
+    union = yg.find_union([layer])
     assert union == layer.area
 
 
@@ -24,7 +26,7 @@ def test_find_union_same() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == layers[0].area
 
 
@@ -33,7 +35,7 @@ def test_find_union_subset() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
         RasterLayer(gdal_dataset_of_region(Area(-1, 1, 1, -1), 0.02)),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == layers[0].area
 
 
@@ -42,7 +44,7 @@ def test_find_union_overlap() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
         RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.02)),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == Area(-15, 15, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
 
 
@@ -51,11 +53,11 @@ def test_find_union_distinct() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-110, 10, -100, -10), 0.02)),
         RasterLayer(gdal_dataset_of_region(Area(100, 10, 110, -10), 0.02)),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == Area(-110, 10, 110, -10, MapProjection("epsg:4326", 0.02, -0.02))
 
     for layer in layers:
-        layer.set_window_for_union(union)
+        _ = layer.as_area(union)
 
 
 def test_find_union_with_null() -> None:
@@ -63,7 +65,7 @@ def test_find_union_with_null() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), 0.02)),
         ConstantLayer(0.0),
     ]
-    union = RasterLayer.find_union(layers)
+    union = yg.find_union(layers)
     assert union == layers[0].area
 
 
@@ -73,7 +75,7 @@ def test_find_union_different_pixel_pitch() -> None:
         RasterLayer(gdal_dataset_of_region(Area(-15, 15, -5, -5), 0.01)),
     ]
     with pytest.raises(ValueError):
-        _ = RasterLayer.find_union(layers)
+        _ = yg.find_union(layers)
 
 
 def test_find_union_with_vector_unbound() -> None:
@@ -88,17 +90,17 @@ def test_find_union_with_vector_unbound() -> None:
                 Area(left=59.93, top=70.07, right=170.04, bottom=44.98), 0.13
             )
         )
-        vector = VectorLayer.layer_from_file(path, None, None, None)
+        vector = VectorLayer.layer_from_file(path, None)
         assert vector.area == area
 
         layers = [raster, vector]
-        union = RasterLayer.find_union(layers)
+        union = yg.find_union(layers)
         aligned_area = vector.area.project_like(raster.area)
         assert union == aligned_area
 
-        raster.set_window_for_union(union)
-        with pytest.raises(ValueError):
-            vector.set_window_for_union(union)
+        for layer in layers:
+            expanded = layer.as_area(union)
+            assert expanded.area == union
 
 
 def test_find_union_with_vector_bound() -> None:
@@ -117,11 +119,11 @@ def test_find_union_with_vector_bound() -> None:
         assert vector.area != area
 
         layers = [raster, vector]
-        union = RasterLayer.find_union(layers)
+        union = yg.find_union(layers)
         assert union == vector.area
 
         for layer in layers:
-            layer.set_window_for_union(union)
+            _ = layer.as_area(union)
 
 
 @pytest.mark.parametrize(
@@ -129,16 +131,11 @@ def test_find_union_with_vector_bound() -> None:
 )
 def test_set_union_self(scale) -> None:
     layer = RasterLayer(gdal_dataset_of_region(Area(-10, 10, 10, -10), scale))
-    old_window = layer.window
 
     # note that the area we passed to gdal_dataset_of_region isn't pixel aligned, so we must
     # use the area from loading the dataset
-    layer.set_window_for_union(layer.area)
-    assert layer.window == old_window
-
-    # reset should not do much here
-    layer.reset_window()
-    assert layer.window == old_window
+    expanded_layer = layer.as_area(layer.area)
+    assert expanded_layer.dimensions == layer.dimensions
 
 
 @pytest.mark.parametrize(
@@ -170,7 +167,8 @@ def test_set_union_superset(
     origin_area = Area(-1, 1, 1, -1)
 
     layer = RasterLayer(gdal_dataset_of_region(origin_area, pixel_density))
-    assert layer.window == Window(0, 0, 100, 100)
+    assert layer.dimensions == (100, 100)
+    assert layer._virtual_window == Window(0, 0, 100, 100)
 
     # The make_dataset... function fills rows with the yoffset, and so the first row
     # will be 0s, matching our padding value, so we use the second row here
@@ -186,15 +184,13 @@ def test_set_union_superset(
     superset = Area(
         -1 - left_padding, 1 + top_padding, 1 + right_padding, -1 - bottom_padding
     )
-    layer.set_window_for_union(superset)
-    assert layer.window == Window(
-        round((0 - left_padding) / pixel_density),
-        round((0 - top_padding) / pixel_density),
+    expanded_layer = layer.as_area(superset)
+    assert expanded_layer.dimensions == (
         round((2 + left_padding + right_padding) / pixel_density),
         round((2 + top_padding + bottom_padding) / pixel_density),
     )
 
-    origin_after_pixel = layer.read_array(
+    origin_after_pixel = expanded_layer.read_array(
         0,
         1 + int(top_padding / pixel_density),
         100 + int((left_padding + right_padding) / pixel_density),
@@ -211,6 +207,3 @@ def test_set_union_superset(
         ]
         * int(right_padding / pixel_density)
     )
-
-    layer.reset_window()
-    assert layer.window == Window(0, 0, 100, 100)

@@ -11,7 +11,7 @@ from tests.unit.helpers import (
     gdal_multiband_dataset_with_data,
 )
 import yirgacheffe as yg
-from yirgacheffe.layers import H3CellLayer
+from yirgacheffe._layers import H3CellLayer
 from yirgacheffe._operators.cse import CSECacheTable
 from yirgacheffe._backends import backend
 
@@ -241,7 +241,7 @@ def test_cse_simple(mocker, monkeypatch) -> None:
             calc = (lhs + rhs) * (lhs + rhs)
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table = CSECacheTable(calc, calc.window)
+            hash_table = CSECacheTable(calc, calc._virtual_window)
 
             assert len(hash_table) == 4
 
@@ -250,10 +250,10 @@ def test_cse_simple(mocker, monkeypatch) -> None:
             lhs_hash = lhs._cse_hash
             rhs_hash = rhs._cse_hash
 
-            assert hash_table._table[(top_level_hash, calc.window)] == (1, None)
-            assert hash_table._table[(common_term_hash, calc.window)] == (2, None)
-            assert hash_table._table[(lhs_hash, calc.window)] == (1, None)
-            assert hash_table._table[(rhs_hash, calc.window)] == (1, None)
+            assert hash_table._table[(top_level_hash, calc._virtual_window)] == (1, None)
+            assert hash_table._table[(common_term_hash, calc._virtual_window)] == (2, None)
+            assert hash_table._table[(lhs_hash, calc._virtual_window)] == (1, None)
+            assert hash_table._table[(rhs_hash, calc._virtual_window)] == (1, None)
 
             lhs_spy = mocker.spy(lhs, "_read_array_with_window")
             rhs_spy = mocker.spy(rhs, "_read_array_for_area")
@@ -275,12 +275,12 @@ def test_simple_aoh_style_range_check(mocker, monkeypatch) -> None:
             calc = (lhs > 2) & (lhs < 7)
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table = CSECacheTable(calc, calc.window)
+            hash_table = CSECacheTable(calc, calc._virtual_window)
 
             assert len(hash_table) == 6
-            assert hash_table._table[(lhs._cse_hash, calc.window)] == (2, None)
+            assert hash_table._table[(lhs._cse_hash, calc._virtual_window)] == (2, None)
             for k, v in hash_table._table.items():
-                if k == (lhs._cse_hash, calc.window):
+                if k == (lhs._cse_hash, calc._virtual_window):
                     continue
                 assert v == (1, None)
 
@@ -309,7 +309,7 @@ def test_caching_versus_boundary_expansion(monkeypatch) -> None:
             calc = lhs.conv2d(matrix) * lhs
 
             # this is an API violation, but let's check the table used for CSE
-            hash_table = CSECacheTable(calc, calc.window)
+            hash_table = CSECacheTable(calc, calc._virtual_window)
             assert len(hash_table) == 4
             for val in hash_table._table.values():
                 assert val == (
@@ -350,18 +350,6 @@ def test_nan_to_num_hashable() -> None:
         assert (expected == actual).all()
 
 
-def test_unary_numpy_apply_hashable() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    with yg.from_array(data1, (0, 0), ("epsg:4326", (1.0, -1.0))) as layer:
-
-        def simple_add(chunk):
-            return chunk + 1.0
-
-        comp = layer.numpy_apply(simple_add)
-
-        assert comp._cse_hash is not None
-
-
 def test_cse_cache_table_reset() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     with (
@@ -369,22 +357,22 @@ def test_cse_cache_table_reset() -> None:
         yg.constant(3) as rhs,
     ):
         calc = (lhs + rhs) * (lhs + rhs)
-        cse_cache = CSECacheTable(calc, calc.window)
+        cse_cache = CSECacheTable(calc, calc._virtual_window)
 
         term = lhs + rhs
         term_hash = term._cse_hash
 
-        assert cse_cache.get_data(term_hash, calc.window) is None
+        assert cse_cache.get_data(term_hash, calc._virtual_window) is None
 
-        cse_cache.set_data(term_hash, calc.window, backend.promote(data1))
+        cse_cache.set_data(term_hash, calc._virtual_window, backend.promote(data1))
 
-        cache_result = cse_cache.get_data(term_hash, calc.window)
+        cache_result = cse_cache.get_data(term_hash, calc._virtual_window)
         assert cache_result is not None
         assert (backend.demote_array(cache_result) == data1).all()
 
         cse_cache.reset_cache()
 
-        assert cse_cache.get_data(term_hash, calc.window) is None
+        assert cse_cache.get_data(term_hash, calc._virtual_window) is None
 
 
 def test_cse_cache_table_cache_miss_on_different_window_size() -> None:
@@ -394,20 +382,20 @@ def test_cse_cache_table_cache_miss_on_different_window_size() -> None:
         yg.constant(3) as rhs,
     ):
         calc = (lhs + rhs) * (lhs + rhs)
-        cse_cache = CSECacheTable(calc, calc.window)
+        cse_cache = CSECacheTable(calc, calc._virtual_window)
 
         term = lhs + rhs
         term_hash = term._cse_hash
 
-        assert cse_cache.get_data(term_hash, calc.window) is None
+        assert cse_cache.get_data(term_hash, calc._virtual_window) is None
 
-        cse_cache.set_data(term_hash, calc.window, backend.promote(data1))
+        cse_cache.set_data(term_hash, calc._virtual_window, backend.promote(data1))
 
-        cache_result = cse_cache.get_data(term_hash, calc.window)
+        cache_result = cse_cache.get_data(term_hash, calc._virtual_window)
         assert (backend.demote_array(cache_result) == data1).all()
 
-        assert cse_cache.get_data(term_hash, calc.window.grow(1)) is None
+        assert cse_cache.get_data(term_hash, calc._virtual_window.grow(1)) is None
         # This just tests that we're not stuck on id(window) check, we do test proper window equality
-        cache_result = cse_cache.get_data(term_hash, calc.window.grow(0))
+        cache_result = cse_cache.get_data(term_hash, calc._virtual_window.grow(0))
         assert cache_result is not None
         assert (backend.demote_array(cache_result) == data1).all()

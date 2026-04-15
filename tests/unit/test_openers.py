@@ -8,10 +8,10 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe import WGS_84_PROJECTION
-from yirgacheffe.layers import InvalidRasterBand, RasterLayer
-from yirgacheffe.window import Area, MapProjection, Window
-from yirgacheffe.operators import DataType
+from yirgacheffe import DataType
+from yirgacheffe._layers import InvalidRasterBand, RasterLayer
+from yirgacheffe import Area, MapProjection
+from yirgacheffe._datatypes import Window
 from tests.unit.helpers import (
     gdal_dataset_of_region,
     gdal_multiband_dataset_with_data,
@@ -49,31 +49,35 @@ def test_too_many_files() -> None:
 def test_open_raster_file() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
+        projection = MapProjection("epsg:4326", 0.02, -0.02)
+        area = Area(-10, 10, 10, -10, projection)
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
         dataset.Close()
         assert os.path.exists(path)
 
         with yg.read_raster(path) as layer:
             assert layer.area == area
-            assert layer.pixel_scale == (0.02, -0.02)
-            assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
-            assert layer.window == Window(0, 0, 1000, 1000)
+            assert layer.projection == projection
+            assert layer.area.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+            assert layer.dimensions == (1000, 1000)
+            assert layer._virtual_window == Window(0, 0, 1000, 1000)
 
 
 def test_open_raster_file_as_path() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.tif"
-        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02))
+        projection = MapProjection("epsg:4326", 0.02, -0.02)
+        area = Area(-10, 10, 10, -10, projection)
         dataset = gdal_dataset_of_region(area, 0.02, filename=path)
         dataset.Close()
         assert path.exists()
 
         with yg.read_raster(path) as layer:
             assert layer.area == area
-            assert layer.pixel_scale == (0.02, -0.02)
-            assert layer.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
-            assert layer.window == Window(0, 0, 1000, 1000)
+            assert layer.projection == projection
+            assert layer.area.geo_transform == (-10, 0.02, 0.0, 10, 0.0, -0.02)
+            assert layer.dimensions == (1000, 1000)
+            assert layer._virtual_window == Window(0, 0, 1000, 1000)
 
 
 def test_open_multiband_raster_wrong_band() -> None:
@@ -114,7 +118,7 @@ def test_open_multiband_raster() -> None:
 def test_shape_from_nonexistent_file() -> None:
     with pytest.raises(FileNotFoundError):
         _ = yg.read_shape(
-            "this_file_does_not_exist.gpkg", (WGS_84_PROJECTION, (1.0, -1.0))
+            "this_file_does_not_exist.gpkg", ("epsg:4326", (1.0, -1.0))
         )
 
 
@@ -124,13 +128,14 @@ def test_open_gpkg_with_mapprojection() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        with yg.read_shape(path, MapProjection(WGS_84_PROJECTION, 1.0, -1.0)) as layer:
+        with yg.read_shape(path, MapProjection("epsg:4326", 1.0, -1.0)) as layer:
             assert layer.area == Area(
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
-            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-            assert layer.window == Window(0, 0, 20, 10)
-            assert layer.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+            assert layer.area.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.dimensions == (20, 10)
+            assert layer._virtual_window == Window(0, 0, 20, 10)
+            assert layer.projection == MapProjection("epsg:4326", 1.0, -1.0)
 
 
 def test_open_gpkg_with_no_projection() -> None:
@@ -142,10 +147,10 @@ def test_open_gpkg_with_no_projection() -> None:
         with yg.read_shape(path) as layer:
             assert layer.area == area
             assert layer.projection is None
+            with pytest.raises(ValueError):
+                _ = layer.area.geo_transform
             with pytest.raises(AttributeError):
-                _ = layer.geo_transform
-            with pytest.raises(AttributeError):
-                _ = layer.window
+                _ = layer._virtual_window
 
 
 def test_open_gpkg_direct_scale() -> None:
@@ -154,13 +159,14 @@ def test_open_gpkg_direct_scale() -> None:
         area = Area(-10.0, 10.0, 10.0, 0.0)
         make_vectors_with_id(42, {area}, path)
 
-        with yg.read_shape(path, (WGS_84_PROJECTION, (1.0, -1.0))) as layer:
+        with yg.read_shape(path, ("epsg:4326", (1.0, -1.0))) as layer:
             assert layer.area == Area(
                 -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
-            assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-            assert layer.window == Window(0, 0, 20, 10)
-            assert layer.map_projection == MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+            assert layer.area.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert layer.dimensions == (20, 10)
+            assert layer._virtual_window == Window(0, 0, 20, 10)
+            assert layer.projection == MapProjection("epsg:4326", 1.0, -1.0)
 
 
 def test_open_gpkg_with_filter() -> None:
@@ -169,16 +175,17 @@ def test_open_gpkg_with_filter() -> None:
         areas = {(Area(-10.0, 10.0, 0.0, 0.0), 42), (Area(0.0, 0.0, 10, -10), 43)}
         make_vectors_with_multiple_ids(areas, path)
 
-        with yg.read_shape(path, (WGS_84_PROJECTION, (1.0, -1.0)), "id_no=42") as layer:
+        with yg.read_shape(path, ("epsg:4326", (1.0, -1.0)), "id_no=42") as layer:
             assert layer.area == Area(
                 -10.0, 10.0, 0.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
             )
-            assert layer.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
-            assert layer.window == Window(0, 0, 10, 10)
+            assert layer.area.geo_transform == (-10.0, 1.0, 0.0, 10.0, 0.0, -1.0)
+            assert layer.dimensions == (10, 10)
+            assert layer._virtual_window == Window(0, 0, 10, 10)
 
             # Because we picked one later, all pixels should be burned
             total = layer.sum()
-            assert total == (layer.window.xsize * layer.window.ysize)
+            assert total == (layer._virtual_window.xsize * layer._virtual_window.ysize)
 
 
 def test_open_shape_like() -> None:
@@ -198,8 +205,9 @@ def test_open_shape_like() -> None:
                 assert layer.area == Area(
                     -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
                 )
-                assert layer.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
-                assert layer.window == Window(0, 0, 20, 10)
+                assert layer.area.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+                assert layer.dimensions == (20, 10)
+                assert layer._virtual_window == Window(0, 0, 20, 10)
                 assert layer.projection == raster_layer.projection
 
 
@@ -226,7 +234,8 @@ def test_open_two_raster_areas_side_by_side(tiled):
             assert group.area == Area(
                 -10, 10, 30, -10, MapProjection("epsg:4326", 0.2, -0.2)
             )
-            assert group.window == Window(0, 0, 200, 100)
+            assert group.dimensions == (200, 100)
+            assert group._virtual_window == Window(0, 0, 200, 100)
 
             with yg.read_raster(path1) as raster1:
                 with yg.read_raster(path2) as raster2:
@@ -251,7 +260,8 @@ def test_open_two_raster_by_glob(tiled):
             assert group.area == Area(
                 -10, 10, 30, -10, MapProjection("epsg:4326", 0.2, -0.2)
             )
-            assert group.window == Window(0, 0, 200, 100)
+            assert group.dimensions == (200, 100)
+            assert group._virtual_window == Window(0, 0, 200, 100)
 
             with yg.read_raster(path1) as raster1:
                 with yg.read_raster(path2) as raster2:
@@ -279,17 +289,21 @@ def test_open_uniform_area_layer() -> None:
         assert dataset.RasterYSize == ceil(180 / pixel_scale)
         dataset.Close()
 
+        expected_projection = MapProjection("epsg:4326", pixel_scale, -pixel_scale)
         with yg.read_narrow_raster(path) as layer:
-            assert layer.map_projection is not None
-            assert layer.map_projection.scale == (pixel_scale, -pixel_scale)
+            assert layer.projection == expected_projection
             assert layer.area == Area(
                 floor(-180 / pixel_scale) * pixel_scale,
                 ceil(90 / pixel_scale) * pixel_scale,
                 ceil(180 / pixel_scale) * pixel_scale,
                 floor(-90 / pixel_scale) * pixel_scale,
-                MapProjection("epsg:4326", pixel_scale, -pixel_scale),
+                expected_projection,
             )
-            assert layer.window == Window(
+            assert layer.dimensions == (
+                ceil((layer.area.right - layer.area.left) / pixel_scale),
+                ceil((layer.area.top - layer.area.bottom) / pixel_scale),
+            )
+            assert layer._virtual_window == Window(
                 0,
                 0,
                 ceil((layer.area.right - layer.area.left) / pixel_scale),
@@ -309,11 +323,8 @@ def test_incorrect_tiff_for_uniform_area() -> None:
 
 def test_constant() -> None:
     with yg.constant(42.0) as layer:
-        area = Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0)
-        projection = MapProjection(WGS_84_PROJECTION, 0.1, -0.1)
-        with RasterLayer.empty_raster_layer(
-            area, projection.scale, DataType.Float32
-        ) as result:
+        area = Area(left=-1.0, right=1.0, top=1.0, bottom=-1.0, projection=MapProjection("epsg:4326", 0.1, -0.1))
+        with RasterLayer.empty_raster_layer(area, DataType.Float32) as result:
             layer.save(result)
 
             expected = np.full((20, 20), 42.0)
@@ -322,14 +333,14 @@ def test_constant() -> None:
 
 
 def test_create_simple_float() -> None:
-    projection = MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+    projection = MapProjection("epsg:4326", 1.0, -1.0)
     data = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     with yg.from_array(data, (-2.0, 1.0), projection) as layer:
         expected_area = Area(
             left=-2.0, right=2.0, top=1.0, bottom=-1.0, projection=projection
         )
 
-        assert layer.map_projection == projection
+        assert layer.projection == projection
         assert layer.area == expected_area
         assert layer.datatype == DataType.Float64
 
@@ -338,14 +349,14 @@ def test_create_simple_float() -> None:
 
 
 def test_create_simple_direct_projection() -> None:
-    expected_projection = MapProjection(WGS_84_PROJECTION, 1.0, -1.0)
+    expected_projection = MapProjection("epsg:4326", 1.0, -1.0)
     data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
-    with yg.from_array(data, (-2.0, 1.0), (WGS_84_PROJECTION, (1.0, -1.0))) as layer:
+    with yg.from_array(data, (-2.0, 1.0), ("epsg:4326", (1.0, -1.0))) as layer:
         expected_area = Area(
             left=-2.0, right=2.0, top=1.0, bottom=-1.0, projection=expected_projection
         )
 
-        assert layer.map_projection == expected_projection
+        assert layer.projection == expected_projection
         assert layer.area == expected_area
         assert layer.datatype == DataType.Int64
 
@@ -360,8 +371,8 @@ def test_rounding_errors() -> None:
     projection = yg.MapProjection("epsg:4326", 0.083333333333333, -0.083333333333333)
 
     with yg.from_array(data1, (-180.0, 90.0), projection) as layer1:
-        assert layer1.window.xsize == 4
-        assert layer1.window.ysize == 4
+        assert layer1._virtual_window.xsize == 4
+        assert layer1._virtual_window.ysize == 4
 
 
 def test_simple_scale_down() -> None:
@@ -385,6 +396,5 @@ def test_simple_scale_down() -> None:
             yg.read_raster_like(path, reference, yg.ResamplingMethod.Nearest) as layer
         ):
             assert layer.area == expected_area
-            assert layer.map_projection == target_projection
-            assert layer.pixel_scale == target_projection.scale
-            assert layer.map_projection == reference.map_projection
+            assert layer.projection == target_projection
+            assert layer.projection == reference.projection

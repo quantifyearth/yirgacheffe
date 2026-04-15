@@ -6,8 +6,8 @@ import numpy as np
 import pytest
 
 import yirgacheffe as yg
-from yirgacheffe.layers import YirgacheffeLayer
-from yirgacheffe.window import Area, MapProjection
+from yirgacheffe._layers import YirgacheffeLayer
+from yirgacheffe import Area, MapProjection
 
 from tests.unit.helpers import make_vectors_with_id
 
@@ -190,11 +190,15 @@ def test_pixel_for_latlng_on_operator() -> None:
 def test_latlng_for_pixel_with_intersection(
     area: Area, window: Area, pixel: tuple[int, int], expected: tuple[float, float]
 ) -> None:
-    layer = YirgacheffeLayer(area)
-    layer.set_window_for_intersection(window)
-    result = layer.latlng_for_pixel(*pixel)
-    assert math.isclose(result[0], expected[0])
-    assert math.isclose(result[1], expected[1])
+    pixel_width, pixel_height = area.pixel_dimensions
+    data = np.zeros((pixel_height, pixel_width))
+    projection = area.projection
+    assert projection is not None
+    with yg.from_array(data, (area.left, area.top), projection) as layer:
+        clipped_layer = layer.as_area(window)
+        result = clipped_layer.latlng_for_pixel(*pixel)
+        assert math.isclose(result[0], expected[0])
+        assert math.isclose(result[1], expected[1])
 
 
 @pytest.mark.parametrize(
@@ -223,7 +227,11 @@ def test_latlng_for_pixel_with_intersection(
 def test_pixel_for_latlng_with_intersection(
     area: Area, window: Area, coord: tuple[float, float], expected: tuple[int, int]
 ) -> None:
-    layer = YirgacheffeLayer(area)
-    layer.set_window_for_intersection(window)
-    result = layer.pixel_for_latlng(*coord)
-    assert result == expected
+    pixel_width, pixel_height = area.pixel_dimensions
+    data = np.zeros((pixel_height, pixel_width))
+    projection = area.projection
+    assert projection is not None
+    with yg.from_array(data, (area.left, area.top), projection) as layer:
+        clipped_layer = layer.as_area(window)
+        result = clipped_layer.pixel_for_latlng(*coord)
+        assert result == expected

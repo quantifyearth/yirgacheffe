@@ -5,15 +5,14 @@ from math import ceil, floor
 from pathlib import Path
 from typing import Any
 
-import deprecation
 from osgeo import gdal, ogr
 
 from .. import __version__
-from ..window import Area, MapProjection, PixelScale
+from .._datatypes import Area, MapProjection
 from .base import YirgacheffeLayer
-from .rasters import RasterLayer
 from .._backends import backend
 from .._backends.enumeration import dtype as DataType
+from ..constants import YSTEP
 
 def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> DataType: # pylint: disable=R0911
     if isinstance(burn_value, str):
@@ -56,123 +55,6 @@ def _validate_burn_value(burn_value: Any, layer: ogr.Layer) -> DataType: # pylin
     else:
         raise ValueError(f"data type of burn value {burn_value} not supported")
 
-
-class RasteredVectorLayer(RasterLayer):
-    """This layer takes a vector file and rasterises it for the given filter. Rasterization
-    up front like this is very expensive, so not recommended. Instead you should use
-    VectorLayer."""
-
-    @classmethod
-    @deprecation.deprecated(
-        deprecated_in="1.7",
-        removed_in="2.0",
-        current_version=__version__,
-        details="Use `VectorLayer` instead."
-    )
-    def layer_from_file( # type: ignore[override] # pylint: disable=W0221
-        cls,
-        filename: Path | str,
-        where_filter: str | None,
-        scale: PixelScale,
-        projection: str,
-        datatype: int | DataType | None = None,
-        burn_value: int | float | str = 1,
-    ) -> RasteredVectorLayer:
-        vectors = ogr.Open(filename)
-        if vectors is None:
-            raise FileNotFoundError(filename)
-        layer = vectors.GetLayer()
-        if where_filter is not None:
-            layer.SetAttributeFilter(where_filter)
-
-        estimated_datatype = _validate_burn_value(burn_value, layer)
-        if datatype is None:
-            datatype_arg: DataType = estimated_datatype
-        elif isinstance(datatype, int):
-            datatype_arg = DataType.of_gdal(datatype)
-        else:
-            datatype_arg = datatype
-
-        map_projection = MapProjection(projection, scale.xstep, scale.ystep)
-
-        vector_layer = RasteredVectorLayer(
-            layer,
-            map_projection,
-            datatype=datatype_arg,
-            burn_value=burn_value
-        )
-
-        # this is a gross hack, but unless you hold open the original file, you'll get
-        # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
-        # the original object being around
-        vector_layer._original = vectors
-        return vector_layer
-
-    def __init__(
-        self,
-        layer: ogr.Layer,
-        projection: MapProjection,
-        datatype: int | DataType = DataType.Byte,
-        burn_value: int | float | str = 1,
-    ):
-        if layer is None:
-            raise ValueError('No layer provided')
-        self.layer = layer
-
-        self._original: Any | None = None
-
-        if isinstance(datatype, int):
-            datatype_arg = DataType.of_gdal(datatype)
-        else:
-            datatype_arg = datatype
-
-        # work out region for mask
-        envelopes = []
-        layer.ResetReading()
-        feature = layer.GetNextFeature()
-        while feature:
-            geometry = feature.GetGeometryRef()
-            if geometry:
-                envelopes.append(geometry.GetEnvelope())
-            feature = layer.GetNextFeature()
-        if len(envelopes) == 0:
-            raise ValueError('No geometry found for')
-
-        # Get the area, but scale it to the pixel resolution that we're using. Note that
-        # the pixel scale GDAL uses can have -ve values, but those will mess up the
-        # ceil/floor math, so we use absolute versions when trying to round.
-        abs_xstep, abs_ystep = abs(projection.xstep), abs(projection.ystep)
-        area = Area(
-            left=floor(min(x[0] for x in envelopes) / abs_xstep) * abs_xstep,
-            top=ceil(max(x[3] for x in envelopes) / abs_ystep) * abs_ystep,
-            right=ceil(max(x[1] for x in envelopes) / abs_xstep) * abs_xstep,
-            bottom=floor(min(x[2] for x in envelopes) / abs_ystep) * abs_ystep,
-            projection=projection,
-        )
-
-        # create new dataset for just that area
-        dataset = gdal.GetDriverByName('mem').Create(
-            'mem',
-            round((area.right - area.left) / abs_xstep),
-            round((area.top - area.bottom) / abs_ystep),
-            1,
-            datatype_arg.to_gdal(),
-            []
-        )
-        if not dataset:
-            raise MemoryError('Failed to create memory mask')
-
-        dataset.SetProjection(projection._gdal_projection)
-        dataset.SetGeoTransform(area.geo_transform)
-        if isinstance(burn_value, (int, float)):
-            gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[burn_value], options=["ALL_TOUCHED=TRUE"])
-        elif isinstance(burn_value, str):
-            gdal.RasterizeLayer(dataset, [1], self.layer, options=[f"ATTRIBUTE={burn_value}", "ALL_TOUCHED=TRUE"])
-        else:
-            raise ValueError("Burn value for layer should be number or field name")
-        super().__init__(dataset)
-
-
 class VectorLayer(YirgacheffeLayer):
     """This layer takes a vector file and rasterises it for the given filter. Rasterization occurs only
     when the data is fetched, so there is no explosive memeory cost, but fetching small units (e.g., one
@@ -190,8 +72,8 @@ class VectorLayer(YirgacheffeLayer):
     ) -> VectorLayer:
         if other_layer is None:
             raise ValueError("like layer can not be None")
-        map_projection = other_layer.map_projection
-        if map_projection is None:
+        projection = other_layer.projection
+        if projection is None:
             raise ValueError("Reference layer must have projectione")
 
         vectors = ogr.Open(filename)
@@ -207,7 +89,7 @@ class VectorLayer(YirgacheffeLayer):
 
         vector_layer = VectorLayer(
             layer,
-            map_projection,
+            projection,
             name=str(filename),
             datatype=datatype if datatype is not None else other_layer.datatype,
             burn_value=burn_value,
@@ -226,35 +108,8 @@ class VectorLayer(YirgacheffeLayer):
     def layer_from_file(
         cls,
         filename: Path | str,
-        where_filter: str | None,
-        scale: PixelScale | None,
-        projection: str | None,
-        datatype: int | DataType | None = None,
-        burn_value: int | float | str = 1,
-        anchor: tuple[float, float] = (0.0, 0.0)
-    ) -> VectorLayer:
-        # In 2.0 we need to remove this and migrate to the MapProjection version
-        if (projection is None) ^ (scale is None):
-            raise ValueError("Either both projection and scale must be provide, or neither")
-        if projection is not None and scale is not None:
-            map_projection = MapProjection(projection, scale.xstep, scale.ystep)
-        else:
-            map_projection = None
-        return cls._future_layer_from_file(
-            filename,
-            where_filter,
-            map_projection,
-            datatype,
-            burn_value,
-            anchor
-        )
-
-    @classmethod
-    def _future_layer_from_file(
-        cls,
-        filename: Path | str,
-        where_filter: str | None,
         projection: MapProjection | None,
+        where_filter: str | None = None,
         datatype: int | DataType | None = None,
         burn_value: int | float | str = 1,
         anchor: tuple[float, float] = (0.0, 0.0)
@@ -391,16 +246,13 @@ class VectorLayer(YirgacheffeLayer):
         _force_union: bool = False,
         top_level: bool = False, # pylint:disable = W0613
     ) -> Area:
-        if self.map_projection is not None and projection is not None and self.map_projection != projection:
+        if self.projection is not None and projection is not None and self.projection != projection:
             raise ValueError("Calculation projection does not match layer projection")
 
-        target_projection = projection if projection is not None else self.map_projection
+        target_projection = projection if projection is not None else self.projection
 
         if target_projection is None:
-            if self._active_area is not None:
-                return self._active_area
-            else:
-                return self._underlying_area
+            return self._underlying_area
         else:
             # Get the area, but scale it to the pixel resolution that we're using. Note that
             # the pixel scale GDAL uses can have -ve values, but those will mess up the
@@ -428,10 +280,7 @@ class VectorLayer(YirgacheffeLayer):
 
     @property
     def area(self) -> Area:
-        if self._active_area is not None:
-            return self._active_area
-        else:
-            return self._get_operation_area()
+        return self._get_operation_area()
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)
@@ -470,8 +319,7 @@ class VectorLayer(YirgacheffeLayer):
         return hash((
             self.name,
             self._underlying_area,
-            self.map_projection,
-            self._active_area,
+            self.projection,
             self._datatype,
             self.burn_value,
             self._filter,
@@ -491,14 +339,14 @@ class VectorLayer(YirgacheffeLayer):
         height: int,
     ) -> Any:
         if target_projection is not None:
-            if self.map_projection is not None and self.map_projection != target_projection:
+            if self.projection is not None and self.projection != target_projection:
                 # This is an internal API, so this should have been caught long before now
                 raise RuntimeError("Inconsistent projection in use in calculation")
             projection = target_projection
         else:
-            if self.map_projection is None:
+            if self.projection is None:
                 raise ValueError("Attempting to rasterize a vector without a map projection")
-            projection = self.map_projection
+            projection = self.projection
 
         # We always need to rasterize on the grid of the reference layer if provided, or 0.0, 0.0 if not
         grid_offset_for_layer = self._underlying_area._grid_offset
@@ -529,20 +377,31 @@ class VectorLayer(YirgacheffeLayer):
             raise MemoryError('Failed to create memory mask')
 
         dataset.SetProjection(projection._gdal_projection)
-        dataset.SetGeoTransform([
+        geotransform = [
             target_area.left + (x * projection.xstep) + rasterize_offset_x,
             projection.xstep,
             0.0,
             target_area.top + (y * projection.ystep) + rasterize_offset_y,
             0.0,
             projection.ystep
-        ])
+        ]
+        dataset.SetGeoTransform(geotransform)
+
+        self.layer.SetSpatialFilterRect(
+            geotransform[0],
+            geotransform[3],
+            geotransform[0] + (geotransform[1] * width),
+            geotransform[3] + (geotransform[5] * height),
+        )
         if isinstance(self.burn_value, (int, float)):
-            gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[self.burn_value], options=["ALL_TOUCHED=TRUE"])
+            gdal.RasterizeLayer(dataset, [1], self.layer, burn_values=[self.burn_value],
+                options=["ALL_TOUCHED=TRUE", f"CHUNKYSIZE={YSTEP}"])
         elif isinstance(self.burn_value, str):
             gdal.RasterizeLayer(dataset, [1], self.layer, options=[f"ATTRIBUTE={self.burn_value}", "ALL_TOUCHED=TRUE"])
         else:
+            self.layer.SetSpatialFilter(None)
             raise ValueError("Burn value for layer should be number or field name")
+        self.layer.SetSpatialFilter(None)
 
         res = backend.promote(dataset.ReadAsArray(0, 0, width, height))
         return res

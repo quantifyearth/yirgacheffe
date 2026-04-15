@@ -11,8 +11,10 @@ from tests.unit.helpers import (
     make_vectors_with_id,
     generate_child_tile,
 )
-from yirgacheffe.layers import GroupLayer, RasterLayer, TiledGroupLayer, VectorLayer
-from yirgacheffe import Area, MapProjection, PixelScale, Window, DataType
+import yirgacheffe as yg
+from yirgacheffe._layers import GroupLayer, RasterLayer, TiledGroupLayer, VectorLayer
+from yirgacheffe import Area, DataType
+from yirgacheffe._datatypes import Window
 
 
 def test_empty_group():
@@ -34,46 +36,50 @@ def test_empty_file_list():
 def test_valid_file_list():
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
+        area = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
         dataset = gdal_dataset_of_region(area, 0.2, filename=path)
         dataset.Close()
         assert os.path.exists(path)
 
         with GroupLayer.layer_from_files([path]) as group:
             assert group.area == area
-            assert group.window == Window(0, 0, 100, 100)
+            assert group.dimensions == (100, 100)
+            assert group._virtual_window == Window(0, 0, 100, 100)
 
 
 def test_valid_file_list_from_dir():
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
+        area = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
         dataset = gdal_dataset_of_region(area, 0.2, filename=path)
         dataset.Close()
         assert os.path.exists(path)
 
         with GroupLayer.layer_from_directory(tempdir) as group:
             assert group.area == area
-            assert group.window == Window(0, 0, 100, 100)
+            assert group.dimensions == (100, 100)
+            assert group._virtual_window == Window(0, 0, 100, 100)
 
 
 def test_single_raster_layer_in_group():
-    area = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    area = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     with RasterLayer(gdal_dataset_of_region(area, 0.2)) as raster1:
         assert raster1.area == area
-        assert raster1.window == Window(0, 0, 100, 100)
+        assert raster1.dimensions == (100, 100)
+        assert raster1._virtual_window == Window(0, 0, 100, 100)
         assert raster1.sum() != 0
 
         with GroupLayer([raster1]) as group:
             assert group.area == area
-            assert group.window == Window(0, 0, 100, 100)
+            assert group.dimensions == (100, 100)
+            assert group._virtual_window == Window(0, 0, 100, 100)
             assert group.sum() == raster1.sum()
 
 
 def test_mismatched_layers():
-    area1 = Area(-20, 20, 20, -20, MapProjection("epsg:4326", 0.2, -0.2))
+    area1 = Area(-20, 20, 20, -20, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
-    area2 = Area(-30, 30, 30, -30, MapProjection("epsg:4326", 0.3, -0.3))
+    area2 = Area(-30, 30, 30, -30, yg.MapProjection("epsg:4326", 0.3, -0.3))
     raster2 = RasterLayer(gdal_dataset_of_region(area2, 0.3))
 
     with pytest.raises(ValueError):
@@ -82,27 +88,29 @@ def test_mismatched_layers():
 
 @pytest.mark.parametrize("klass", [GroupLayer, TiledGroupLayer])
 def test_two_raster_areas_side_by_side(klass):
-    area1 = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
-    area2 = Area(10, 10, 30, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    area2 = Area(10, 10, 30, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster2 = RasterLayer(gdal_dataset_of_region(area2, 0.2))
 
     group = klass([raster1, raster2])
-    assert group.area == Area(-10, 10, 30, -10, raster1.map_projection)
-    assert group.window == Window(0, 0, 200, 100)
+    assert group.area == Area(-10, 10, 30, -10, raster1.projection)
+    assert group.dimensions == (200, 100)
+    assert group._virtual_window == Window(0, 0, 200, 100)
     assert group.sum() == raster1.sum() + raster2.sum()
 
 
 @pytest.mark.parametrize("klass", [GroupLayer, TiledGroupLayer])
 def test_two_raster_areas_top_to_bottom(klass):
-    area1 = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
-    area2 = Area(10, 10, 30, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    area2 = Area(10, 10, 30, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster2 = RasterLayer(gdal_dataset_of_region(area2, 0.2))
 
     group = klass([raster1, raster2])
-    assert group.area == Area(-10, 10, 30, -10, raster1.map_projection)
-    assert group.window == Window(0, 0, 200, 100)
+    assert group.area == Area(-10, 10, 30, -10, raster1.projection)
+    assert group.dimensions == (200, 100)
+    assert group._virtual_window == Window(0, 0, 200, 100)
     assert group.sum() == raster1.sum() + raster2.sum()
 
 
@@ -127,8 +135,9 @@ def test_grid_tiles(klass, dims):
             rasters.append(raster)
 
     group = klass(rasters)
-    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].map_projection)
-    assert group.window == Window(0, 0, 5 * dims, 5 * dims)
+    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].projection)
+    assert group.dimensions == (5 * dims, 5 * dims)
+    assert group._virtual_window == Window(0, 0, 5 * dims, 5 * dims)
     assert group.sum() == np.array([x.sum() for x in rasters]).sum()
 
 
@@ -157,9 +166,10 @@ def test_overlapping_tiles(klass, dims):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
-    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+    assert group.dimensions == (5 * dims + 2, 5 * dims + 2)
+    assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
     data = group.read_array(0, 0, (5 * dims) + 2, (5 * dims) + 2)
     assert data.shape == ((5 * dims) + 2, (5 * dims) + 2)
     assert (
@@ -171,14 +181,15 @@ def test_overlapping_tiles(klass, dims):
 
 
 def test_two_raster_read_only_from_one():
-    area1 = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
-    area2 = Area(-10, -10, 10, -30, MapProjection("epsg:4326", 0.2, -0.2))
+    area2 = Area(-10, -10, 10, -30, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster2 = RasterLayer(gdal_dataset_of_region(area2, 0.2))
 
     group = GroupLayer([raster1, raster2])
-    assert group.area == Area(-10, 10, 10, -30, MapProjection("epsg:4326", 0.2, -0.2))
-    assert group.window == Window(0, 0, 100, 200)
+    assert group.area == Area(-10, 10, 10, -30, yg.MapProjection("epsg:4326", 0.2, -0.2))
+    assert group.dimensions == (100, 200)
+    assert group._virtual_window == Window(0, 0, 100, 200)
 
     data = group.read_array(0, 0, 10, 10)
     expected = raster1.read_array(0, 0, 10, 10)
@@ -186,14 +197,15 @@ def test_two_raster_read_only_from_one():
 
 
 def test_two_raster_read_only_from_other():
-    area1 = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
-    area2 = Area(-10, -10, 10, -30, MapProjection("epsg:4326", 0.2, -0.2))
+    area2 = Area(-10, -10, 10, -30, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster2 = RasterLayer(gdal_dataset_of_region(area2, 0.2))
 
     group = GroupLayer([raster1, raster2])
-    assert group.area == Area(-10, 10, 10, -30, MapProjection("epsg:4326", 0.2, -0.2))
-    assert group.window == Window(0, 0, 100, 200)
+    assert group.area == Area(-10, 10, 10, -30, yg.MapProjection("epsg:4326", 0.2, -0.2))
+    assert group.dimensions == (100, 200)
+    assert group._virtual_window == Window(0, 0, 100, 200)
 
     data = group.read_array(0, 100, 10, 10)
     expected = raster2.read_array(0, 0, 10, 10)
@@ -203,19 +215,19 @@ def test_two_raster_read_only_from_other():
 def test_single_vector_layer_in_group():
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
-        area = Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 0.2, -0.2))
+        area = Area(-10.0, 10.0, 10.0, -10.0, yg.MapProjection("epsg:4326", 0.2, -0.2))
         make_vectors_with_id(42, {area}, path)
 
-        vector1 = VectorLayer.layer_from_file(
-            path, None, PixelScale(0.2, -0.2), "epsg:4326"
-        )
+        vector1 = VectorLayer.layer_from_file(path, area.projection)
         assert vector1.area == area
-        assert vector1.window == Window(0, 0, 100, 100)
-        assert vector1.sum() == (vector1.window.xsize * vector1.window.ysize)
+        assert vector1.dimensions == (100, 100)
+        assert vector1._virtual_window == Window(0, 0, 100, 100)
+        assert vector1.sum() == (vector1._virtual_window.xsize * vector1._virtual_window.ysize)
 
         group = GroupLayer([vector1])
         assert group.area == area
-        assert group.window == Window(0, 0, 100, 100)
+        assert group.dimensions == (100, 100)
+        assert group._virtual_window == Window(0, 0, 100, 100)
         assert group.sum() == vector1.sum()
 
 
@@ -224,41 +236,38 @@ def test_overlapping_vector_layers():
         path1 = os.path.join(tempdir, "test1.gpkg")
         area1 = Area(-10.0, 10.0, 10.0, -10.0)
         make_vectors_with_id(42, {area1}, path1)
-        vector1 = VectorLayer.layer_from_file(
-            path1, None, PixelScale(0.2, -0.2), "epsg:4326"
-        )
+        projection = yg.MapProjection("epsg:4326", 0.2, -0.2)
+
+        vector1 = VectorLayer.layer_from_file(path1, projection)
 
         path2 = os.path.join(tempdir, "test2.gpkg")
         area2 = Area(-0.0, 10.0, 20.0, -10.0)
         make_vectors_with_id(24, {area2}, path2)
-        vector2 = VectorLayer.layer_from_file(
-            path2, None, PixelScale(0.2, -0.2), "epsg:4326"
-        )
+        vector2 = VectorLayer.layer_from_file(path2, projection)
 
         group = GroupLayer([vector1, vector2])
-        assert group.area == Area(
-            -10, 10, 20, -10, MapProjection("epsg:4326", 0.2, -0.2)
-        )
-        assert group.window == Window(0, 0, 150, 100)
+        assert group.area == Area(-10, 10, 20, -10, projection)
+        assert group.dimensions == (150, 100)
+        assert group._virtual_window == Window(0, 0, 150, 100)
         assert group.sum() == vector1.sum() + (vector2.sum() / 2)
 
 
 @pytest.mark.parametrize("klass", [GroupLayer, TiledGroupLayer])
 def test_with_window_adjust(klass):
+    projection = yg.MapProjection("epsg:4326", 0.1, -0.1)
     with tempfile.TemporaryDirectory() as tempdir:
         layers = []
         for idx in range(1, 11):
             path = os.path.join(tempdir, f"{idx}.gpkg")
             area = Area(idx, 10, idx + 1, -10)
             make_vectors_with_id(idx, {area}, path)
-            vector = VectorLayer.layer_from_file(
-                path, None, PixelScale(0.1, -0.1), "epsg:4326", burn_value="id_no"
-            )
+            vector = VectorLayer.layer_from_file(path, projection, burn_value="id_no")
             layers.append(vector)
 
         group = klass(layers)
-        assert group.area == Area(1, 10, 11, -10, MapProjection("epsg:4326", 0.1, -0.1))
-        assert group.window == Window(0, 0, 100, 200)
+        assert group.area == Area(1, 10, 11, -10, projection)
+        assert group.dimensions == (100, 200)
+        assert group._virtual_window == Window(0, 0, 100, 200)
 
         # Test before we apply a window
         row = group.read_array(0, 0, 100, 1)[0]
@@ -273,10 +282,9 @@ def test_with_window_adjust(klass):
         # now apply a window over each zone and check we
         # get what we expect
         for idx in range(1, 11):
-            group.reset_window()
-            area = Area(idx, 10, idx + 1, -10, MapProjection("epsg:4326", 0.1, -0.1))
-            group.set_window_for_intersection(area)
-            row = group.read_array(0, 0, 10, 1)
+            area = Area(idx, 10, idx + 1, -10, projection)
+            windowed_group = group.as_area(area)
+            row = windowed_group.read_array(0, 0, 10, 1)
             assert (row == idx).all()
 
 
@@ -301,20 +309,21 @@ def test_multipe_tiles_with_window(klass, dims):
 
     group = klass(rasters)
     assert group.area == Area(
-        0, 0, 10 * dims, -10 * dims, MapProjection("epsg:4326", 2.0, -2.0)
+        0, 0, 10 * dims, -10 * dims, yg.MapProjection("epsg:4326", 2.0, -2.0)
     )
-    assert group.window == Window(0, 0, 5 * dims, 5 * dims)
+    assert group.dimensions == (5 * dims, 5 * dims)
+    assert group._virtual_window == Window(0, 0, 5 * dims, 5 * dims)
 
     area = Area(
         group.area.left + 4.0,
         group.area.top - 4.0,
         group.area.right - 4.0,
         group.area.bottom + 4.0,
-        MapProjection("epsg:4326", 2.0, -2.0),
+        yg.MapProjection("epsg:4326", 2.0, -2.0),
     )
-    group.set_window_for_intersection(area)
-    assert group.window == Window(2, 2, (5 * dims) - 4, (5 * dims) - 4)
-    assert group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
+    windowed_group = group.as_area(area)
+    assert windowed_group.dimensions == (5 * dims - 4, 5 * dims - 4)
+    assert windowed_group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
         (5 * dims) - 4,
         (5 * dims) - 4,
     )
@@ -347,20 +356,21 @@ def test_overlapping_tiles_with_window(klass, dims):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, MapProjection("epsg:4326", 2.0, -2.0)
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, yg.MapProjection("epsg:4326", 2.0, -2.0)
     )
-    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+    assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
+    assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
 
     area = Area(
         group.area.left + 4.0,
         group.area.top - 4.0,
         group.area.right - 4.0,
         group.area.bottom + 4.0,
-        MapProjection("epsg:4326", 2.0, -2.0),
+        yg.MapProjection("epsg:4326", 2.0, -2.0),
     )
-    group.set_window_for_intersection(area)
-    assert group.window == Window(2, 2, (5 * dims) - 2, (5 * dims) - 2)
-    data = group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4)
+    windowed_group = group.as_area(area)
+    assert windowed_group.dimensions == ((5 * dims) - 2, (5 * dims) - 2)
+    data = windowed_group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4)
     assert data.shape == ((5 * dims) - 4, (5 * dims) - 4)
     assert (
         data
@@ -397,9 +407,10 @@ def test_overlapping_tiles_with_read_aligned_to_tiles(klass):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, MapProjection("epsg:4326", 2.0, -2.0)
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, yg.MapProjection("epsg:4326", 2.0, -2.0)
     )
-    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+    assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
+    assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
 
     # Read each OG tile in turn
     for y in range(dims):
@@ -454,19 +465,20 @@ def test_multipe_tiles_with_missing_tile(klass, dims, remove):
             rasters.append(raster)
 
     group = klass(rasters)
-    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].map_projection)
-    assert group.window == Window(0, 0, 5 * dims, 5 * dims)
+    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].projection)
+    assert group.dimensions == (5 * dims, 5 * dims)
+    assert group._virtual_window == Window(0, 0, 5 * dims, 5 * dims)
 
     area = Area(
         group.area.left + 4.0,
         group.area.top - 4.0,
         group.area.right - 4.0,
         group.area.bottom + 4.0,
-        rasters[0].map_projection,
+        rasters[0].projection,
     )
-    group.set_window_for_intersection(area)
-    assert group.window == Window(2, 2, (5 * dims) - 4, (5 * dims) - 4)
-    assert group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
+    windowed_group = group.as_area(area)
+    assert windowed_group.dimensions == ((5 * dims) - 4, (5 * dims) - 4)
+    assert windowed_group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
         (5 * dims) - 4,
         (5 * dims) - 4,
     )
@@ -515,20 +527,21 @@ def test_oversized_tiles_with_missing_tile(klass, dims, remove):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
-    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+    assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
+    assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
 
     area = Area(
         group.area.left + 4.0,
         group.area.top - 4.0,
         group.area.right - 4.0,
         group.area.bottom + 4.0,
-        rasters[0].map_projection,
+        rasters[0].projection,
     )
-    group.set_window_for_intersection(area)
-    assert group.window == Window(2, 2, (5 * dims) - 2, (5 * dims) - 2)
-    assert group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
+    windowed_group = group.as_area(area)
+    assert windowed_group.dimensions == ((5 * dims) - 2, (5 * dims) - 2)
+    assert windowed_group.read_array(0, 0, (5 * dims) - 4, (5 * dims) - 4).shape == (
         (5 * dims) - 4,
         (5 * dims) - 4,
     )
@@ -562,9 +575,10 @@ def test_read_zero_pixels(klass, size):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
-    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+    assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
+    assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
 
     with pytest.raises(ValueError):
         _ = group.read_array(0, 0, size[0], size[1])
@@ -602,15 +616,17 @@ def test_read_tiles_superset(read_area):
 
     group = GroupLayer(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
-    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+    assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
+    assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
 
     tiled = TiledGroupLayer(rasters)
     assert tiled.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
-    assert tiled.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+    assert tiled.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
+    assert tiled._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
 
     group_data = group.read_array(*read_area)
     tiled_data = tiled.read_array(*read_area)
@@ -651,14 +667,15 @@ def test_oversized_tiles_with_missing_tile_row_slices(klass, dims, remove):
 
     group = klass(rasters)
     assert group.area == Area(
-        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].map_projection
+        -2, 2, (10 * dims) + 2, (-10 * dims) - 2, rasters[0].projection
     )
-    assert group.window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
+    assert group.dimensions == ((5 * dims) + 2, (5 * dims) + 2)
+    assert group._virtual_window == Window(0, 0, (5 * dims) + 2, (5 * dims) + 2)
 
-    for y in range(group.window.ysize - 6):
-        assert group.read_array(0, y, group.window.xsize, 6).shape == (
+    for y in range(group._virtual_window.ysize - 6):
+        assert group.read_array(0, y, group._virtual_window.xsize, 6).shape == (
             6,
-            group.window.xsize,
+            group._virtual_window.xsize,
         )
 
 
@@ -690,13 +707,14 @@ def test_multipe_tiles_with_missing_tile_row_slices(klass, dims, remove):
             rasters.append(raster)
 
     group = klass(rasters)
-    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].map_projection)
-    assert group.window == Window(0, 0, 5 * dims, 5 * dims)
+    assert group.area == Area(0, 0, 10 * dims, -10 * dims, rasters[0].projection)
+    assert group.dimensions == (5 * dims, 5 * dims)
+    assert group._virtual_window == Window(0, 0, 5 * dims, 5 * dims)
 
-    for y in range(group.window.ysize - 6):
-        assert group.read_array(0, y, group.window.xsize, 6).shape == (
+    for y in range(group._virtual_window.ysize - 6):
+        assert group.read_array(0, y, group._virtual_window.xsize, 6).shape == (
             6,
-            group.window.xsize,
+            group._virtual_window.xsize,
         )
 
 
@@ -706,9 +724,9 @@ def test_two_raster_with_conv2d(klass):
     # numpy's np.zero as conv2d left the operating window as
     # having float values in it, which were whole numbers, but np.zeros
     # fails if the dimensions are not integer types.
-    area1 = Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
-    area2 = Area(10, 10, 30, -10, MapProjection("epsg:4326", 0.2, -0.2))
+    area2 = Area(10, 10, 30, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster2 = RasterLayer(gdal_dataset_of_region(area2, 0.2))
 
     group = klass([raster1, raster2])
@@ -718,5 +736,5 @@ def test_two_raster_with_conv2d(klass):
         [1, 10, 1],
         [0, 1, 0],
     ], dtype=np.float32)
-    filtered_group = group.astype(DataType.Float32).conv2d(kernel) > 12
+    filtered_group = group.as_type(DataType.Float32).conv2d(kernel) > 12
     assert 19800 == filtered_group.sum()

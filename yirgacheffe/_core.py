@@ -9,15 +9,17 @@ from typing import Sequence
 import numpy as np
 from osgeo import gdal
 
-from .layers import UniformAreaLayer
-from .layers import YirgacheffeLayer
-from .layers import ReprojectedRasterLayer, ResamplingMethod
-from .layers import ConstantLayer
-from .layers import GroupLayer, TiledGroupLayer
-from .layers import RasterLayer
-from .layers import VectorLayer
-from .layers import AreaPerPixelLayer
-from .window import MapProjection
+from ._layers import UniformAreaLayer
+from ._layers import YirgacheffeLayer
+from ._layers import ReprojectedRasterLayer, ResamplingMethod
+from ._layers import ConstantLayer
+from ._layers import GroupLayer, TiledGroupLayer
+from ._layers import RasterLayer
+from ._layers import VectorLayer
+from ._layers import AreaPerPixelLayer
+from ._layers import find_union
+from ._layers import H3CellLayer
+from ._datatypes import MapProjection
 from ._backends.enumeration import dtype as DataType
 
 def read_raster(
@@ -80,10 +82,10 @@ def read_raster_like(
         ...     res = layer1 * layer2
         ...     res.to_geotiff('result_in_esri_54009.tif')
     """
-    if like.map_projection is None:
+    if like.projection is None:
         raise ValueError("Reference layer must have a map projection.")
     original = RasterLayer.layer_from_file(filename, band, ignore_nodata)
-    return ReprojectedRasterLayer(original, like.map_projection, method, original.name)
+    return ReprojectedRasterLayer(original, like.projection, method, original.name)
 
 def read_narrow_raster(
     filename: Path | str,
@@ -167,10 +169,10 @@ def read_shape(
             projection_name, scale_tuple = projection
             projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
 
-    return VectorLayer._future_layer_from_file(
+    return VectorLayer.layer_from_file(
         filename,
-        where_filter,
         projection,
+        where_filter,
         datatype,
         burn_value,
     )
@@ -287,6 +289,28 @@ def area_raster(
 
     return AreaPerPixelLayer(projection)
 
+def h3_tile(
+    cell_id: str,
+    projection: MapProjection | tuple[str, tuple[float, float]],
+) -> YirgacheffeLayer:
+    """Create a layer that represents an H3 tile.
+
+    Args:
+        cell_id: The H3 cell identifier.
+        projection: the map projection and pixel scale to use when rasterizing.
+
+    Returns:
+        A geospatial layer where the pixels within the tile are 1 and those outside are 0.
+    """
+    if projection is None:
+        raise ValueError("Projection must not be none")
+
+    if not isinstance(projection, MapProjection):
+        projection_name, scale_tuple = projection
+        projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
+
+    return H3CellLayer(cell_id, projection)
+
 def to_geotiff(
     filename: Path | str,
     bands: Sequence[YirgacheffeLayer],
@@ -321,7 +345,7 @@ def to_geotiff(
     layer_list = list(bands)
     first_layer = layer_list[0]
     for layer in layer_list[1:]:
-        if layer.map_projection != first_layer.map_projection:
+        if layer.projection != first_layer.projection:
             raise ValueError("All layers must have the same map projection")
         if layer.datatype != first_layer.datatype:
             raise TypeError("All layers must have same data type. Use astype to explicitly cast layers.")
@@ -343,7 +367,7 @@ def to_geotiff(
     if not is_vsi_based:
         typed_filename.parent.mkdir(parents=True, exist_ok=True)
 
-    union_area = YirgacheffeLayer.find_union(layer_list)
+    union_area = find_union(layer_list)
 
     # GDAL TIFF compression is a significant bottleneck, and threading really helps. Yirgacheffe otherwise
     # will parallel compute a block of data, and then wait as a single thread does the GDAL TIFF compression
@@ -356,7 +380,7 @@ def to_geotiff(
         else:
             gdal_tiff_threads = parallelism
 
-    projection = first_layer.map_projection
+    projection = first_layer.projection
     if projection is None:
         raise ValueError("Can't save layours without projection")
 
@@ -364,10 +388,8 @@ def to_geotiff(
         try:
             with RasterLayer.empty_raster_layer(
                 union_area,
-                projection.scale,
                 first_layer.datatype,
                 tempory_file.name,
-                projection.name,
                 nodata=nodata,
                 sparse=sparse,
                 threads=gdal_tiff_threads,

@@ -10,9 +10,9 @@ import torch
 from osgeo import gdal
 
 import yirgacheffe as yg
-from yirgacheffe import Area, PixelScale, Window
-from yirgacheffe.layers import ConstantLayer, RasterLayer, VectorLayer
-from yirgacheffe.operators import DataType
+from yirgacheffe import Area, DataType
+from yirgacheffe._layers import RasterLayer, VectorLayer
+from yirgacheffe._datatypes import Window
 from yirgacheffe._operators import LayerOperation
 from yirgacheffe._backends import backend
 from tests.unit.helpers import (
@@ -61,18 +61,7 @@ def test_error_of_pixel_scale_wrong_three_param() -> None:
     layer3 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.01, data3))
 
     with pytest.raises(ValueError):
-        _ = LayerOperation.where(layer1, layer2, layer3)
-
-
-def test_incompatible_source_and_destination_projections() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-
-    with pytest.raises(ValueError):
-        _ = RasterLayer.empty_raster_layer(
-            layer1.area, PixelScale(1.0, -1.0), layer1.datatype
-        )
+        _ = yg.where(layer1, layer2, layer3)
 
 
 @pytest.mark.parametrize(
@@ -491,99 +480,6 @@ def test_power_const_by_float_layer() -> None:
     assert (expected == actual).all()
 
 
-def test_simple_unary_numpy_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(chunk):
-        return chunk + 1.0
-
-    comp = layer1.numpy_apply(simple_add)
-    comp.save(result)
-
-    expected = data1 + 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
-def test_isin_unary_numpy_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(chunk):
-        return np.isin(chunk, [2.0, 3.0])
-
-    comp = layer1.numpy_apply(simple_add)
-    comp.save(result)
-
-    # The * 1.0 is because the numpy result will be bool, but we bounced
-    # our answer via a float gdal dataset
-    expected = np.isin(data1, [2.0, 3.0]) * 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
-def test_simple_binary_numpy_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
-
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(chunk1, chunk2):
-        return chunk1 + chunk2
-
-    comp = layer1.numpy_apply(simple_add, layer2)
-    comp.save(result)
-
-    expected = data1 + data2
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
-def test_simple_unary_shader_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(pixel):
-        return pixel + 1.0
-
-    comp = layer1.shader_apply(simple_add)
-    comp.save(result)
-
-    expected = data1 + 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
-def test_simple_binary_shader_apply() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
-
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(pixel1, pixel2):
-        return pixel1 + pixel2
-
-    comp = layer1.shader_apply(simple_add, layer2)
-    comp.save(result)
-
-    expected = data1 + data2
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
 @pytest.mark.parametrize(
     "operator",
     [
@@ -624,81 +520,30 @@ def test_sum_layer() -> None:
 
 def test_constant_layer_result_rhs() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(1.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
+    with (
+        yg.from_array(data1, (0, 0), yg.MapProjection("epsg:4326", 0.02, -0.02)) as layer1,
+        yg.constant(1.0) as const_layer,
+    ):
+        comp = layer1 + const_layer
+        assert comp.dimensions == (4, 2)
 
-    layers = [layer1, const_layer, result]
-    intersection = RasterLayer.find_intersection(layers)
-    for layer in layers:
-        layer.set_window_for_intersection(intersection)
-
-    comp = layer1 + const_layer
-    comp.save(result)
-    result.reset_window()
-    actual = result.read_array(0, 0, 4, 2)
-
-    expected = 1.0 + data1
-
-    assert (expected == actual).all()
+        actual = comp.read_array(0, 0, 4, 2)
+        expected = data1 + 1.0
+        assert (expected == actual).all()
 
 
 def test_constant_layer_result_lhs() -> None:
     data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(1.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
+    with (
+        yg.from_array(data1, (0, 0), yg.MapProjection("epsg:4326", 0.02, -0.02)) as layer1,
+        yg.constant(1.0) as const_layer,
+    ):
+        comp = const_layer + layer1
+        assert comp.dimensions == (4, 2)
 
-    intersection = RasterLayer.find_intersection([layer1, const_layer])
-    const_layer.set_window_for_intersection(intersection)
-    layer1.set_window_for_intersection(intersection)
-
-    comp = const_layer + layer1
-    comp.save(result)
-
-    actual = result.read_array(0, 0, 4, 2)
-
-    expected = 1.0 + data1
-
-    assert (expected == actual).all()
-
-
-def test_shader_apply_constant_lhs() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(1.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(pixel1, pixel2):
-        return pixel1 + pixel2
-
-    comp = const_layer.shader_apply(simple_add, layer1)
-    comp.save(result)
-
-    expected = data1 + 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
-
-
-def test_shader_apply_constant_rhs() -> None:
-    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    const_layer = ConstantLayer(1.0)
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    def simple_add(pixel1, pixel2):
-        return pixel1 + pixel2
-
-    comp = layer1.shader_apply(simple_add, const_layer)
-    result = RasterLayer.empty_raster_layer_like(layer1)
-
-    comp.save(result)
-
-    expected = data1 + 1.0
-    actual = result.read_array(0, 0, 4, 2)
-
-    assert (expected == actual).all()
+        actual = comp.read_array(0, 0, 4, 2)
+        expected = data1 + 1.0
+        assert (expected == actual).all()
 
 
 def test_direct_layer_save() -> None:
@@ -1040,7 +885,7 @@ def test_where_simple(ct) -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.where(layer1 > 0, ct(1), ct(2))
+    comp = yg.where(layer1 > 0, ct(1), ct(2))
     comp.ystep = 1
     comp.save(result)
 
@@ -1058,7 +903,7 @@ def test_where_layers() -> None:
     layer_b = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data_b))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.where(layer1 > 0, layer_a, layer_b)
+    comp = yg.where(layer1 > 0, layer_a, layer_b)
     comp.ystep = 1
     comp.save(result)
 
@@ -1087,7 +932,7 @@ def test_isin_simple_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.isin(layer1, [2, 3])
+    comp = yg.isin(layer1, [2, 3])
     comp.ystep = 1
     comp.save(result)
 
@@ -1265,7 +1110,7 @@ def test_log_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.log(layer1)
+    comp = yg.log(layer1)
     comp.save(result)
 
     expected = backend.log(backend.promote(data1))
@@ -1325,7 +1170,7 @@ def test_exp_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.exp(layer1)
+    comp = yg.exp(layer1)
     comp.save(result)
 
     expected = backend.exp(backend.promote(data1))
@@ -1357,7 +1202,7 @@ def test_minimum_layers() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.minimum(layer1, layer2)
+    comp = yg.minimum(layer1, layer2)
     comp.save(result)
 
     expected = np.minimum(data1, data2)
@@ -1372,7 +1217,7 @@ def test_maximum_layers() -> None:
     layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.maximum(layer1, layer2)
+    comp = yg.maximum(layer1, layer2)
     comp.save(result)
 
     expected = np.maximum(data1, data2)
@@ -1398,7 +1243,7 @@ def test_clip_both_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.clip(layer1, 3.0, 6.0)
+    comp = yg.clip(layer1, 3.0, 6.0)
     comp.save(result)
 
     expected = np.clip(data1, 3.0, 6.0)
@@ -1424,7 +1269,7 @@ def test_clip_upper_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.clip(layer1, max=6.0)
+    comp = yg.clip(layer1, max=6.0)
     comp.save(result)
 
     expected = np.clip(data1, a_min=None, a_max=6.0)
@@ -1450,7 +1295,7 @@ def test_clip_lower_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.clip(layer1, min=3.0)
+    comp = yg.clip(layer1, min=3.0)
     comp.save(result)
 
     expected = np.clip(data1, a_min=3.0, a_max=None)
@@ -1478,7 +1323,7 @@ def test_abs_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.abs(layer1)
+    comp = yg.abs(layer1)
     comp.save(result)
 
     expected = backend.abs_op(backend.promote(data1))
@@ -1646,7 +1491,7 @@ def test_floor_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.floor(layer1)
+    comp = yg.floor(layer1)
     comp.save(result)
 
     expected = backend.floor_op(backend.promote(data1))
@@ -1676,7 +1521,7 @@ def test_round_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.round(layer1)
+    comp = yg.round(layer1)
     comp.save(result)
 
     expected = backend.round_op(backend.promote(data1))
@@ -1706,7 +1551,7 @@ def test_ceil_module() -> None:
     layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
     result = RasterLayer.empty_raster_layer_like(layer1)
 
-    comp = LayerOperation.ceil(layer1)
+    comp = yg.ceil(layer1)
     comp.save(result)
 
     expected = backend.ceil_op(backend.promote(data1))
@@ -1874,9 +1719,7 @@ def test_raster_and_vector() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        vector = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), yg.WGS_84_PROJECTION
-        )
+        vector = VectorLayer.layer_from_file(path, yg.MapProjection("epsg:4326", 1.0, -1.0))
 
         calc = raster * vector
         assert calc.sum() > 0.0
@@ -1893,9 +1736,7 @@ def test_raster_and_vector_mixed_projection() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        vector = VectorLayer.layer_from_file(
-            path, None, PixelScale(1.0, -1.0), yg.WGS_84_PROJECTION
-        )
+        vector = VectorLayer.layer_from_file(path, yg.MapProjection("epsg:4326", 1.0, -1.0))
 
         with pytest.raises(ValueError):
             _ = raster * vector
@@ -1911,7 +1752,7 @@ def test_raster_and_vector_no_scale_on_vector() -> None:
         make_vectors_with_id(42, {area}, path)
         assert path.exists()
 
-        vector = VectorLayer.layer_from_file(path, None, None, None)
+        vector = VectorLayer.layer_from_file(path, None)
 
         calc = raster * vector
         assert calc.sum() > 0.0
@@ -2046,13 +1887,15 @@ def test_very_slightly_missaligned_layers() -> None:
                 data2, (-180.000823370733258, 90.000411685366629), projection
             ) as layer2,
         ):
-            assert layer1.window == layer2.window
+            assert layer1.dimensions == layer2.dimensions
+            assert layer1._virtual_window == layer2._virtual_window
             expected_area = layer1.area | layer2.area
             diff = layer1 + layer2
             diff.to_geotiff(tmp / "test.tif")
 
         with yg.read_raster(tmp / "test.tif") as r:
-            assert r.window == Window(0, 0, 4, 4)
+            assert r.dimensions == (4, 4)
+            assert r._virtual_window == Window(0, 0, 4, 4)
             assert r.area == expected_area
 
             data = r.read_array(0, 0, 4, 4)

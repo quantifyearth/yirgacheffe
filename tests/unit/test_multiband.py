@@ -5,26 +5,23 @@ import numpy as np
 from osgeo import gdal
 
 import yirgacheffe as yg
-from yirgacheffe.layers import RasterLayer
-from yirgacheffe.window import Area, PixelScale
-
+from yirgacheffe._layers import RasterLayer
 
 def test_simple_two_band_image() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         target_path = os.path.join(tempdir, "target.tif")
+        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
 
         # Create an output raster layer with a number of bands
         bands = 4
         target = RasterLayer.empty_raster_layer(
-            Area(-1, 1, 1, -1),
-            PixelScale(1.0, -1.0),
+            yg.Area(-1, 1, 1, -1, projection),
             gdal.GDT_Byte,
             filename=target_path,
             bands=bands,
         )
 
         # Create a set of rasters in turn to fill each band
-        projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
         for i in range(bands):
             data1 = np.full((2, 2), i + 1)
             layer1 = yg.from_array(data1, (-1.0, 1.0), projection)
@@ -52,20 +49,15 @@ def test_stack_tifs_with_area_match() -> None:
             layer1 = yg.from_array(data1, (-100 + i, 100 + i), projection)
             source_layers.append(layer1)
 
-        intersection = RasterLayer.find_intersection(source_layers)
-        for layer in source_layers:
-            layer.set_window_for_intersection(intersection)
-
-        layer = source_layers[-1]
-        assert layer.window.xsize == 100 - (bands - 1)
-        assert layer.window.ysize == 100 - (bands - 1)
+        intersection = yg.find_intersection(source_layers)
+        aligned_layers = [layer.as_area(intersection) for layer in source_layers]
 
         target_path = os.path.join(tempdir, "target.tif")
         target = RasterLayer.empty_raster_layer_like(
-            layer, filename=target_path, bands=bands
+            aligned_layers[0], filename=target_path, bands=bands
         )
         for i in range(bands):
-            source_layers[i].save(target, band=i + 1)
+            aligned_layers[i].save(target, band=i + 1)
 
         # force things to disk
         target.close()
