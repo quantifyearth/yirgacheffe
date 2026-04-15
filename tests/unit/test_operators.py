@@ -2091,35 +2091,3 @@ def test_rshift_by_const() -> None:
         result = calc.read_array(0, 0, 4, 2)
         expected = data >> 2
         assert (expected == result).all()
-
-
-@pytest.mark.parametrize("cost_threshold, expected_count", [
-    (0, 2),
-    (1, 2),
-    (2, 1),
-    (3, 1),
-    (4, 0),
-    (5, 0),
-    (10, 0),
-])
-def test_evaluation_threshold_honoured(monkeypatch, cost_threshold, expected_count) -> None:
-    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]]).astype(np.uint8)
-    data2 = np.array([[10, 20, 30, 40], [50, 60, 70, 80]]).astype(np.uint8)
-    layer1 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data1))
-    layer2 = RasterLayer(gdal_dataset_with_data((0.0, 0.0), 0.02, data2))
-
-    with monkeypatch.context() as m:
-        teth_counter = 0
-        def eval_counter(a):
-            nonlocal teth_counter
-            teth_counter += 1
-            return a
-
-        m.setattr(yg.constants, "EVALUATION_THRESHOLD", cost_threshold)
-        monkeypatch.setattr(yg._backends.backend, "eval_op", eval_counter)
-
-        comp = layer1 + layer2 * 2
-        expected = data1 + data2 * 2
-        actual = comp.read_array(0, 0, 4, 2)
-        assert (expected == actual).all()
-        assert teth_counter == expected_count
