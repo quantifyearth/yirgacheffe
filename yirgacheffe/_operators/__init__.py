@@ -407,6 +407,10 @@ class LayerMathMixin:
             new_area=new_area,
         )
 
+    def as_projection(self, projection: MapProjection, method):
+        from .._layers import ReprojectedRasterLayer
+        return ReprojectedRasterLayer(self, projection, method)
+
     def latlng_for_pixel(self, x: int, y: int) -> tuple[float, float]:
         """Get geo coords for pixel. This is relative to the set view window.
 

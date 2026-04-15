@@ -1,6 +1,5 @@
 from __future__ import annotations
 import uuid
-from collections.abc import Callable
 from typing import Any
 
 from .. import __version__
@@ -107,34 +106,6 @@ class YirgacheffeLayer(LayerMathMixin):
             self.area.top, 0.0, self.projection.ystep
         )
 
-    def _set_window(self, new_area: Area, validation_callable: Callable[[Window],None] | None = None) -> None:
-        if self.projection is None:
-            raise ValueError("Can not set Window without explicit pixel scale")
-
-        if new_area.projection is None:
-            new_area = new_area.project_like(self._underlying_area)
-
-        # We force everything onto a grid aligned basis for calculating the window to avoid rounding issues
-        new_area = new_area._grid_aligned
-        underlying_area = self._underlying_area._grid_aligned
-
-        xoff, yoff = self.projection.round_down_pixels(
-            (new_area.left - underlying_area.left) / abs(self.projection.xstep),
-            (underlying_area.top - new_area.top) / abs(self.projection.ystep),
-        )
-        xsize, ysize = self.projection.round_up_pixels(
-            (new_area.right - new_area.left) / abs(self.projection.xstep),
-            (new_area.top - new_area.bottom) / abs(self.projection.ystep),
-        )
-        new_window = Window(xoff, yoff, xsize, ysize)
-
-        if validation_callable is not None:
-            # This should raise an exception if it fails
-            validation_callable(new_window)
-
-        self._window = new_window
-        self._active_area = new_area
-
     def _reset_window(self) -> None:
         self._active_area = None
         if self.projection:
@@ -143,40 +114,6 @@ class YirgacheffeLayer(LayerMathMixin):
                 (self.area.bottom - self.area.top) / self.projection.ystep,
             )
             self._window = Window(0, 0, width, height)
-
-    def offset_window_by_pixels(self, offset: int) -> None:
-        """Grows (if pixels is positive) or shrinks (if pixels is negative) the window for the layer."""
-        if offset == 0:
-            return
-
-        if offset < 0:
-            if (offset * -2 >= self._virtual_window.xsize) or (offset * -2 >= self._virtual_window.ysize):
-                raise ValueError(f"Can not shrink window by {offset}, would make size 0 or fewer pixels.")
-
-        new_window = Window(
-            xoff=self._virtual_window.xoff - offset,
-            yoff=self._virtual_window.yoff - offset,
-            xsize=self._virtual_window.xsize + (2 * offset),
-            ysize=self._virtual_window.ysize + (2 * offset),
-        )
-        if self.projection is None:
-            raise ValueError("Can not offset Window without explicit pixel scale")
-
-        # Note we can't assume that we weren't already on an intersection when making the offset!
-        # But remember that window is always relative to underlying area, and new_window
-        # here is based off the existing window
-        projection = self.projection
-        new_left = self._underlying_area.left + (new_window.xoff * projection.xstep)
-        new_top = self._underlying_area.top + (new_window.yoff * projection.ystep)
-        new_area = Area(
-            left=new_left,
-            top=new_top,
-            right=new_left + (new_window.xsize * projection.xstep),
-            bottom=new_top + (new_window.ysize * projection.ystep),
-            projection=self._underlying_area.projection,
-        )
-        self._window = new_window
-        self._active_area = new_area
 
     def _read_array_with_window(
         self,

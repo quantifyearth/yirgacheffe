@@ -76,12 +76,6 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         method: ResamplingMethod,
         name: str | None = None,
     ):
-        # This calls `reset_window` on the layer as part of it's progress. In 2.0 this will be
-        # a private API, but it's public in 1.x, though not widely used. This check is to ensure
-        # that assumption about it not really being used is true.
-        if src._active_area is not None:
-            raise ValueError("Source can not have a custom window framing set")
-
         reprojected_area = src.area.reproject(target_projection)
 
         super().__init__(
@@ -168,14 +162,8 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         # without relying on things like pids.
         fid = uuid.uuid4()
         with VsimemFile(f"/vsimem/src_{fid}.tif") as src_data_path:
-            # We need to be careful to restore the window state here, as the window is part of
-            # the CSE hash for _src, and the CSE hash for this layer includes the hash for the _src
-            # layer, so in effect we break our own hash if we forget to call reset window.
-            if  self._src._active_area is not None:
-                raise RuntimeError("Source can not have a custom window framing set")
-            self._src._set_window(expanded_src_read_area)
-            self._src.to_geotiff(src_data_path)
-            self._src._reset_window()
+            windowed = self._src.as_area(expanded_src_read_area)
+            windowed.to_geotiff(src_data_path)
 
             with VsimemFile(f"/vsimem/warped_{fid}.tif") as warped_data_path:
                 gdal.Warp(

@@ -1,9 +1,10 @@
-## v2.0.0 (31/03/2026)
+## v2.0.0 (15/04/2026)
 
 ### Added
 
 * Added a `dimensions` property to layers to give the raster equivalent width and height.
 * Added an `as_area` operator to redefine the area of a layer for use in a calculation. Useful for overriding the default behaviour of operators in terms of the area they take, and for explicit clipping or padding of inputs.
+* Added an `as_projection` operator to reproject a raster or calculation to a new map projection.
 * Added `h3_tile` to generate a layer for rasterizing H3 tiles.
 
 ### Changed
@@ -18,13 +19,13 @@
 
 ### Removed
 
-* Removed mutable layer properties `set_window_for_intersection`, `set_window_for_union`, and `reset_window`. Use the immutable `as_area` operator instead.
+* Removed mutable layer properties `set_window_for_intersection`, `set_window_for_union`, `offset_window_by_pixels`, and `reset_window`. Use the immutable `as_area` operator instead.
 * Removed `window` property from the public API.
 * Removed `Window` class from the public API.
 * Removed `PixelScale` class, deprecated for a long time, use `MapProjection` instead.
 * Removed `RasteredVectorLayer` class (use `VectorLayer` instead).
 * Removed old `projection` and `pixel_size` properties from layers that are now combined in the `MapProjection` object.
-* Removed `layers` from the public API, core methods should be used to access layers instead.
+* Removed `layers` from the public API, core methods (e.g., `read_raster`, `read_shape`) or operators (e.g., `as_projection`) should be used to access layers instead.
 * Removed properties from internal `LayerObject` API that was earlier exposed and had to be maintained for backwards compatibility.
 * Remove `WGS_84_PROJECTION` constant - for a while now this has been deprecated since we added more human readable string support (e.g., "epsg:4326").
 * Removed `scaled_raster_from_raster` which created an in memory rescaled image. Use `read_raster_like` to generate a dynamically scaled raster instead.
