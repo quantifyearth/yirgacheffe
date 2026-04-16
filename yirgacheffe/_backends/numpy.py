@@ -192,4 +192,8 @@ operator_map: dict[op, Callable] = {
     op.RSHIFT: np.ndarray.__rshift__,
     op.ASAREA: as_area_op,
     op.ASPROJECTION: as_projection_op,
+    op.LOGICAL_AND: np.logical_and,
+    op.LOGICAL_OR: np.logical_or,
+    op.LOGICAL_XOR: np.logical_xor,
+    op.LOGICAL_NOT: np.logical_not,
 }

@@ -17,8 +17,8 @@ The following symbolic operators are supported on layers:
 | <= | less than or equal |
 | > | greater than |
 | >= | greater than or equal |
-| & | logical and |
-| \| | logical or |
+| & | bitwise and |
+| \| | bitwise or |
 
 On a layer you can also invoke the following operations using `layer.operator(...)` syntax:
 
@@ -48,6 +48,7 @@ You can also call the following methods from `yirgacheffe`:
             - all
             - any
             - ceil
+            - clip
             - exp
             - exp2
             - floor
@@ -55,6 +56,10 @@ You can also call the following methods from `yirgacheffe`:
             - log
             - log10
             - log2
+            - logical_and
+            - logical_or
+            - logical_not
+            - logical_xor
             - maximum
             - minimum
             - nan_to_num

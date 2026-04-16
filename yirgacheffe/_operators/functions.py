@@ -149,3 +149,7 @@ abs = LayerOperation.abs # pylint: disable=W0622
 floor = LayerOperation.floor
 round = LayerOperation.round # pylint: disable=W0622
 ceil = LayerOperation.ceil
+logical_and = LayerOperation.logical_and
+logical_or = LayerOperation.logical_or
+logical_not = LayerOperation.logical_not
+logical_xor = LayerOperation.logical_xor

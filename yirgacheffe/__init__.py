@@ -20,7 +20,7 @@ from ._datatypes.mapprojection import MapProjection
 from ._backends.enumeration import dtype as DataType
 
 from ._operators.functions import where, minimum, maximum, clip, log, log2, log10, exp, exp2, nan_to_num, isin, \
-    floor, ceil # pylint: disable=W0611
+    floor, ceil, logical_and, logical_or, logical_not, logical_xor # pylint: disable=W0611
 from ._operators.functions import abs, all, any, round, sum # pylint: disable=W0611,W0622
 
 gdal.UseExceptions()
