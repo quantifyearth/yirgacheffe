@@ -2091,3 +2091,85 @@ def test_rshift_by_const() -> None:
         result = calc.read_array(0, 0, 4, 2)
         expected = data >> 2
         assert (expected == result).all()
+
+
+def test_logical_and() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data1 = np.array([[1, 2, 0, 0], [0, 6, 7, 8]])
+    data2 = np.array([[0, 1, 0, 1], [2, 0, 2, 1]])
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (0, 0), projection) as layer2,
+    ):
+        calc_logical = yg.logical_and(layer1, layer2)
+        calc_bitwise = layer1 & layer2
+        result_logical = calc_logical.read_array(0, 0, 4, 2)
+        result_bitwise = calc_bitwise.read_array(0, 0, 4, 2)
+
+        expected = np.logical_and(data1, data2)
+
+        assert not (result_logical == result_bitwise).all()
+        assert (result_logical == expected).all()
+
+
+def test_logical_or() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data1 = np.array([[1, 2, 0, 0], [0, 6, 7, 8]])
+    data2 = np.array([[0, 1, 0, 1], [2, 0, 2, 1]])
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (0, 0), projection) as layer2,
+    ):
+        calc_logical = yg.logical_or(layer1, layer2)
+        calc_bitwise = layer1 | layer2
+        result_logical = calc_logical.read_array(0, 0, 4, 2)
+        result_bitwise = calc_bitwise.read_array(0, 0, 4, 2)
+
+        expected = np.logical_or(data1, data2)
+
+        assert not (result_logical == result_bitwise).all()
+        assert (result_logical == expected).all()
+
+
+def test_logical_xor() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data1 = np.array([[1, 2, 0, 0], [0, 6, 7, 8]])
+    data2 = np.array([[0, 1, 0, 1], [2, 0, 2, 1]])
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (0, 0), projection) as layer2,
+    ):
+        calc_logical = yg.logical_xor(layer1, layer2)
+        result_logical = calc_logical.read_array(0, 0, 4, 2)
+
+        expected = np.logical_xor(data1, data2)
+
+        assert (result_logical == expected).all()
+
+
+def test_logical_not() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data1 = np.array([[1, 2, 0, 0], [0, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        calc_logical = yg.logical_not(layer)
+        result_logical = calc_logical.read_array(0, 0, 4, 2)
+
+        expected = np.logical_not(data1)
+
+        assert (result_logical == expected).all()
+
+
+def test_logical_not_too() -> None:
+    projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        calc1 = layer > 5
+        calc2 = yg.logical_not(layer <= 5)
+
+        result1 = calc1.read_array(0, 0, 4, 2)
+        result2 = calc2.read_array(0, 0, 4, 2)
+
+        expected = data1 > 5
+
+        assert (result1 == result2).all()
+        assert (result1 == expected).all()

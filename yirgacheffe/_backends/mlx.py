@@ -216,6 +216,9 @@ def as_area_op(data, new_area): # pylint: disable=W0613
 def as_projection_op(data, projection, method): # pylint: disable=W0613
     return data
 
+def logical_xor_op(x, y):
+    return mx.logical_and(mx.logical_or(x, y), mx.logical_not(mx.logical_and(x, y)))
+
 operator_map: dict[op, Callable] = {
     op.ADD: mx.array.__add__,
     op.SUB: mx.array.__sub__,
@@ -266,4 +269,8 @@ operator_map: dict[op, Callable] = {
     op.RSHIFT: mx.array.__rshift__,
     op.ASAREA: as_area_op,
     op.ASPROJECTION: as_projection_op,
+    op.LOGICAL_AND: mx.logical_and,
+    op.LOGICAL_OR: mx.logical_or,
+    op.LOGICAL_XOR: logical_xor_op,
+    op.LOGICAL_NOT: mx.logical_not,
 }

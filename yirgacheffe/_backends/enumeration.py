@@ -56,6 +56,10 @@ class operators(Enum):
     RSHIFT = 48
     ASAREA = 49
     ASPROJECTION = 50
+    LOGICAL_AND = 51
+    LOGICAL_OR = 52
+    LOGICAL_XOR = 53
+    LOGICAL_NOT = 54
 
 class dtype(Enum):
     """Represents the type of data returned by a layer.

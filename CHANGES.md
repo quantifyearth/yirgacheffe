@@ -1,4 +1,4 @@
-## v2.0.0 (15/04/2026)
+## v2.0.0 (16/04/2026)
 
 ### Added
 
@@ -6,6 +6,7 @@
 * Added an `as_area` operator to redefine the area of a layer for use in a calculation. Useful for overriding the default behaviour of operators in terms of the area they take, and for explicit clipping or padding of inputs.
 * Added an `as_projection` operator to reproject a raster or calculation to a new map projection.
 * Added `h3_tile` to generate a layer for rasterizing H3 tiles.
+* Added `logical_and`, `logical_or`, `logical_not`, and `logical_xor` operators.
 
 ### Changed
 

@@ -280,6 +280,18 @@ class LayerMathMixin:
             window_op=WindowOperation.NONE,
         )
 
+    def logical_and(self, other):
+        return LayerOperation(self, op.LOGICAL_AND, other, window_op=WindowOperation.INTERSECTION)
+
+    def logical_or(self, other):
+        return LayerOperation(self, op.LOGICAL_OR, other, window_op=WindowOperation.UNION)
+
+    def logical_not(self):
+        return LayerOperation(self, op.LOGICAL_NOT, window_op=WindowOperation.NONE)
+
+    def logical_xor(self, other):
+        return LayerOperation(self, op.LOGICAL_XOR, other, window_op=WindowOperation.UNION)
+
     def clip(self, min=None, max=None): # pylint: disable=W0622
         # In the numpy 1 API np.clip(array) used a_max, a_min arguments and array.clip() used max and min as arguments
         # In numpy 2 they moved so that max and min worked on both, but still support a_max, and a_min on np.clip.
