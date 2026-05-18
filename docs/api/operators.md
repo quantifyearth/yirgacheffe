@@ -25,6 +25,9 @@ On a layer you can also invoke the following operations using `layer.operator(..
 | Operator |
 |----------|
 | abs |
+| as_area |
+| as_projection |
+| as_type |
 | ceil |
 | clip |
 | conv2d |

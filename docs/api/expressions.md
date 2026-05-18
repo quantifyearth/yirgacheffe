@@ -123,6 +123,31 @@ with yg.read_raster('float_data.tif') as float_layer:
     int_layer = float_layer.as_type(DataType.Int32)
 ```
 
+### Area conversion
+
+In general when you are working on multiple data sources, Yirgacheffe will attempt to work out a minimal valid geospatial area of coverage for a given expression, based on the notion that for any region outside that defined in a GeoTIFF Yirgacheffe will fill in the gaps with zero. For example, if you multiply two areas together that have different geospatial areas, then it will take the intersection as it knows that pixels outside those defined in either layer will be zero, so the multiplication will result in zero, and so the intersection avoids unnecessary computation. However, for say addition, it will have to take the union of the areas as 0 plus a value is still a value.
+
+However, sometimes you will want to override this behaviour, and specify a layer is cropped to a certain subregion of the overall calculation is done to match the area of some other data you have. For that you can use the `as_area` operator.
+
+```python
+    with yg.read_raster('sweden.tif') as swe:
+        stockholm = swe.as_area(yg.Area(...coordinates of stockholm...))
+```
+
+### Projection conversion
+
+Another problem frequently encountered is having two data sources in different map projections. In that case Yirgacheffe can be used to reproject the data. You can either do this at load time, using `read_raster_like`, or within an expression:
+
+```python
+    with yg.read_raster('sweden_epsg:6004.tif') as swe:
+        swe_wgs84 = swe.as_projection("eps:4326", yg.ResampleingMethod.Nearest)
+        swe_wgs84.to_geotiff('sweden_wgs84.tif')
+```
+
+You must specify a resampling method to be used.
+
+Note: be careful using this as it is an expensive operation. If you use the same data in multiple calculations and reproject it each time you are probably better to reproject it and save it to disk, and then use that version multiple times.
+
 ## Storing the results of expressions
 
 There are three ways to store the result of a computation.
