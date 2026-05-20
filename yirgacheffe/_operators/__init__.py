@@ -7,6 +7,7 @@ import multiprocessing
 import operator as pyoperator
 import os
 import queue
+import random
 import resource
 import signal
 import sys
@@ -26,6 +27,7 @@ from typing import Any
 
 import numpy as np
 import numpy.typing as npt
+import psutil
 from osgeo import gdal
 from dill import dumps, loads # type: ignore
 from pyproj import Transformer
@@ -41,6 +43,8 @@ from .cse import CSECacheTable
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
+
+BACKOFF_TIME = 5
 
 class WindowOperation(Enum):
     NONE = 1
@@ -562,12 +566,17 @@ class LayerOperation(LayerMathMixin):
         other: Any = None,
         window_op: WindowOperation = WindowOperation.NONE,
         buffer_padding: int = 0,
+        free_mem_func = None,
         **kwargs
     ):
         self.ystep = constants.YSTEP
         self.kwargs = kwargs
         self._virtual_window_op = window_op
         self.buffer_padding = buffer_padding
+        if free_mem_func is None:
+            self.free_mem_func = lambda: psutil.virtual_memory().free
+        else:
+            self.free_mem_func = free_mem_func
 
         if lhs is None:
             raise ValueError("LHS on operation should not be none")
@@ -630,12 +639,16 @@ class LayerOperation(LayerMathMixin):
         if isinstance(self.operator, types.LambdaType):
             odict['operator_dill'] = dumps(self.operator)
             del odict['operator']
+        odict['free_mem_func_dill'] = dumps(self.free_mem_func)
+        del odict['free_mem_func']
         return odict
 
     def __setstate__(self, state) -> None:
         if 'operator_dill' in state:
             state['operator'] = loads(state['operator_dill'])
             del state['operator_dill']
+        state['free_mem_func'] = loads(state['free_mem_func_dill'])
+        del state['free_mem_func_dill']
         self.__dict__.update(state)
 
     @property
@@ -1145,6 +1158,14 @@ class LayerOperation(LayerMathMixin):
             while True:
                 cse_cache.reset_cache()
 
+                # If the system is low on memory, we should back off. Obviously there's
+                # a risk we starve in this currect implementation :/
+                # We are also using ystep, which is a worse case scenario
+                free_mem = self.free_mem_func()
+                if ((self.ystep * width * np_dtype.itemsize) * 4) > free_mem:
+                    time.sleep(BACKOFF_TIME + (random.random() * 2))
+                    continue
+
                 # We acquire the lock so we know we have somewhere to put the
                 # result before we take work. This is because in practice
                 # it seems the writing to GeoTIFF is the bottleneck, and
@@ -1270,6 +1291,22 @@ class LayerOperation(LayerMathMixin):
 
         total = None
 
+        # There's some dependancy ordering that could be more optimal here, as above
+        # we do some checks as to whether to run single threaded or not, but assuming
+        # you're not that close to the wire, we should do a check on how much memory
+        # is free an adjust the chunk size, on the assumption it's better to use
+        # the CPU core count with less data per chunk over throttling back workers
+        # if we don't have sufficient memory.
+        #
+        # Ideally we'd be more dynamic here, but our hands are somewhat tied due to how
+        # we need to setup the shared memory blocks for the results in advance, so
+        # without rewriting this entirely, scaling the chunk size based on initial system
+        # state is as good as we'll get in this release.
+        free_mem = self.free_mem_func()
+        seg_size_per_row = np_dtype.itemsize * computation_window.xsize
+        rows_in_mem = free_mem / seg_size_per_row
+        rows_per_worker = min(self.ystep, max(math.floor(rows_in_mem / worker_count), 1))
+
         with ExitStack() as stack:
             # If we get this far, then we're going to do the multiprocessing path. In general we've had
             # a lot of issues with limits on open file descriptors using multiprocessing on bigger machines
@@ -1283,7 +1320,7 @@ class LayerOperation(LayerMathMixin):
 
                 mem_sem_cast = []
                 for _ in range(worker_count):
-                    seg_size = np_dtype.itemsize * self.ystep * computation_window.xsize
+                    seg_size = np_dtype.itemsize * rows_per_worker * computation_window.xsize
                     shared_buf = smm.SharedMemory(size=seg_size)
                     cast_buf : npt.NDArray = np.ndarray(
                         (self.ystep, computation_window.xsize),
@@ -1296,10 +1333,10 @@ class LayerOperation(LayerMathMixin):
                 source_queue: multiprocessing.queues.Queue[tuple[int,int] | None] = Queue()
                 result_queue: multiprocessing.queues.Queue[tuple[int,int,int] | None] = Queue()
 
-                for yoffset in range(0, computation_window.ysize, self.ystep):
+                for yoffset in range(0, computation_window.ysize, rows_per_worker):
                     step = ((computation_window.ysize - yoffset)
-                        if yoffset+self.ystep > computation_window.ysize
-                        else self.ystep)
+                        if yoffset+rows_per_worker > computation_window.ysize
+                        else rows_per_worker)
                     source_queue.put((
                         yoffset,
                         step
