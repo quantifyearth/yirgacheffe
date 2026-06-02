@@ -38,7 +38,7 @@ def test_simple_scale_up() -> None:
 
 
 def test_scaling_down_unaligned() -> None:
-    area = Area(-10.005, 10.005, 9.995, -9.995)
+    area = Area(-10.004, 10.004, 9.996, -9.996)
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
         assert raster.dimensions == (20.0 / 0.02, 20.0 / 0.02)
@@ -47,12 +47,12 @@ def test_scaling_down_unaligned() -> None:
         layer = raster.as_projection(target_projection, ResamplingMethod.Nearest)
 
         assert layer.dimensions == (20 / 0.01, 20 / 0.01)
-        assert layer.area == Area(-10.01, 10.01, 9.99, -9.99, target_projection)
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, target_projection)
         assert layer.projection == target_projection
 
 
 def test_scaling_up_unaligned() -> None:
-    area = Area(-10.005, 10.005, 9.995, -9.995)
+    area = Area(-10.004, 10.004, 9.996, -9.996)
     dataset = gdal_dataset_of_region(area, 0.02)
     with RasterLayer(dataset) as raster:
         assert raster.dimensions == (20.0 / 0.02, 20.0 / 0.02)

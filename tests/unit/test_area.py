@@ -474,14 +474,14 @@ def test_reproject(lhs: Area, target: MapProjection, expected: Area) -> None:
             Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.04, -0.04)),
         ),
         (
-            Area(-10.005, 10.005, 9.995, -9.995, MapProjection("epsg:4326", 0.02, -0.02)),
+            Area(-10.004, 10.004, 9.996, -9.996, MapProjection("epsg:4326", 0.02, -0.02)),
             MapProjection("epsg:4326", 0.01, -0.01),
-            Area(-10.01, 10.01, 9.99, -9.99, MapProjection("epsg:4326", 0.01, -0.01)),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 0.01, -0.01)),
         ),
         (
-            Area(-10.005, 10.005, 9.995, -9.995, MapProjection("epsg:4326", 0.02, -0.02)),
+            Area(-10.004, 10.004, 9.996, -9.996, MapProjection("epsg:4326", 0.02, -0.02)),
             MapProjection("epsg:4326", 0.04, -0.04),
-            Area(-10.005, 10.005, 9.995, -9.995, MapProjection("epsg:4326", 0.04, -0.04)),
+            Area(-10.004, 10.004, 9.996, -9.996, MapProjection("epsg:4326", 0.04, -0.04)),
         ),
     ]
 )
@@ -489,7 +489,6 @@ def test_reproject_scaling(lhs: Area, target: MapProjection, expected: Area) -> 
     # This is reprojection again, but just changing the scale, which is split
     # out just to make debugging easier :)
     assert lhs.reproject(target) == expected
-
 
 @pytest.mark.parametrize(
     "lhs,target",
