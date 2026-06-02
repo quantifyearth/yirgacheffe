@@ -13,7 +13,6 @@ from yirgacheffe._layers import RasterLayer, ResamplingMethod
 from yirgacheffe import Area, MapProjection
 from yirgacheffe._datatypes import Window
 
-
 def test_simple_scale_down() -> None:
     area = Area(-10, 10, 10, -10)
     dataset = gdal_dataset_of_region(area, 0.02)
@@ -36,6 +35,34 @@ def test_simple_scale_up() -> None:
         assert layer.projection == target_projection
         assert layer.area.geo_transform == (-10, 0.04, 0.0, 10, 0.0, -0.04)
         assert layer.dimensions == (500, 500)
+
+
+def test_scaling_down_unaligned() -> None:
+    area = Area(-10.004, 10.004, 9.996, -9.996)
+    dataset = gdal_dataset_of_region(area, 0.02)
+    with RasterLayer(dataset) as raster:
+        assert raster.dimensions == (20.0 / 0.02, 20.0 / 0.02)
+
+        target_projection = MapProjection("epsg:4326", 0.01, -0.01)
+        layer = raster.as_projection(target_projection, ResamplingMethod.Nearest)
+
+        assert layer.dimensions == (20 / 0.01, 20 / 0.01)
+        assert layer.area == Area(-10.0, 10.0, 10.0, -10.0, target_projection)
+        assert layer.projection == target_projection
+
+
+def test_scaling_up_unaligned() -> None:
+    area = Area(-10.004, 10.004, 9.996, -9.996)
+    dataset = gdal_dataset_of_region(area, 0.02)
+    with RasterLayer(dataset) as raster:
+        assert raster.dimensions == (20.0 / 0.02, 20.0 / 0.02)
+
+        target_projection = MapProjection("epsg:4326", 0.04, -0.04)
+        layer = raster.as_projection(target_projection, ResamplingMethod.Nearest)
+
+        assert layer.dimensions == (20 / 0.04, 20 / 0.04)
+        assert layer.area == Area(-10, 10, 10, -10, target_projection)
+        assert layer.projection == target_projection
 
 
 def test_scaling_up_pixels() -> None:

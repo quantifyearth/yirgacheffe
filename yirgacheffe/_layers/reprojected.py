@@ -8,19 +8,8 @@ from osgeo import gdal
 from .._datatypes import Area, MapProjection, Window
 from .rasters import YirgacheffeLayer, RasterLayer
 from .._backends.enumeration import dtype as DataType
+from .._utils import VsimemFile
 
-class VsimemFile:
-    def __init__(self, path):
-        self.path = path
-
-    def __enter__(self):
-        return self.path
-
-    def __exit__(self, *args):
-        try:
-            gdal.Unlink(self.path)
-        except RuntimeError:
-            pass
 
 class ResamplingMethod(Enum):
     """Resampling methods used in reprojecting rasters.
@@ -160,11 +149,11 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
         # VSIMEM space, so we use a uuid4 that should be close enough to collision free
         # without relying on things like pids.
         fid = uuid.uuid4()
-        with VsimemFile(f"/vsimem/src_{fid}.tif") as src_data_path:
+        with VsimemFile(f"src_{fid}.tif") as src_data_path:
             windowed = self._src.as_area(expanded_src_read_area)
             windowed.to_geotiff(src_data_path)
 
-            with VsimemFile(f"/vsimem/warped_{fid}.tif") as warped_data_path:
+            with VsimemFile(f"warped_{fid}.tif") as warped_data_path:
                 gdal.Warp(
                     warped_data_path,
                     src_data_path,
@@ -176,7 +165,7 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                         width=xsize,
                         height=ysize,
                         resampleAlg=self._method.value,
-                        targetAlignedPixels=False,
+                        targetAlignedPixels=True,
                         outputBounds=(read_area.left, read_area.bottom, read_area.right, read_area.top)
                     )
                 )

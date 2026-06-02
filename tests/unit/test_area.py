@@ -407,8 +407,8 @@ def test_grid_offset(area: Area, expected: tuple[float, float] | None) -> None:
             Area(
                 -1002230.0,
                 1234040.0,
-                1002460.0,
-                -1229810.0,
+                1002230.0,
+                -1229820.0,
                 MapProjection("esri:54009", 10.0, -10.0),
             ),
         ),
@@ -416,12 +416,12 @@ def test_grid_offset(area: Area, expected: tuple[float, float] | None) -> None:
             Area(
                 -1002230.0,
                 1234040.0,
-                1002460.0,
-                -1229810.0,
+                1002230.0,
+                -1229820.0,
                 MapProjection("esri:54009", 10.0, -10.0),
             ),
             Area(-5.0, 4.99, 5.0, -5.01, MapProjection("epsg:4326", 0.1, -0.1)),
-            Area(-10.1, 9.9, 10.1, -9.9, MapProjection("epsg:4326", 0.1, -0.1)),
+            Area(-10.1, 10.0, 10.1, -10.0, MapProjection("epsg:4326", 0.1, -0.1)),
         ),
     ],
 )
@@ -438,8 +438,8 @@ def test_project_like(lhs: Area, rhs: Area, expected: Area) -> None:
             Area(
                 -1002230.0,
                 1234040.0,
-                1002460.0,
-                -1229810.0,
+                1002230.0,
+                -1229820.0,
                 MapProjection("esri:54009", 10.0, -10.0),
             ),
         ),
@@ -447,18 +447,48 @@ def test_project_like(lhs: Area, rhs: Area, expected: Area) -> None:
             Area(
                 -1002230.0,
                 1234040.0,
-                1002460.0,
-                -1229810.0,
+                1002230.0,
+                -1229820.0,
                 MapProjection("esri:54009", 10.0, -10.0),
             ),
             MapProjection("epsg:4326", 0.1, -0.1),
-            Area(-10.1, 9.9, 10.1, -9.9, MapProjection("epsg:4326", 0.1, -0.1)),
+            Area(-10.1, 10.0, 10.1, -10.0, MapProjection("epsg:4326", 0.1, -0.1)),
         ),
     ],
 )
 def test_reproject(lhs: Area, target: MapProjection, expected: Area) -> None:
     assert lhs.reproject(target) == expected
 
+
+@pytest.mark.parametrize(
+    "lhs,target,expected",
+    [
+        (
+            Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02)),
+            MapProjection("epsg:4326", 0.01, -0.01),
+            Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.01, -0.01)),
+        ),
+        (
+            Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02)),
+            MapProjection("epsg:4326", 0.04, -0.04),
+            Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.04, -0.04)),
+        ),
+        (
+            Area(-10.004, 10.004, 9.996, -9.996, MapProjection("epsg:4326", 0.02, -0.02)),
+            MapProjection("epsg:4326", 0.01, -0.01),
+            Area(-10.0, 10.0, 10.0, -10.0, MapProjection("epsg:4326", 0.01, -0.01)),
+        ),
+        (
+            Area(-10.004, 10.004, 9.996, -9.996, MapProjection("epsg:4326", 0.02, -0.02)),
+            MapProjection("epsg:4326", 0.04, -0.04),
+            Area(-10.004, 10.004, 9.996, -9.996, MapProjection("epsg:4326", 0.04, -0.04)),
+        ),
+    ]
+)
+def test_reproject_scaling(lhs: Area, target: MapProjection, expected: Area) -> None:
+    # This is reprojection again, but just changing the scale, which is split
+    # out just to make debugging easier :)
+    assert lhs.reproject(target) == expected
 
 @pytest.mark.parametrize(
     "lhs,target",

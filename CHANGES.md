@@ -1,3 +1,9 @@
+## v2.0.1 (02/06/2026)
+
+### Changes
+
+* Moved to using GDAL's wrap to predict reprojected area rather than a hybrid approach.
+
 ## v2.0.0 (16/04/2026)
 
 ### Added
