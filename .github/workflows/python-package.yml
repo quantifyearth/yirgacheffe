@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: publishing
-    container: ghcr.io/osgeo/gdal:ubuntu-small-3.11.4
+    container: ghcr.io/osgeo/gdal:ubuntu-small-3.12.4
     strategy:
       fail-fast: true
       matrix:
