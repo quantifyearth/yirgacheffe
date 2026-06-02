@@ -346,6 +346,8 @@ class Area:
                 targetAlignedPixels=True,
             ))
             vrt_ds = gdal.Open(path)
+            print(vrt_ds.RasterXSize, vrt_ds.RasterYSize)
+            print(vrt_ds.GetGeoTransform())
 
             gt = vrt_ds.GetGeoTransform()
             assert gt[1] == target_projection.xstep
