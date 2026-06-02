@@ -1,10 +1,12 @@
 from __future__ import annotations
 import math
+import uuid
 from dataclasses import dataclass
 
 from osgeo import gdal
 
 from .mapprojection import MapProjection
+from .._utils import VsimemFile
 
 @dataclass(frozen=True)
 class Area:
@@ -334,21 +336,31 @@ class Area:
         </VRTDataset>'''
 
         src_ds = gdal.Open(vrt_xml)
-        vrt_ds = gdal.AutoCreateWarpedVRT(src_ds, None,
-                                          target_projection._gdal_projection,
-                                          gdal.GRA_NearestNeighbour)
-        gt = vrt_ds.GetGeoTransform()
-        min_x = gt[0]
-        max_y = gt[3]
-        max_x = min_x + gt[1] * vrt_ds.RasterXSize
-        min_y = max_y + gt[5] * vrt_ds.RasterYSize
+
+        with VsimemFile(f"{str(uuid.uuid4())}.vrt") as path:
+            gdal.Warp(path, src_ds, options=gdal.WarpOptions(
+                dstSRS=target_projection._gdal_projection,
+                xRes=target_projection.xstep,
+                yRes=target_projection.ystep,
+                resampleAlg=gdal.GRA_NearestNeighbour,
+                targetAlignedPixels=True,
+            ))
+            vrt_ds = gdal.Open(path)
+
+            gt = vrt_ds.GetGeoTransform()
+            assert gt[1] == target_projection.xstep
+            assert gt[5] == target_projection.ystep
+
+            min_x = gt[0]
+            max_y = gt[3]
+            width = gt[1] * vrt_ds.RasterXSize
+            height = gt[5] * vrt_ds.RasterYSize
+
+        max_x = min_x + width
+        min_y = max_y + height
 
         return Area(
-            math.floor(min_x / target_projection.xstep) * target_projection.xstep,
-            math.ceil(max_y / target_projection.ystep) * target_projection.ystep,
-            math.ceil(max_x / target_projection.xstep) * target_projection.xstep,
-            math.floor(min_y / target_projection.ystep) * target_projection.ystep,
-            target_projection,
+            min_x, max_y, max_x, min_y, target_projection
         )
 
     def project_like(self, other: Area) -> Area:
