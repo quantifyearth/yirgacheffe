@@ -689,16 +689,22 @@ class LayerOperation(LayerMathMixin):
         if force_union:
             all_areas = [x for x in all_areas if not x.is_world]
 
-        window_op = WindowOperation.UNION if force_union else self._virtual_window_op
-        match window_op:
-            case WindowOperation.NONE:
-                area = all_areas[0]
-            case WindowOperation.INTERSECTION:
-                area = reduce(pyoperator.and_, all_areas)
-            case WindowOperation.UNION:
-                area = reduce(pyoperator.or_, all_areas)
-            case _:
-                raise RuntimeError("Should not be reached")
+        try:
+            match self._virtual_window_op:
+                case WindowOperation.NONE:
+                    area = all_areas[0]
+                case WindowOperation.INTERSECTION:
+                    area = reduce(pyoperator.and_, all_areas)
+                case WindowOperation.UNION:
+                    area = reduce(pyoperator.or_, all_areas)
+                case _:
+                    raise RuntimeError("Should not be reached")
+        except ValueError:
+            # Handle the case where we have disjoint areas that are
+            # combined with a global layer.
+            if not force_union:
+                raise
+            area = reduce(pyoperator.or_, all_areas)
 
         if top_level and area.is_world:
             return self._get_operation_area(projection, True)
