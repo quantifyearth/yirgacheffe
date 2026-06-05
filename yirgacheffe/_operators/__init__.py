@@ -512,11 +512,13 @@ class LayerMathMixin:
     def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
         raise NotImplementedError("Must be overridden by subclass")
 
-    def show(self, ax=None, max_pixels: int | None =1000, **kwargs):
+    def show(self, ax=None, parallelism=False, max_pixels: int | None =1000, **kwargs):
         """Display data using matplotlib.
 
         Args:
             ax: Matplotlib axes object. If not provided, the default matplotlib context will be used.
+            parallelism: Whether to attempt to use parallelisation for rendering. Has a higher
+                startup cost so can be slower for small rasters.
             max_pixels: How many pixels to downsample to. If None, raw pixels will be used.
             **kwargs: Passed to matplotlib imshow.
 
@@ -530,12 +532,19 @@ class LayerMathMixin:
 
         window = self._virtual_window
 
-        raw_data = self.read_array(
-            0,
-            0,
-            window.xsize,
-            window.ysize
-        )
+        if not parallelism:
+            raw_data = self.read_array(
+                0,
+                0,
+                window.xsize,
+                window.ysize
+            )
+        else:
+            from .._layers import RasterLayer # type: ignore # pylint: disable=C0415
+            with RasterLayer.empty_raster_layer_like(self) as memlayer:
+                self.parallel_save(memlayer)
+                raw_data = memlayer._dataset.GetRasterBand(1).ReadAsArray(0, 0, window.xsize, window.ysize)
+
         if max_pixels:
             downsample = max(window.xsize, window.ysize) // max_pixels
             downsample = max(downsample, 1)
