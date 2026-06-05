@@ -517,6 +517,8 @@ class LayerMathMixin:
 
         Args:
             ax: Matplotlib axes object. If not provided, the default matplotlib context will be used.
+            parallelism: Whether to attempt to use parallelisation for rendering. Has a higher
+                startup cost so can be slower for small rasters.
             max_pixels: How many pixels to downsample to. If None, raw pixels will be used.
             **kwargs: Passed to matplotlib imshow.
 
