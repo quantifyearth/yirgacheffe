@@ -512,7 +512,7 @@ class LayerMathMixin:
     def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
         raise NotImplementedError("Must be overridden by subclass")
 
-    def show(self, ax=None, max_pixels: int | None =1000, **kwargs):
+    def show(self, ax=None, parallelism=False, max_pixels: int | None =1000, **kwargs):
         """Display data using matplotlib.
 
         Args:
@@ -530,12 +530,19 @@ class LayerMathMixin:
 
         window = self._virtual_window
 
-        raw_data = self.read_array(
-            0,
-            0,
-            window.xsize,
-            window.ysize
-        )
+        if not parallelism:
+            raw_data = self.read_array(
+                0,
+                0,
+                window.xsize,
+                window.ysize
+            )
+        else:
+            from .._layers import RasterLayer # type: ignore # pylint: disable=C0415
+            with RasterLayer.empty_raster_layer_like(self) as memlayer:
+                self.parallel_save(memlayer)
+                raw_data = memlayer._dataset.GetRasterBand(1).ReadAsArray(0, 0, window.xsize, window.ysize)
+
         if max_pixels:
             downsample = max(window.xsize, window.ysize) // max_pixels
             downsample = max(downsample, 1)

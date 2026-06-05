@@ -1,12 +1,16 @@
 ## v2.0.2 (05/06/2026)
 
+### Added
+
+* Added a `parallelism` flag to the `show` call.
+
 ### Fixed
 
 * The operators `yg.any` and `yg.all` were excessively greedy when calculating area of operation, ignoring any intermediary operations in an expression that reduced the leaf geospatial areas, leading to excess computation and output size. This is now fixed.
 
 ## v2.0.1 (02/06/2026)
 
-### Changes
+### Changed
 
 * Moved to using GDAL's wrap to predict reprojected area rather than a hybrid approach.
 
