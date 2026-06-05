@@ -421,3 +421,63 @@ def test_multiple_subexpressions_by_constant() -> None:
         result = expected_success.sum()
         expected = (14 * 14) + (16 * 2)
         assert result == expected
+
+
+@pytest.mark.parametrize("op", [
+    yg.any,
+    yg.all,
+    yg.sum,
+])
+def test_aggregate_scope(op) -> None:
+    # Based on an observed issue where any was operating on a set of layers
+    # where they had been restricted due to other operators, but any seemed
+    # to read past that and get the wider source area, doing a bunch of unnecessary work
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
+
+    data1 = np.ones((4, 4))
+    data2 = np.zeros((4, 4))
+    data3 = np.ones((2, 2))
+
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (0, 0), projection) as layer2,
+        yg.from_array(data3, (1, -1), projection) as lens,
+    ):
+        assert layer1.area == layer2.area
+        assert layer1.area != lens.area
+
+        focus1 = layer1 & lens
+        assert focus1.area == lens.area
+        focus2 = layer2 & lens
+        assert focus2.area == lens.area
+
+        unfocused_join = op([layer1, layer2])
+        assert unfocused_join.area == layer1.area
+
+        focused_joined = op([focus1, focus2])
+        assert focused_joined.area == lens.area
+
+
+def test_scope_on_windowed_with_global() -> None:
+    # This is the root cause of what was the above test failing originally
+    # I've pulled this out explicitly just incase the implementation of the above
+    # aggregate operators ever changes
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
+
+    data1 = np.ones((4, 4))
+    data2 = np.ones((2, 2))
+
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (1, -1), projection) as lens,
+    ):
+        assert layer1.area != lens.area
+
+        focused_layer = layer1 & lens
+        assert focused_layer.area == lens.area
+
+        # The constant layer here is global, which was forcing the area algorithm
+        # to recurse to find the next bounded layer, but it was going too far down
+        # the expression tree, and getting the original layer, not the refined version
+        final_layer = focused_layer != 0
+        assert final_layer.area == lens.area
