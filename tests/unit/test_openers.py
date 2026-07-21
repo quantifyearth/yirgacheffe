@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from affine import Affine
 
 import yirgacheffe as yg
 from yirgacheffe import DataType
@@ -398,3 +399,36 @@ def test_simple_scale_down() -> None:
             assert layer.area == expected_area
             assert layer.projection == target_projection
             assert layer.projection == reference.projection
+
+
+def test_create_simple_with_affine() -> None:
+    projection = MapProjection("epsg:4326", 1.0, -1.0)
+    data = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    transform = Affine(1.0, 0.0, -2.0, 0.0, -1.0, 3.0)
+
+    with yg.from_array(data, transform, projection) as layer:
+        expected_area = Area(
+            left=-2.0, right=2.0, top=3.0, bottom=1.0, projection=projection
+        )
+
+        assert layer.projection == projection
+        assert layer.area == expected_area
+        assert layer.datatype == DataType.Float64
+
+        actual = layer.read_array(0, 0, 4, 2)
+        assert (data == actual).all()
+
+
+@pytest.mark.parametrize("transform", [
+    Affine(1.0, 10.0, -2.0, 0.0, -1.0, 1.0), # sheer
+    Affine(1.0, 10.0, -2.0, 10.0, -1.0, 1.0), # sheer
+    Affine(1.0, 0.0, -2.0, 10.0, -1.0, 1.0), # sheer
+    Affine(10.0, 0.0, -2.0, 0.0, -1.0, 1.0), # pixel scale
+    Affine(10.0, 0.0, -2.0, 0.0, -10.0, 1.0), # pixel scale
+    Affine(1.0, 0.0, -2.0, 0.0, -10.0, 1.0), # pixel scale
+])
+def test_create_simple_with_invalid_affine(transform) -> None:
+    projection = MapProjection("epsg:4326", 1.0, -1.0)
+    data = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    with pytest.raises(ValueError):
+        _ =  yg.from_array(data, transform, projection)
