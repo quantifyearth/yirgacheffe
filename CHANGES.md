@@ -3,6 +3,11 @@
 ### Added
 
 * Added `MapProjection.from_affine` to simplify interop with GeoTessera/Rasterio.
+* Added `Area.affine_transform` to get an Affine transform version of a projected map area.
+
+### Changed
+
+* Accept an Affine transform as offset to `from_array`.
 
 ## v2.0.2 (05/06/2026)
 

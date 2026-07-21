@@ -3,6 +3,7 @@ import math
 import uuid
 from dataclasses import dataclass
 
+from affine import Affine
 from osgeo import gdal
 
 from .mapprojection import MapProjection
@@ -434,4 +435,26 @@ class Area:
             self.top,
             0.0,
             self.projection.ystep
+        )
+
+    @property
+    def affine_transform(self) -> Affine:
+        """Returns an Affine transform for the layer.
+
+        Can be useful for interoperability with rasterio.
+        Attempts to call this on an area with no projection will raise a ValueError.
+
+        Returns:
+            An Affine object transform record.
+        """
+        if self.projection is None:
+            raise ValueError("Can not get transform for unprojected layer")
+
+        return Affine(
+            self.projection.xstep,
+            0.0,
+            self.left,
+            0.0,
+            self.projection.ystep,
+            self.top,
         )

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Sequence
 
 import numpy as np
+from affine import Affine
 from osgeo import gdal
 
 from ._layers import UniformAreaLayer
@@ -223,7 +224,7 @@ def constant(value: int | float) -> YirgacheffeLayer:
 
 def from_array(
     values: np.ndarray,
-    origin: tuple[float, float],
+    origin: tuple[float, float] | Affine,
     projection: MapProjection | tuple[str, tuple[float, float]],
 ) -> YirgacheffeLayer:
     """Creates an in-memory layer from a numerical array.
@@ -233,6 +234,9 @@ def from_array(
             the second dimension.
         origin: the position of the top left pixel in the geospatial space
         projection: the map projection and pixel scale to use.
+
+    To help with interop with rastio you can pass an Affine transform as the origin. It must
+    match the provided map projection in terms of pixel scale.
 
     Returns:
         A geospatial layer that uses the provided data for its values.
@@ -244,6 +248,19 @@ def from_array(
     if not isinstance(projection, MapProjection):
         projection_name, scale_tuple = projection
         projection = MapProjection(projection_name, scale_tuple[0], scale_tuple[1])
+
+    # To simplify compatibility with rasterio friendly things
+    if isinstance(origin, Affine):
+        if origin.b != 0 or origin.d != 0.0:
+            raise ValueError("Rotated/sheared transforms are not currently supported")
+        # This check on the pixel size is based on MapProjection.__eq__ logic
+        if (abs(origin.a - projection.xstep) >= projection._min_step) or \
+            (abs(origin.e - projection.ystep) >= projection._min_step):
+            raise ValueError("Transform pixel scale foes not match map projection.")
+        x_origin = origin.c
+        y_origin = origin.f
+    else:
+        x_origin, y_origin = origin
 
     dims = values.shape
 
@@ -260,7 +277,7 @@ def from_array(
         [],
     )
     dataset.SetGeoTransform([
-        origin[0], projection.xstep, 0.0, origin[1], 0.0, projection.ystep
+        x_origin, projection.xstep, 0.0, y_origin, 0.0, projection.ystep
     ])
     dataset.SetProjection(projection._gdal_projection)
     dataset.GetRasterBand(1).WriteArray(values, 0, 0)

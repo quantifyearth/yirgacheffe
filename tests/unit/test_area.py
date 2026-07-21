@@ -1,6 +1,7 @@
 import math
 
 import pytest
+from affine import Affine
 
 from yirgacheffe import Area, MapProjection
 
@@ -527,3 +528,41 @@ def test_invalid_projected_areas(area_args) -> None:
 def test_constant_to_geotiff(projection) -> None:
     area = Area(0, 0, 100 * projection.xstep, 100 * projection.ystep, projection)
     assert area.pixel_dimensions == (100, 100)
+
+
+@pytest.mark.parametrize("area,expected", [
+    (
+        Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02)),
+        (-10, 0.02, 0.0, 10, 0.0, -0.02),
+    ),
+    (
+        Area(-10, 10, 10, -10, MapProjection("esri:54009", 5.0, -5.0)),
+        (-10, 5.0, 0.0, 10, 0.0, -5.0),
+    ),
+])
+def test_geo_transform(area, expected) -> None:
+    assert area.geo_transform == expected
+
+
+@pytest.mark.parametrize("area,expected", [
+    (
+        Area(-10, 10, 10, -10, MapProjection("epsg:4326", 0.02, -0.02)),
+        Affine(0.02, 0.0, -10.0, 0.0, -0.02, 10)
+    ),
+    (
+        Area(-10, 10, 10, -10, MapProjection("esri:54009", 5.0, -5.0)),
+        Affine(5.0, 0.0, -10.0, 0.0, -5.0, 10)
+    ),
+])
+def test_affine_transform(area, expected) -> None:
+    assert area.affine_transform == expected
+
+
+def test_invalid_geo_transform() -> None:
+    with pytest.raises(ValueError):
+        _ = Area(-10, 10, 10, -10).geo_transform
+
+
+def test_invalid_affine_transform() -> None:
+    with pytest.raises(ValueError):
+        _ = Area(-10, 10, 10, -10).affine_transform
