@@ -1,3 +1,9 @@
+## v2.0.3 (21/07/2026)
+
+### Added
+
+* Added `MapProjection.from_affine` to simplify interop with GeoTessera/Rasterio.
+
 ## v2.0.2 (05/06/2026)
 
 ### Added

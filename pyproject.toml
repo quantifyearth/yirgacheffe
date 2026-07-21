@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yirgacheffe"
-version = "2.0.2"
+version = "2.0.3"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
@@ -27,6 +27,7 @@ dependencies = [
     "numpy>=1.24,<3.0",
     "gdal[numpy]>=3.8,<4.0",
     "scikit-image>=0.20,<1.0",
+    "affine",
     "torch",
     "dill",
     "tomli",
@@ -78,6 +79,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "graphviz.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "affine.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
