@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pyproj
 import pytest
+from affine import Affine
 from osgeo import gdal
 
 import yirgacheffe as yg
@@ -28,8 +29,6 @@ def test_scale_from_projection(name) -> None:
     projection = MapProjection(name, 0.1, -0.1)
     assert projection == MapProjection(name, 0.1, -0.1)
     assert projection.name == pyproj.CRS.from_string(name).to_wkt()
-    assert projection.xstep == 0.1
-    assert projection.ystep == -0.1
     assert projection.xstep == 0.1
     assert projection.ystep == -0.1
 
@@ -125,3 +124,21 @@ def test_projection_equality(
 def test_invalid_projection_name() -> None:
     with pytest.raises(ValueError):
         _ = MapProjection("random name", 1.0, -1.0)
+
+def test_from_affine() -> None:
+    affine = Affine(10, 0, 456, 0, -10, 413)
+    crs = pyproj.CRS.from_epsg(4326)
+    projection = MapProjection.from_affine(crs, affine)
+    assert projection.xstep == 10
+    assert projection.ystep == -10
+    assert projection.name == crs.to_wkt()
+
+@pytest.mark.parametrize("affine", [
+    Affine(10, 0, 456, 20, -10, 413),
+    Affine(10, 20, 456, 20, -10, 413),
+    Affine(10, 20, 456, 0, -10, 413),
+])
+def test_from_affine_unsupported_sheer(affine) -> None:
+    crs = pyproj.CRS.from_epsg(4326)
+    with pytest.raises(ValueError):
+        _ = MapProjection.from_affine(crs, affine)

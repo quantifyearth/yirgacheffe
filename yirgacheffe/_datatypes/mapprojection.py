@@ -2,6 +2,7 @@ from __future__ import annotations
 import math
 from functools import lru_cache
 
+from affine import Affine
 import lazy_loader as lazy # type: ignore
 
 # Pyproj is relatively slow to import, which was adding reasonably to
@@ -60,6 +61,32 @@ class MapProjection:
 
         >>> proj_esri = MapProjection("esri:54030", 1000, -1000)
     """
+
+    @classmethod
+    def from_affine(cls, crs, transform: Affine) -> MapProjection:
+        """Build a map projection from a CRS and Affine transform.
+
+        Useful for instance when mixing Yirgacheffe with Rasterio.
+
+        Args:
+            crs: Either a string or a CRS object from pyproj or rasterio.
+            transform: an Affine transform object.
+
+        Returns:
+            A map projection based on the CRS and pixel size provided.
+        """
+        if isinstance(crs, str):
+            text = crs
+        else:
+            try:
+                text = crs.to_wkt()
+            except AttributeError as exc:
+                raise TypeError("Expected either string or CRS object as first argument") from exc
+        if not isinstance(transform, Affine):
+            raise TypeError("Expected Affine transform as second argument")
+        if transform.b != 0.0 or transform.d != 0.0:
+            raise ValueError("Rotated/sheared transforms are not currently supported")
+        return cls(text, transform.a, transform.e)
 
     def __init__(self, projection_string: str, xstep: float, ystep: float) -> None:
         try:
