@@ -5,6 +5,7 @@ from math import ceil, floor
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 from osgeo import gdal, ogr
 
 from .. import __version__
@@ -239,7 +240,6 @@ class VectorLayer(YirgacheffeLayer):
 
         super().__init__(area, name=name)
 
-
     def _get_operation_area(
         self,
         projection: MapProjection | None = None,
@@ -328,6 +328,27 @@ class VectorLayer(YirgacheffeLayer):
     @property
     def datatype(self) -> DataType:
         return self._datatype
+
+    @property
+    def attributes(self) -> pd.DataFrame | None:
+        if self._original is None:
+            self._unpark()
+        raw = [feat.items() for feat in self.layer]
+
+        df = pd.DataFrame(raw)
+
+        # OGR returns datetime values as strings, so we need to promote those to Python
+        # datetime fields ourselves. Other types seem to be handled normally.
+        layer_defn = self.layer.GetLayerDefn()
+        for i in range(layer_defn.GetFieldCount()):
+            field_defn = layer_defn.GetFieldDefn(i)
+            if field_defn.GetType() in [ogr.OFTDate, ogr.OFTDateTime]:
+                column_name = field_defn.GetName()
+                # This is perhaps overly specific, but the exact datetime accuracy seems to
+                # vary by platform, which makes tests unstable, so I force it to microseconds
+                df[column_name] = pd.to_datetime(df[column_name]).astype("datetime64[us]")
+
+        return df
 
     def _read_array_for_area(
         self,

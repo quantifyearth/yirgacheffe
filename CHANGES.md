@@ -4,6 +4,7 @@
 
 * Added `MapProjection.from_affine` to simplify interop with GeoTessera/Rasterio.
 * Added `Area.affine_transform` to get an Affine transform version of a projected map area.
+* Added `Layer.attributes` which returns a dataframe with available metadata from files like GeoJSON and GeoPackage.
 
 ### Changed
 

@@ -28,6 +28,7 @@ dependencies = [
     "gdal[numpy]>=3.8,<4.0",
     "scikit-image>=0.20,<1.0",
     "affine",
+    "pandas",
     "torch",
     "dill",
     "tomli",
@@ -59,6 +60,10 @@ dev = [
     "mkdocs-gen-files",
     "black",
     "tifffile",
+    "geopandas",
+    "pandas-stubs",
+    "types-geopandas",
+    "types-shapely",
 ]
 
 [project.urls]
