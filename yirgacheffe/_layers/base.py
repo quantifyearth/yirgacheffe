@@ -2,6 +2,8 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+import pandas as pd
+
 from .. import __version__
 from .._operators import LayerMathMixin
 from .._datatypes import Area, MapProjection, Window
@@ -55,6 +57,15 @@ class YirgacheffeLayer(LayerMathMixin):
     def datatype(self) -> DataType:
         """Returns the [`DataType`][yirgacheffe.DataType] of the pixels within a layer."""
         raise NotImplementedError("Must be overridden by subclass")
+
+    @property
+    def attributes(self) -> pd.DataFrame | None:
+        """The feature attributes table fopr this layer, as a DataFrame.
+
+        The rows in this table will be based on any filters applied (shape layers created with `where_filter`). Returns
+        None for layers that have no attributes.
+        """
+        return None
 
     @property
     def projection(self) -> MapProjection | None:
