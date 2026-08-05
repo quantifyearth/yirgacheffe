@@ -5,15 +5,18 @@
 * Added `MapProjection.from_affine` to simplify interop with GeoTessera/Rasterio.
 * Added `Area.affine_transform` to get an Affine transform version of a projected map area.
 * Added `Layer.attributes` which returns a dataframe with available metadata from files like GeoJSON and GeoPackage.
+* Added `nodata` argument to `from_array`.
 
 ### Changed
 
 * Accept an Affine transform as offset to `from_array`.
+* Made `as_projection` NODATA aware, so empty spaces will be filled with NODATA rather than 0s in the layer being reprojected has NODATA specified.
+* Operators that have inputs with NODATA now will propagate the NODATA values if they are all of the same value, otherwise they will be ignored.
 
 ### Fixed
 
 * Group layers not working when constructed from operations on layers rather than raw layers.
-s
+
 ## v2.0.2 (05/06/2026)
 
 ### Added

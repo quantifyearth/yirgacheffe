@@ -1,5 +1,4 @@
 from __future__ import annotations
-import copy
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -50,7 +49,7 @@ class GroupLayer(YirgacheffeLayer):
 
     def __init__(
         self,
-        layers: list[YirgacheffeLayer],
+        layers: Sequence[YirgacheffeLayer],
         name: str | None = None
     ) -> None:
         if not layers:
@@ -65,8 +64,7 @@ class GroupLayer(YirgacheffeLayer):
         # We store them in reverse order so that from the user's perspective
         # the first layer in the list will be the most important in terms
         # over overlapping.
-        self._underlying_layers = copy.copy(layers)
-        self._underlying_layers.reverse()
+        self._underlying_layers = list(reversed(layers))
         self.layers = self._underlying_layers
 
     @property

@@ -765,7 +765,7 @@ class LayerOperation(LayerMathMixin):
         except AttributeError:
             rhs = sentinel
         try:
-            other_area = self.other.nodata
+            other = self.other.nodata
         except AttributeError:
             other = sentinel
 
