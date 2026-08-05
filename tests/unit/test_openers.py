@@ -344,9 +344,28 @@ def test_create_simple_float() -> None:
         assert layer.projection == projection
         assert layer.area == expected_area
         assert layer.datatype == DataType.Float64
+        assert layer.nodata is None
 
         actual = layer.read_array(0, 0, 4, 2)
         assert (data == actual).all()
+
+
+def test_create_simple_float_with_nodata() -> None:
+    projection = MapProjection("epsg:4326", 1.0, -1.0)
+    data = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+    with yg.from_array(data, (-2.0, 1.0), projection, nodata=5.0) as layer:
+        expected_area = Area(
+            left=-2.0, right=2.0, top=1.0, bottom=-1.0, projection=projection
+        )
+
+        assert layer.projection == projection
+        assert layer.area == expected_area
+        assert layer.datatype == DataType.Float64
+        assert layer.nodata == 5.0
+
+        actual = layer.read_array(0, 0, 4, 2)
+        data[data==5.0] = np.nan
+        assert np.array_equal(data, actual, equal_nan=True)
 
 
 def test_create_simple_direct_projection() -> None:
