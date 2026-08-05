@@ -2173,3 +2173,19 @@ def test_logical_not_too() -> None:
 
         assert (result1 == result2).all()
         assert (result1 == expected).all()
+
+@pytest.mark.parametrize("origin", [
+    (0.0, 0.0),
+    (-10.0, 10.0),
+    (10.0, -10.0),
+    (-10, -10.0),
+    (10.0, 10.0),
+])
+def test_virtual_window(origin: tuple[float,float]) -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data1, origin, projection) as layer:
+        op_layer = layer * 2
+        print(layer._virtual_window)
+        print(op_layer._virtual_window)
+        assert layer._virtual_window == op_layer._virtual_window

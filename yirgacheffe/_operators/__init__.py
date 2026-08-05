@@ -730,15 +730,11 @@ class LayerOperation(LayerMathMixin):
         assert area is not None
         assert not area.is_world
 
-        xoff, yoff = projection.round_down_pixels(
-            area.left / projection.xstep,
-            area.top / (projection.ystep * -1.0)
-        )
         xsize, ysize = projection.round_up_pixels(
             (area.right - area.left) / projection.xstep,
             (area.top - area.bottom) / (projection.ystep * -1.0),
         )
-        return Window(xoff, yoff, xsize, ysize)
+        return Window(0, 0, xsize, ysize)
 
     @property
     def dimensions(self) -> tuple[int,int]:

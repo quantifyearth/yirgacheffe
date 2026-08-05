@@ -414,7 +414,7 @@ def test_multiple_subexpressions_by_constant() -> None:
         # we expect this to work
         expected_success = (layer1 + 1) * (layer2 + 1)
 
-        expected_window = Window(0, 10, 14, 14)
+        expected_window = Window(0, 0, 14, 14)
         assert expected_success._virtual_window == expected_window
         assert expected_success.dimensions == (14, 14)
 
