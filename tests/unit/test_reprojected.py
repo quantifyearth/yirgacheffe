@@ -538,3 +538,41 @@ def test_vs_gdal_warp(
                     else:
                         disagree = yg.abs(warped - reprojected) > 1e-12
                         assert disagree.sum() == 0
+
+
+def test_reproject_without_nodata() -> None:
+    src_projection = MapProjection('EPSG:32629', 10.0, -10.0)
+    dst_projection = MapProjection('EPSG:32630', 10.0, -10.0)
+
+    data = np.zeros((8, 8))
+    data[0:4, 4:8] = 1
+    data[4:8, 4:8] = 2
+    data[4:8, 0:4] = 1
+    data[0:4, 0:4] = 2
+    assert (data == 0).sum() == 0
+
+    with yg.from_array(data, (257230.0, 6123850.0), src_projection) as original:
+        reprojected = original.as_projection(dst_projection, ResamplingMethod.Nearest)
+        assert reprojected.nodata is None
+        width, height = reprojected.dimensions
+        reprojected_data = reprojected.read_array(0, 0, width, height)
+        assert (reprojected_data == 0).sum() > 0
+
+
+def test_reproject_with_nodata() -> None:
+    src_projection = MapProjection('EPSG:32629', 10.0, -10.0)
+    dst_projection = MapProjection('EPSG:32630', 10.0, -10.0)
+
+    data = np.zeros((8, 8))
+    data[0:4, 4:8] = 1
+    data[4:8, 4:8] = 2
+    data[4:8, 0:4] = 1
+    data[0:4, 0:4] = 2
+    assert np.isnan(data).sum() == 0
+
+    with yg.from_array(data, (257230.0, 6123850.0), src_projection, nodata=-1.0) as original:
+        reprojected = original.as_projection(dst_projection, ResamplingMethod.Nearest)
+        assert reprojected.nodata == -1.0
+        width, height = reprojected.dimensions
+        reprojected_data = reprojected.read_array(0, 0, width, height)
+        assert np.isnan(reprojected_data).sum() > 0

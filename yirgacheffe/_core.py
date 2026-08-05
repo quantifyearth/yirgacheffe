@@ -226,6 +226,7 @@ def from_array(
     values: np.ndarray,
     origin: tuple[float, float] | Affine,
     projection: MapProjection | tuple[str, tuple[float, float]],
+    nodata: float | int | None = None,
 ) -> YirgacheffeLayer:
     """Creates an in-memory layer from a numerical array.
 
@@ -234,6 +235,7 @@ def from_array(
             the second dimension.
         origin: the position of the top left pixel in the geospatial space
         projection: the map projection and pixel scale to use.
+        nodata: if specified the value to use as NODATA.
 
     To help with interop with rastio you can pass an Affine transform as the origin. It must
     match the provided map projection in terms of pixel scale.
@@ -281,6 +283,8 @@ def from_array(
     ])
     dataset.SetProjection(projection._gdal_projection)
     dataset.GetRasterBand(1).WriteArray(values, 0, 0)
+    if nodata is not None:
+        dataset.GetRasterBand(1).SetNoDataValue(nodata)
 
     return RasterLayer(dataset)
 

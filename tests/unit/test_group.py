@@ -17,23 +17,23 @@ from yirgacheffe import Area, DataType
 from yirgacheffe._datatypes import Window
 
 
-def test_empty_group():
+def test_empty_group() -> None:
     with pytest.raises(ValueError):
-        with GroupLayer(set()) as _layer:
+        with GroupLayer([]) as _layer:
             pass
 
 
-def test_invalid_file_list():
+def test_invalid_file_list() -> None:
     with pytest.raises(ValueError):
-        _ = GroupLayer.layer_from_files(None)
+        _ = GroupLayer.layer_from_files(None) # type: ignore
 
 
-def test_empty_file_list():
+def test_empty_file_list() -> None:
     with pytest.raises(ValueError):
         _ = GroupLayer.layer_from_files([])
 
 
-def test_valid_file_list():
+def test_valid_file_list() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
@@ -47,7 +47,7 @@ def test_valid_file_list():
             assert group._virtual_window == Window(0, 0, 100, 100)
 
 
-def test_valid_file_list_from_dir():
+def test_valid_file_list_from_dir() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
         area = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
@@ -61,7 +61,7 @@ def test_valid_file_list_from_dir():
             assert group._virtual_window == Window(0, 0, 100, 100)
 
 
-def test_single_raster_layer_in_group():
+def test_single_raster_layer_in_group() -> None:
     area = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     with RasterLayer(gdal_dataset_of_region(area, 0.2)) as raster1:
         assert raster1.area == area
@@ -76,7 +76,7 @@ def test_single_raster_layer_in_group():
             assert group.sum() == raster1.sum()
 
 
-def test_mismatched_layers():
+def test_mismatched_layers() -> None:
     area1 = Area(-20, 20, 20, -20, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
     area2 = Area(-30, 30, 30, -30, yg.MapProjection("epsg:4326", 0.3, -0.3))
@@ -87,7 +87,7 @@ def test_mismatched_layers():
 
 
 @pytest.mark.parametrize("klass", [GroupLayer, TiledGroupLayer])
-def test_two_raster_areas_side_by_side(klass):
+def test_two_raster_areas_side_by_side(klass) -> None:
     area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
     area2 = Area(10, 10, 30, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
@@ -101,7 +101,7 @@ def test_two_raster_areas_side_by_side(klass):
 
 
 @pytest.mark.parametrize("klass", [GroupLayer, TiledGroupLayer])
-def test_two_raster_areas_top_to_bottom(klass):
+def test_two_raster_areas_top_to_bottom(klass) -> None:
     area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
     area2 = Area(10, 10, 30, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
@@ -123,7 +123,7 @@ def test_two_raster_areas_top_to_bottom(klass):
         (TiledGroupLayer, 3),
     ],
 )
-def test_grid_tiles(klass, dims):
+def test_grid_tiles(klass: type[GroupLayer], dims: int) -> None:
     rasters = []
     for x in range(dims):
         for y in range(dims):
@@ -149,7 +149,7 @@ def test_grid_tiles(klass, dims):
         3,
     ],
 )
-def test_overlapping_tiles(klass, dims):
+def test_overlapping_tiles(klass: type[GroupLayer], dims: int) -> None:
     rasters = []
     for x in range(dims):
         for y in range(dims):
@@ -180,7 +180,7 @@ def test_overlapping_tiles(klass, dims):
     ).all()
 
 
-def test_two_raster_read_only_from_one():
+def test_two_raster_read_only_from_one() -> None:
     area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
     area2 = Area(-10, -10, 10, -30, yg.MapProjection("epsg:4326", 0.2, -0.2))
@@ -196,7 +196,7 @@ def test_two_raster_read_only_from_one():
     assert (data == expected).all()
 
 
-def test_two_raster_read_only_from_other():
+def test_two_raster_read_only_from_other() -> None:
     area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
     raster1 = RasterLayer(gdal_dataset_of_region(area1, 0.2))
     area2 = Area(-10, -10, 10, -30, yg.MapProjection("epsg:4326", 0.2, -0.2))
@@ -212,7 +212,7 @@ def test_two_raster_read_only_from_other():
     assert (data == expected).all()
 
 
-def test_single_vector_layer_in_group():
+def test_single_vector_layer_in_group() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
         area = Area(-10.0, 10.0, 10.0, -10.0, yg.MapProjection("epsg:4326", 0.2, -0.2))
@@ -231,7 +231,7 @@ def test_single_vector_layer_in_group():
         assert group.sum() == vector1.sum()
 
 
-def test_overlapping_vector_layers():
+def test_overlapping_vector_layers() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path1 = os.path.join(tempdir, "test1.gpkg")
         area1 = Area(-10.0, 10.0, 10.0, -10.0)
@@ -253,7 +253,7 @@ def test_overlapping_vector_layers():
 
 
 @pytest.mark.parametrize("klass", [GroupLayer, TiledGroupLayer])
-def test_with_window_adjust(klass):
+def test_with_window_adjust(klass) -> None:
     projection = yg.MapProjection("epsg:4326", 0.1, -0.1)
     with tempfile.TemporaryDirectory() as tempdir:
         layers = []
@@ -296,7 +296,7 @@ def test_with_window_adjust(klass):
         3,
     ],
 )
-def test_multipe_tiles_with_window(klass, dims):
+def test_multipe_tiles_with_window(klass: type[GroupLayer], dims: int) -> None:
     rasters = []
     for x in range(dims):
         for y in range(dims):
@@ -337,7 +337,7 @@ def test_multipe_tiles_with_window(klass, dims):
         3,
     ],
 )
-def test_overlapping_tiles_with_window(klass, dims):
+def test_overlapping_tiles_with_window(klass: type[GroupLayer], dims: int) -> None:
     rasters = []
     for x in range(dims):
         for y in range(dims):
@@ -387,7 +387,7 @@ def test_overlapping_tiles_with_window(klass, dims):
         (TiledGroupLayer),
     ],
 )
-def test_overlapping_tiles_with_read_aligned_to_tiles(klass):
+def test_overlapping_tiles_with_read_aligned_to_tiles(klass) -> None:
     dims = 3
     rasters = []
     for x in range(dims):
@@ -452,7 +452,7 @@ def test_overlapping_tiles_with_read_aligned_to_tiles(klass):
         (4, 15),
     ],
 )
-def test_multipe_tiles_with_missing_tile(klass, dims, remove):
+def test_multipe_tiles_with_missing_tile(klass: type[GroupLayer], dims: int, remove: int) -> None:
     rasters = []
     for x in range(dims):
         for y in range(dims):
@@ -511,7 +511,7 @@ def test_multipe_tiles_with_missing_tile(klass, dims, remove):
         (4, 15),
     ],
 )
-def test_oversized_tiles_with_missing_tile(klass, dims, remove):
+def test_oversized_tiles_with_missing_tile(klass: type[GroupLayer], dims: int, remove: int) -> None:
     rasters = []
     for x in range(dims):
         for y in range(dims):
@@ -555,7 +555,7 @@ def test_oversized_tiles_with_missing_tile(klass, dims, remove):
         (0, 10),
     ],
 )
-def test_read_zero_pixels(klass, size):
+def test_read_zero_pixels(klass: type[GroupLayer], size: tuple[int,int]) -> None:
     dims = 2
     rasters = []
     for x in range(dims):
@@ -596,7 +596,7 @@ def test_read_zero_pixels(klass, size):
         (-10, -10, 32, 32),  # off all sides
     ],
 )
-def test_read_tiles_superset(read_area):
+def test_read_tiles_superset(read_area: tuple[int,int,int,int]) -> None:
     dims = 2
     rasters = []
     for x in range(dims):
@@ -651,7 +651,7 @@ def test_read_tiles_superset(read_area):
         (3, 8),
     ],
 )
-def test_oversized_tiles_with_missing_tile_row_slices(klass, dims, remove):
+def test_oversized_tiles_with_missing_tile_row_slices(klass: type[GroupLayer], dims, remove) -> None:
     rasters = []
     for x in range(dims):
         for y in range(dims):
@@ -694,7 +694,7 @@ def test_oversized_tiles_with_missing_tile_row_slices(klass, dims, remove):
         (3, 8),
     ],
 )
-def test_multipe_tiles_with_missing_tile_row_slices(klass, dims, remove):
+def test_multipe_tiles_with_missing_tile_row_slices(klass: type[GroupLayer], dims, remove) -> None:
     rasters = []
     for x in range(dims):
         for y in range(dims):
@@ -719,7 +719,7 @@ def test_multipe_tiles_with_missing_tile_row_slices(klass, dims, remove):
 
 
 @pytest.mark.parametrize("klass", [GroupLayer, TiledGroupLayer])
-def test_two_raster_with_conv2d(klass):
+def test_two_raster_with_conv2d(klass) -> None:
     # This test was added due to the group layers hitting an issue in
     # numpy's np.zero as conv2d left the operating window as
     # having float values in it, which were whole numbers, but np.zeros
@@ -738,3 +738,53 @@ def test_two_raster_with_conv2d(klass):
     ], dtype=np.float32)
     filtered_group = group.as_type(DataType.Float32).conv2d(kernel) > 12
     assert 19800 == filtered_group.sum()
+
+
+@pytest.mark.parametrize("klass", [GroupLayer, TiledGroupLayer])
+def test_group_of_calculations(klass) -> None:
+    area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 2.0, -2.0))
+    raster1 = RasterLayer(gdal_dataset_of_region(area1, 2.0))
+    area2 = Area(10, 10, 30, -10, yg.MapProjection("epsg:4326", 2.0, -2.0))
+    raster2 = RasterLayer(gdal_dataset_of_region(area2, 2.0))
+    assert raster1.sum() > 0
+    assert raster2.sum() > 0
+
+    group = klass([raster1 * 2, raster2 * 2])
+    assert group.sum() > 0
+
+    input_w, input_h = raster1.dimensions
+    output_w, output_h = group.dimensions
+    assert input_w * 2 == output_w
+    assert input_h == output_h
+
+    data1 = raster1.read_array(0, 0, input_w, input_h)
+    data2 = raster2.read_array(0, 0, input_w, input_h)
+    result1 = group.read_array(0, 0, input_w, input_h)
+    result2 = group.read_array(input_w, 0, input_w, input_h)
+
+    assert ((data1 * 2) == result1).all()
+    assert ((data2 * 2) == result2).all()
+
+
+def test_overlapping_tile_with_nodata() -> None:
+    area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 2.0, -2.0))
+    dataset1 = gdal_dataset_of_region(area1, 2.0)
+    dataset1.GetRasterBand(1).SetNoDataValue(8.0)
+    raster1 = RasterLayer(dataset1)
+
+    area2 = Area(-10, 0, 10, -20, yg.MapProjection("epsg:4326", 2.0, -2.0))
+    dataset2 = gdal_dataset_of_region(area2, 2.0)
+    raster2 = RasterLayer(dataset2)
+
+    group = GroupLayer([raster1, raster2])
+
+    # Read the area that matches raster1 and check it has data from raster2 where
+    # the values should be 8
+    res = group.read_array(0, 0, 10, 10)
+
+    for idx in range(10):
+        row = res[idx]
+        if idx != 8:
+            assert (row == idx).all()
+        else:
+            assert (row == 3).all()

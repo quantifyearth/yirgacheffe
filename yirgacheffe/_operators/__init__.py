@@ -730,15 +730,11 @@ class LayerOperation(LayerMathMixin):
         assert area is not None
         assert not area.is_world
 
-        xoff, yoff = projection.round_down_pixels(
-            area.left / projection.xstep,
-            area.top / (projection.ystep * -1.0)
-        )
         xsize, ysize = projection.round_up_pixels(
             (area.right - area.left) / projection.xstep,
             (area.top - area.bottom) / (projection.ystep * -1.0),
         )
-        return Window(xoff, yoff, xsize, ysize)
+        return Window(0, 0, xsize, ysize)
 
     @property
     def dimensions(self) -> tuple[int,int]:
@@ -753,6 +749,34 @@ class LayerOperation(LayerMathMixin):
             (area.right - area.left) / projection.xstep,
             (area.top - area.bottom) / (projection.ystep * -1.0),
         )
+
+    @property
+    def nodata(self) -> int | float | None:
+        class _NoNoDataSentinel():
+            pass
+        sentinel = _NoNoDataSentinel()
+
+        try:
+            lhs = self.lhs.nodata
+        except AttributeError:
+            lhs = sentinel
+        try:
+            rhs = self.rhs.nodata
+        except AttributeError:
+            rhs = sentinel
+        try:
+            other = self.other.nodata
+        except AttributeError:
+            other = sentinel
+
+        # This is not very well defined, but if we have a data layer that has no data
+        # we can propagate that. If there's multiple and they don't align them don't
+        # bother, and we'll do this properly in github issue #147.
+        all_nodatas = {x for x in [lhs, rhs, other] if x != sentinel}
+        if len(all_nodatas) == 1:
+            return all_nodatas.pop()
+
+        return None
 
     @property
     def datatype(self) -> DataType:

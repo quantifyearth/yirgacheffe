@@ -1,5 +1,4 @@
 from __future__ import annotations
-import copy
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -50,7 +49,7 @@ class GroupLayer(YirgacheffeLayer):
 
     def __init__(
         self,
-        layers: list[YirgacheffeLayer],
+        layers: Sequence[YirgacheffeLayer],
         name: str | None = None
     ) -> None:
         if not layers:
@@ -65,8 +64,7 @@ class GroupLayer(YirgacheffeLayer):
         # We store them in reverse order so that from the user's perspective
         # the first layer in the list will be the most important in terms
         # over overlapping.
-        self._underlying_layers = copy.copy(layers)
-        self._underlying_layers.reverse()
+        self._underlying_layers = list(reversed(layers))
         self.layers = self._underlying_layers
 
     @property
@@ -127,19 +125,26 @@ class GroupLayer(YirgacheffeLayer):
         if len(contributing_layers) == 1:
             layer, adjusted_layer_window, intersection = contributing_layers[0]
             if target_window == intersection:
-                data = layer._read_array(
+                data = backend.promote(layer.read_array(
                     intersection.xoff - adjusted_layer_window.xoff,
                     intersection.yoff - adjusted_layer_window.yoff,
                     intersection.xsize,
                     intersection.ysize
-                )
-                if layer.nodata is not None:
-                    data = backend.where(backend.isnan(data), 0.0, data)
+                ))
+                try:
+                    if layer.nodata is not None:
+                        data = backend.where(backend.isnan(data), 0.0, data)
+                except AttributeError:
+                    pass
                 return data
 
         result = np.zeros((ysize, xsize), dtype=float)
         for layer, adjusted_layer_window, intersection in contributing_layers:
-            data = layer._read_array(
+            try:
+                layer_has_nodata = layer.nodata is not None
+            except AttributeError:
+                layer_has_nodata = False
+            data = layer.read_array(
                 intersection.xoff - adjusted_layer_window.xoff,
                 intersection.yoff - adjusted_layer_window.yoff,
                 intersection.xsize,
@@ -147,7 +152,7 @@ class GroupLayer(YirgacheffeLayer):
             )
             result_x_offset = (intersection.xoff - xoffset) - window.xoff
             result_y_offset = (intersection.yoff - yoffset) - window.yoff
-            if layer.nodata is None:
+            if not layer_has_nodata:
                 result[
                     result_y_offset:result_y_offset + intersection.ysize,
                     result_x_offset:result_x_offset + intersection.xsize
@@ -254,7 +259,7 @@ class TiledGroupLayer(GroupLayer):
             intersection = Window.find_intersection_no_throw([target_window, adjusted_layer_window])
             if intersection is None:
                 continue
-            data = layer._read_array(
+            data = layer.read_array(
                 intersection.xoff - adjusted_layer_window.xoff,
                 intersection.yoff - adjusted_layer_window.yoff,
                 intersection.xsize,
