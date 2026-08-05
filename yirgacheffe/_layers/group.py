@@ -127,12 +127,12 @@ class GroupLayer(YirgacheffeLayer):
         if len(contributing_layers) == 1:
             layer, adjusted_layer_window, intersection = contributing_layers[0]
             if target_window == intersection:
-                data = layer.read_array(
+                data = backend.promote(layer.read_array(
                     intersection.xoff - adjusted_layer_window.xoff,
                     intersection.yoff - adjusted_layer_window.yoff,
                     intersection.xsize,
                     intersection.ysize
-                )
+                ))
                 # See issue #147 in github - nodata for operators is poorly
                 # defined, so we just dodge that question if you group operations
                 # for now.
