@@ -98,6 +98,10 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
     def datatype(self) -> DataType:
         return self._src.datatype
 
+    @property
+    def nodata(self) -> int | float | None:
+        return self._src.nodata
+
     def _read_array_with_window(
         self,
         xoffset: int,
@@ -164,6 +168,8 @@ class ReprojectedRasterLayer(YirgacheffeLayer):
                         yRes=projection.ystep,
                         width=xsize,
                         height=ysize,
+                        srcNodata=self.nodata,
+                        dstNodata=self.nodata,
                         resampleAlg=self._method.value,
                         targetAlignedPixels=True,
                         outputBounds=(read_area.left, read_area.bottom, read_area.right, read_area.top)

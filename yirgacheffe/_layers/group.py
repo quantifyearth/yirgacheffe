@@ -133,9 +133,6 @@ class GroupLayer(YirgacheffeLayer):
                     intersection.xsize,
                     intersection.ysize
                 ))
-                # See issue #147 in github - nodata for operators is poorly
-                # defined, so we just dodge that question if you group operations
-                # for now.
                 try:
                     if layer.nodata is not None:
                         data = backend.where(backend.isnan(data), 0.0, data)
@@ -145,9 +142,6 @@ class GroupLayer(YirgacheffeLayer):
 
         result = np.zeros((ysize, xsize), dtype=float)
         for layer, adjusted_layer_window, intersection in contributing_layers:
-            # See issue #147 in github - nodata for operators is poorly
-            # defined, so we just dodge that question if you group operations
-            # for now.
             try:
                 layer_has_nodata = layer.nodata is not None
             except AttributeError:

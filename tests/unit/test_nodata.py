@@ -1,5 +1,6 @@
 import numpy as np
 
+import yirgacheffe as yg
 from yirgacheffe._layers.rasters import RasterLayer
 from yirgacheffe._layers.group import GroupLayer
 
@@ -96,3 +97,97 @@ def test_group_layer_with_nodata_read_from_empty_area() -> None:
                 actual = group.read_array(0, 18, 4, 2)
                 expected = np.array([[0.0, 0.0, 0.0, 0.0], [5.0, 6.0, 7.0, 8.0]])
                 assert np.array_equal(expected, actual, equal_nan=True)
+
+
+def test_simple_operator_without_nodata_value() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
+    with RasterLayer(dataset) as layer:
+        calc = layer * 2
+        assert calc.nodata is None
+        actual = calc.read_array(0, 0, 4, 2)
+        assert np.array_equal(data1 * 2, actual, equal_nan=True)
+
+
+def test_simple_operator_with_nodata_value() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
+    dataset.GetRasterBand(1).SetNoDataValue(5.0)
+    with RasterLayer(dataset) as layer:
+        calc = layer * 2
+        assert calc.nodata == 5.0
+        data1[data1 == 5.0] = np.nan
+        actual = calc.read_array(0, 0, 4, 2)
+        assert np.array_equal(data1 * 2, actual, equal_nan=True)
+
+
+def test_reproject_with_nodata_value() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
+    dataset.GetRasterBand(1).SetNoDataValue(5.0)
+    with RasterLayer(dataset) as layer:
+        calc = layer.as_projection(yg.MapProjection("esri:54009", 10, -10), yg.ResamplingMethod.Nearest)
+        assert calc.nodata == 5.0
+
+def test_simple_operator_mixed_nodata_value_1() -> None:
+    # Mixed layers where one has nodata and the other doesn't
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
+    data2 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2)
+    dataset2.GetRasterBand(1).SetNoDataValue(5.0)
+    with (
+        RasterLayer(dataset1) as layer1,
+        RasterLayer(dataset2) as layer2,
+    ):
+        calc = layer1 + layer2
+        assert calc.nodata is None
+
+        # Data layer 2 will still have nodata in it
+        data2[data2 == 5.0] = np.nan
+        actual = calc.read_array(0, 0, 4, 2)
+        assert np.array_equal(data1 + data2, actual, equal_nan=True)
+
+
+def test_simple_operator_mixed_nodata_value_2() -> None:
+    # Mixed layers where both have different nodata values
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
+    dataset1.GetRasterBand(1).SetNoDataValue(2.0)
+    data2 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2)
+    dataset2.GetRasterBand(1).SetNoDataValue(5.0)
+    with (
+        RasterLayer(dataset1) as layer1,
+        RasterLayer(dataset2) as layer2,
+    ):
+        calc = layer1 + layer2
+        assert calc.nodata is None
+
+        # Data layer 2 will still have nodata in it
+        data1[data1 == 2.0] = np.nan
+        data2[data2 == 5.0] = np.nan
+        actual = calc.read_array(0, 0, 4, 2)
+        assert np.array_equal(data1 + data2, actual, equal_nan=True)
+
+
+def test_simple_operator_mixed_nodata_value_3() -> None:
+    # Mixed layers where both have same nodata
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
+    dataset1.GetRasterBand(1).SetNoDataValue(5.0)
+    data2 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset2 = gdal_dataset_with_data((0.0, 0.0), 0.02, data2)
+    dataset2.GetRasterBand(1).SetNoDataValue(5.0)
+    with (
+        RasterLayer(dataset1) as layer1,
+        RasterLayer(dataset2) as layer2,
+    ):
+        calc = layer1 + layer2
+        assert calc.nodata == 5.0
+
+        # Data layer 2 will still have nodata in it
+        data1[data1 == 5.0] = np.nan
+        data2[data2 == 5.0] = np.nan
+        actual = calc.read_array(0, 0, 4, 2)
+        assert np.array_equal(data1 + data2, actual, equal_nan=True)

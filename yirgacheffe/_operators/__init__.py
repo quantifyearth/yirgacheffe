@@ -751,6 +751,34 @@ class LayerOperation(LayerMathMixin):
         )
 
     @property
+    def nodata(self) -> int | float | None:
+        class _NoNoDataSentinel():
+            pass
+        sentinel = _NoNoDataSentinel()
+
+        try:
+            lhs = self.lhs.nodata
+        except AttributeError:
+            lhs = sentinel
+        try:
+            rhs = self.rhs.nodata
+        except AttributeError:
+            rhs = sentinel
+        try:
+            other_area = self.other.nodata
+        except AttributeError:
+            other = sentinel
+
+        # This is not very well defined, but if we have a data layer that has no data
+        # we can propagate that. If there's multiple and they don't align them don't
+        # bother, and we'll do this properly in github issue #147.
+        all_nodatas = {x for x in [lhs, rhs, other] if x != sentinel}
+        if len(all_nodatas) == 1:
+            return all_nodatas.pop()
+
+        return None
+
+    @property
     def datatype(self) -> DataType:
         # If this is an 'astype' then go with the target cast
         if self.operator == op.ASTYPE:

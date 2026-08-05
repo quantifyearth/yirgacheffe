@@ -106,8 +106,8 @@ class YirgacheffeLayer(LayerMathMixin):
         return (self._window.xsize, self._window.ysize)
 
     @property
-    def nodata(self) -> None:
-        return None
+    def nodata(self) -> int | float | None:
+        raise AttributeError("layer does not support no data")
 
     def _read_array_with_window(
         self,
