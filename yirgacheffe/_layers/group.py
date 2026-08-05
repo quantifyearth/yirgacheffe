@@ -127,19 +127,32 @@ class GroupLayer(YirgacheffeLayer):
         if len(contributing_layers) == 1:
             layer, adjusted_layer_window, intersection = contributing_layers[0]
             if target_window == intersection:
-                data = layer._read_array(
+                data = layer.read_array(
                     intersection.xoff - adjusted_layer_window.xoff,
                     intersection.yoff - adjusted_layer_window.yoff,
                     intersection.xsize,
                     intersection.ysize
                 )
-                if layer.nodata is not None:
-                    data = backend.where(backend.isnan(data), 0.0, data)
+                # See issue #147 in github - nodata for operators is poorly
+                # defined, so we just dodge that question if you group operations
+                # for now.
+                try:
+                    if layer.nodata is not None:
+                        data = backend.where(backend.isnan(data), 0.0, data)
+                except AttributeError:
+                    pass
                 return data
 
         result = np.zeros((ysize, xsize), dtype=float)
         for layer, adjusted_layer_window, intersection in contributing_layers:
-            data = layer._read_array(
+            # See issue #147 in github - nodata for operators is poorly
+            # defined, so we just dodge that question if you group operations
+            # for now.
+            try:
+                layer_has_nodata = layer.nodata is not None
+            except AttributeError:
+                layer_has_nodata = False
+            data = layer.read_array(
                 intersection.xoff - adjusted_layer_window.xoff,
                 intersection.yoff - adjusted_layer_window.yoff,
                 intersection.xsize,
@@ -147,7 +160,7 @@ class GroupLayer(YirgacheffeLayer):
             )
             result_x_offset = (intersection.xoff - xoffset) - window.xoff
             result_y_offset = (intersection.yoff - yoffset) - window.yoff
-            if layer.nodata is None:
+            if not layer_has_nodata:
                 result[
                     result_y_offset:result_y_offset + intersection.ysize,
                     result_x_offset:result_x_offset + intersection.xsize
@@ -254,7 +267,7 @@ class TiledGroupLayer(GroupLayer):
             intersection = Window.find_intersection_no_throw([target_window, adjusted_layer_window])
             if intersection is None:
                 continue
-            data = layer._read_array(
+            data = layer.read_array(
                 intersection.xoff - adjusted_layer_window.xoff,
                 intersection.yoff - adjusted_layer_window.yoff,
                 intersection.xsize,
