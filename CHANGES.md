@@ -10,6 +10,10 @@
 
 * Accept an Affine transform as offset to `from_array`.
 
+### Fixed
+
+* Group layers not working when constructed from operations on layers rather than raw layers.
+s
 ## v2.0.2 (05/06/2026)
 
 ### Added
