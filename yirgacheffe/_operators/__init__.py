@@ -17,7 +17,7 @@ import types
 from collections.abc import Callable
 from contextlib import ExitStack, nullcontext, suppress
 from enum import Enum
-from functools import reduce
+from functools import cached_property, reduce
 from multiprocessing import Process, Queue, Semaphore, cpu_count
 from multiprocessing.synchronize import Semaphore as SemaphoreType
 from multiprocessing.managers import SharedMemoryManager
@@ -676,7 +676,7 @@ class LayerOperation(LayerMathMixin):
             # This is assumed to be because kwargs contains something unhashable
             return None
 
-    @property
+    @cached_property
     def area(self) -> Area:
         return self._get_operation_area(self.projection, top_level=True)
 
@@ -720,7 +720,7 @@ class LayerOperation(LayerMathMixin):
         else:
             return area
 
-    @property
+    @cached_property
     def _virtual_window(self) -> Window:
         projection = self.projection
         if projection is None:
@@ -736,7 +736,7 @@ class LayerOperation(LayerMathMixin):
         )
         return Window(0, 0, xsize, ysize)
 
-    @property
+    @cached_property
     def dimensions(self) -> tuple[int,int]:
         projection = self.projection
         if projection is None:
@@ -750,7 +750,7 @@ class LayerOperation(LayerMathMixin):
             (area.top - area.bottom) / (projection.ystep * -1.0),
         )
 
-    @property
+    @cached_property
     def nodata(self) -> int | float | None:
         class _NoNoDataSentinel():
             pass
@@ -778,7 +778,7 @@ class LayerOperation(LayerMathMixin):
 
         return None
 
-    @property
+    @cached_property
     def datatype(self) -> DataType:
         # If this is an 'astype' then go with the target cast
         if self.operator == op.ASTYPE:
@@ -798,7 +798,7 @@ class LayerOperation(LayerMathMixin):
         coerced_type = np.result_type(*internal_types_as_numpy_types)
         return numpy_to_dtype(coerced_type)
 
-    @property
+    @cached_property
     def projection(self) -> MapProjection | None:
         if self.operator == op.ASAREA:
             return self.kwargs["new_area"].projection
