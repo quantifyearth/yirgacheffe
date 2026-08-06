@@ -7,6 +7,7 @@
 * Added `Layer.attributes` which returns a dataframe with available metadata from files like GeoJSON and GeoPackage.
 * Added `nodata` argument to `from_array`.
 * Added `default` argument to `from_rasters` to have non-zero values outside of tiles.
+* Added `take` operator support.
 
 ### Changed
 

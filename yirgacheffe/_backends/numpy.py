@@ -138,6 +138,9 @@ def as_area_op(data, new_area): # pylint: disable=W0613
 def as_projection_op(data, projection, method): # pylint: disable=W0613
     return data
 
+def take_op(layer, table):
+    return np.take(np.array(table), layer)
+
 operator_map: dict[op, Callable] = {
     op.ADD: np.ndarray.__add__,
     op.SUB: np.ndarray.__sub__,
@@ -196,4 +199,5 @@ operator_map: dict[op, Callable] = {
     op.LOGICAL_OR: np.logical_or,
     op.LOGICAL_XOR: np.logical_xor,
     op.LOGICAL_NOT: np.logical_not,
+    op.TAKE: take_op,
 }

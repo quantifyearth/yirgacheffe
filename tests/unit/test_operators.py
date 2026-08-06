@@ -2174,6 +2174,7 @@ def test_logical_not_too() -> None:
         assert (result1 == result2).all()
         assert (result1 == expected).all()
 
+
 @pytest.mark.parametrize("origin", [
     (0.0, 0.0),
     (-10.0, 10.0),
@@ -2189,3 +2190,37 @@ def test_virtual_window(origin: tuple[float,float]) -> None:
         print(layer._virtual_window)
         print(op_layer._virtual_window)
         assert layer._virtual_window == op_layer._virtual_window
+
+
+def  test_take_operator() -> None:
+    # To make testing easier, we  just do a *10 crosswalk table
+    lut = [x * 10 for x in range(10)]
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        crosswalked = layer.take(lut)
+        result = crosswalked.read_array(0, 0, 4, 2)
+        expected = data1 * 10
+        assert (result == expected).all()
+
+
+def  test_take_operator_invalid_lut() -> None:
+    lut = [x + 10 for x in range(4)]
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        crosswalked = layer.take(lut)
+        with pytest.raises(IndexError):
+            _ = crosswalked.read_array(0, 0, 4, 2)
+
+
+def  test_take_function() -> None:
+    # To make testing easier, we  just do a *10 crosswalk table
+    lut = [x * 10 for x in range(10)]
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        crosswalked = yg.take(lut, layer)
+        result = crosswalked.read_array(0, 0, 4, 2)
+        expected = data1 * 10
+        assert (result == expected).all()

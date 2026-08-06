@@ -60,6 +60,7 @@ class operators(Enum):
     LOGICAL_OR = 52
     LOGICAL_XOR = 53
     LOGICAL_NOT = 54
+    TAKE = 55
 
 class dtype(Enum):
     """Represents the type of data returned by a layer.

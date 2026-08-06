@@ -357,7 +357,6 @@ def logical_xor(layer1, layer2):
 def logical_not(layer):
     """Returns a boolean layer that is the logical inverse of the input layer.
 
-
     Args:
         layer: The input layer.
 
@@ -365,3 +364,17 @@ def logical_not(layer):
         A new layer that is the logical inverse of the input.
     """
     return LayerOperation.logical_not(layer)
+
+def take(table, layer):
+    """Returns a layer where the values of each pixel are derived by using the pixels in the provided layer as indexes
+    into the provided look up table.
+
+    Args:
+        table: A look up table of values.
+        layer: The input layer.
+
+    Returns:
+        A new layer that is the same as the source layers except pixel values have been substituted via the look up
+        table.
+    """
+    return LayerOperation.take(layer, table)
