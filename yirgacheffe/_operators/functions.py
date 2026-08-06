@@ -1,8 +1,10 @@
+from typing import Sequence
 
 import operator as pyoperator
 
 from . import LayerOperation, WindowOperation
 from .._backends.enumeration import operators as op
+from .._layers import GroupLayer, YirgacheffeLayer
 
 def where(cond, a, b):
     """Return elements chosen from `a` or `b` depending on `cond`.
@@ -357,7 +359,6 @@ def logical_xor(layer1, layer2):
 def logical_not(layer):
     """Returns a boolean layer that is the logical inverse of the input layer.
 
-
     Args:
         layer: The input layer.
 
@@ -365,3 +366,34 @@ def logical_not(layer):
         A new layer that is the logical inverse of the input.
     """
     return LayerOperation.logical_not(layer)
+
+def take(table, layer):
+    """Returns a layer where the values of each pixel are derived by using the pixels in the provided layer as indexes
+    into the provided look up table.
+
+    Args:
+        table: A look up table of values.
+        layer: The input layer.
+
+    Returns:
+        A new layer that is the same as the source layers except pixel values have been substituted via the look up
+        table.
+    """
+    return LayerOperation.take(layer, table)
+
+def merge(layers: Sequence[YirgacheffeLayer]) -> GroupLayer:
+    """Takes a sequence of layers and treats them as a single layer.
+
+    The layers must have the same map projection and pixel scale. If not you can use the `as_projection` operator
+    to adjust them before merging.
+
+    This is useful for instance if you have a set of tiles that should be treated as a single larger map. If the layers
+    overlap then they are prioritised first to last from the provided list.
+
+    Args:
+        layers: The list of layers to combine.
+
+    Returns:
+        A single new layer.
+    """
+    return GroupLayer(layers)

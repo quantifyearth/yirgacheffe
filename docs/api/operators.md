@@ -40,6 +40,7 @@ On a layer you can also invoke the following operations using `layer.operator(..
 | log10 |
 | log2 |
 | nan_to_num |
+| take |
 
 You can also call the following methods from `yirgacheffe`:
 
@@ -64,10 +65,12 @@ You can also call the following methods from `yirgacheffe`:
             - logical_not
             - logical_xor
             - maximum
+            - merge
             - minimum
             - nan_to_num
             - round
             - sum
+            - take
             - where
         show_root_heading: false
         show_source: false

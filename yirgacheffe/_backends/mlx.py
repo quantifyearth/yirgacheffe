@@ -219,6 +219,13 @@ def as_projection_op(data, projection, method): # pylint: disable=W0613
 def logical_xor_op(x, y):
     return mx.logical_and(mx.logical_or(x, y), mx.logical_not(mx.logical_and(x, y)))
 
+def take_op(layer, table):
+    # This is slower than I'd like it, but we have to do this check to maintain matched behaviour
+    # with the numpy backend.
+    if (layer < 0).any() or (layer >= len(table)).any():
+        raise IndexError("Table values outside of range of table")
+    return mx.take(mx.array(table), layer)
+
 operator_map: dict[op, Callable] = {
     op.ADD: mx.array.__add__,
     op.SUB: mx.array.__sub__,
@@ -273,4 +280,5 @@ operator_map: dict[op, Callable] = {
     op.LOGICAL_OR: mx.logical_or,
     op.LOGICAL_XOR: logical_xor_op,
     op.LOGICAL_NOT: mx.logical_not,
+    op.TAKE: take_op,
 }

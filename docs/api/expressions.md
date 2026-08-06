@@ -79,6 +79,7 @@ The following math operators common to numpy and other libraries are currently s
 * nan_to_num
 * round
 * sum
+* take
 
 Typically these can be invoked either on a layer as a method:
 
