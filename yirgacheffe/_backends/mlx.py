@@ -220,6 +220,8 @@ def logical_xor_op(x, y):
     return mx.logical_and(mx.logical_or(x, y), mx.logical_not(mx.logical_and(x, y)))
 
 def take_op(layer, table):
+    # This is slower than I'd like it, but we have to do this check to maintain matched behaviour
+    # with the numpy backend.
     if (layer < 0).any() or (layer >= len(table)).any():
         raise IndexError("Table values outside of range of table")
     return mx.take(mx.array(table), layer)

@@ -65,6 +65,7 @@ You can also call the following methods from `yirgacheffe`:
             - logical_not
             - logical_xor
             - maximum
+            - merge
             - minimum
             - nan_to_num
             - round

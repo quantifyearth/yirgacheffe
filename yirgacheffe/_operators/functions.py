@@ -1,8 +1,10 @@
+from typing import Sequence
 
 import operator as pyoperator
 
 from . import LayerOperation, WindowOperation
 from .._backends.enumeration import operators as op
+from .._layers import GroupLayer, YirgacheffeLayer
 
 def where(cond, a, b):
     """Return elements chosen from `a` or `b` depending on `cond`.
@@ -378,3 +380,20 @@ def take(table, layer):
         table.
     """
     return LayerOperation.take(layer, table)
+
+def merge(layers: Sequence[YirgacheffeLayer]) -> GroupLayer:
+    """Takes a sequence of layers and treats them as a single layer.
+
+    The layers must have the same map projection and pixel scale. If not you can use the `as_projection` operator
+    to adjust them before merging.
+
+    This is useful for instance if you have a set of tiles that should be treated as a single larger map. If the layers
+    overlap then they are prioritised first to last from the provided list.
+
+    Args:
+        layers: The list of layers to combine.
+
+    Returns:
+        A single new layer.
+    """
+    return GroupLayer(layers)

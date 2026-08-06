@@ -843,3 +843,27 @@ def test_overlapping_tile_with_nodata() -> None:
             assert (row == idx).all()
         else:
             assert (row == 3).all()
+
+def test_merge_convenience_function() -> None:
+    area1 = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 2.0, -2.0))
+    raster1 = RasterLayer(gdal_dataset_of_region(area1, 2.0))
+    area2 = Area(10, 10, 30, -10, yg.MapProjection("epsg:4326", 2.0, -2.0))
+    raster2 = RasterLayer(gdal_dataset_of_region(area2, 2.0))
+    assert raster1.sum() > 0
+    assert raster2.sum() > 0
+
+    group = yg.merge([raster1 * 2, raster2 * 2])
+    assert group.sum() > 0
+
+    input_w, input_h = raster1.dimensions
+    output_w, output_h = group.dimensions
+    assert input_w * 2 == output_w
+    assert input_h == output_h
+
+    data1 = raster1.read_array(0, 0, input_w, input_h)
+    data2 = raster2.read_array(0, 0, input_w, input_h)
+    result1 = group.read_array(0, 0, input_w, input_h)
+    result2 = group.read_array(input_w, 0, input_w, input_h)
+
+    assert ((data1 * 2) == result1).all()
+    assert ((data2 * 2) == result2).all()
