@@ -23,7 +23,8 @@ class GroupLayer(YirgacheffeLayer):
         cls,
         directory_path: Path | str,
         name: str | None = None,
-        matching: str = "*.tif"
+        matching: str = "*.tif",
+        default: float | int = 0.0,
     ) -> GroupLayer:
         if directory_path is None:
             raise ValueError("Directory path is None")
@@ -32,25 +33,27 @@ class GroupLayer(YirgacheffeLayer):
         files = list(directory_path.glob(matching))
         if len(files) < 1:
             raise GroupLayerEmpty(directory_path)
-        return cls.layer_from_files(files, name)
+        return cls.layer_from_files(files, name, default)
 
     @classmethod
     def layer_from_files(
         cls,
         filenames: Sequence[Path | str],
-        name: str | None = None
+        name: str | None = None,
+        default: float | int = 0.0,
     ) -> GroupLayer:
         if filenames is None:
             raise ValueError("filenames argument is None")
         rasters: list[YirgacheffeLayer] = [RasterLayer.layer_from_file(x) for x in filenames]
         if len(rasters) < 1:
             raise GroupLayerEmpty("No files found")
-        return cls(rasters, name)
+        return cls(rasters, name, default)
 
     def __init__(
         self,
         layers: Sequence[YirgacheffeLayer],
-        name: str | None = None
+        name: str | None = None,
+        default: int | float = 0.0,
     ) -> None:
         if not layers:
             raise GroupLayerEmpty("Expected one or more layers")
@@ -66,6 +69,7 @@ class GroupLayer(YirgacheffeLayer):
         # over overlapping.
         self._underlying_layers = list(reversed(layers))
         self.layers = self._underlying_layers
+        self.default = default
 
     @property
     def _cse_hash(self) -> int | None:
@@ -138,7 +142,7 @@ class GroupLayer(YirgacheffeLayer):
                     pass
                 return data
 
-        result = np.zeros((ysize, xsize), dtype=float)
+        result = np.full((ysize, xsize), self.default)
         for layer, adjusted_layer_window, intersection in contributing_layers:
             try:
                 layer_has_nodata = layer.nodata is not None
@@ -219,7 +223,7 @@ class TiledGroupLayer(GroupLayer):
     away with that at the expense of needing to know all tiles have the same shape.__abs__()
 
     Two notes:
-    * You can have missing tiles, and it'll fill in zeros.
+    * You can have missing tiles, and it'll fill in with the default value.
     * The tiles can overlap - e.g., JRC Annual Change tiles all overlap by a few pixels on all edges.
     """
     def _read_array_with_window(
@@ -307,7 +311,7 @@ class TiledGroupLayer(GroupLayer):
         # Allow for reading off top
         if combed_partials:
             if combed_partials[0].y > 0:
-                row_chunk = np.zeros((combed_partials[0].y, xsize))
+                row_chunk = np.full((combed_partials[0].y, xsize), self.default)
                 last_y_offset = 0
                 last_y_height = combed_partials[0].y
 
@@ -317,7 +321,10 @@ class TiledGroupLayer(GroupLayer):
                 if row_chunk.shape[0] < tile.data.shape[0]:
                     assert last_y_height == row_chunk.shape[0]
                     row_chunk = np.vstack(
-                        (row_chunk, np.zeros((tile.data.shape[0] - row_chunk.shape[0], row_chunk.shape[1])))
+                        (
+                            row_chunk,
+                            np.full((tile.data.shape[0] - row_chunk.shape[0], row_chunk.shape[1]), self.default)
+                        )
                     )
                     last_y_height = row_chunk.shape[0]
                 new_data = tile.data
@@ -325,7 +332,10 @@ class TiledGroupLayer(GroupLayer):
                     assert row_chunk.shape[0] > new_data.shape[0]
                     # we have some overlap data from oversized tiles (hello JRC) when there's a GAP in general
                     new_data = np.vstack(
-                        (new_data, np.zeros((row_chunk.shape[0] - new_data.shape[0], new_data.shape[1])))
+                        (
+                            new_data,
+                            np.full((row_chunk.shape[0] - new_data.shape[0], new_data.shape[1]), self.default)
+                        )
                     )
                 assert row_chunk.shape[0] == new_data.shape[0]
 
@@ -344,7 +354,7 @@ class TiledGroupLayer(GroupLayer):
                         expected_next_x = expected_next_x + subdata.shape[1]
                 else:
                     # Gap between tiles, so fill it before adding new data
-                    row_chunk = np.hstack((row_chunk, np.zeros((new_data.shape[0], -x_offset))))
+                    row_chunk = np.hstack((row_chunk, np.full((new_data.shape[0], -x_offset), self.default)))
                     row_chunk = np.hstack((row_chunk, new_data))
                     expected_next_x = expected_next_x + new_data.shape[1] + -x_offset
             else:
@@ -354,7 +364,12 @@ class TiledGroupLayer(GroupLayer):
                     if row_chunk.shape[1] != xsize:
                         assert row_chunk.shape[1] < xsize, f"row is too wide: expected {xsize}, is {row_chunk.shape[1]}"
                         # Missing tile at end of row, so fill in
-                        row_chunk = np.hstack((row_chunk, np.zeros((last_y_height, xsize - row_chunk.shape[1]))))
+                        row_chunk = np.hstack(
+                            (
+                                row_chunk,
+                                np.full((last_y_height, xsize - row_chunk.shape[1]), self.default)
+                            )
+                        )
                     if data is None:
                         data = row_chunk
                         expected_next_y += last_y_height
@@ -371,7 +386,7 @@ class TiledGroupLayer(GroupLayer):
                             expected_next_y += subdata.shape[0]
                 if tile.data is not None:
                     if tile.x != 0:
-                        row_chunk = np.hstack((np.zeros((tile.data.shape[0], tile.x)), tile.data))
+                        row_chunk = np.hstack((np.full((tile.data.shape[0], tile.x), self.default), tile.data))
                     else:
                         row_chunk = tile.data
                     last_y_offset = tile.y
@@ -380,7 +395,7 @@ class TiledGroupLayer(GroupLayer):
 
         assert last_y_offset is not None
         if (last_y_offset + last_y_height) < ysize:
-            data = np.vstack((data, np.zeros((ysize - (last_y_offset + last_y_height), xsize))))
+            data = np.vstack((data, np.full((ysize - (last_y_offset + last_y_height), xsize), self.default)))
 
         assert data is not None
         assert data.shape == (ysize, xsize)

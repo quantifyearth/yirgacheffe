@@ -1,4 +1,4 @@
-## v2.0.3 (21/07/2026)
+## v2.1.0 (06/08/2026)
 
 ### Added
 
@@ -6,6 +6,7 @@
 * Added `Area.affine_transform` to get an Affine transform version of a projected map area.
 * Added `Layer.attributes` which returns a dataframe with available metadata from files like GeoJSON and GeoPackage.
 * Added `nodata` argument to `from_array`.
+* Added `default` argument to `from_rasters` to have non-zero values outside of tiles.
 
 ### Changed
 

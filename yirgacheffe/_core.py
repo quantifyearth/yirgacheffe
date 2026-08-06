@@ -111,7 +111,8 @@ def read_narrow_raster(
 
 def read_rasters(
     filenames : Sequence[Path | str],
-    tiled: bool=False
+    tiled: bool = False,
+    default: int | float = 0.0,
 ) -> YirgacheffeLayer:
     """Open a set of raster files (e.g., GeoTIFFs) as a single layer.
 
@@ -120,6 +121,7 @@ def read_rasters(
         tiled: If you know that the rasters for a regular tileset, then setting this flag allows
             Yirgacheffe to perform certain optimisations that significantly improve performance for
             this use case.
+        default: The value to synthesis where there is no data. Defaults to 0.
 
     Returns:
         An layer representing the raster data.
@@ -136,9 +138,9 @@ def read_rasters(
             f"Got {type(filenames).__name__}. Did you mean to pass [{filenames!r}]?"
         )
     if not tiled:
-        return GroupLayer.layer_from_files(filenames)
+        return GroupLayer.layer_from_files(filenames, default=default)
     else:
-        return TiledGroupLayer.layer_from_files(filenames)
+        return TiledGroupLayer.layer_from_files(filenames, default=default)
 
 def read_shape(
     filename: Path | str,

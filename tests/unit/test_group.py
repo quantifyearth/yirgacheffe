@@ -36,29 +36,84 @@ def test_empty_file_list() -> None:
 def test_valid_file_list() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
-        dataset = gdal_dataset_of_region(area, 0.2, filename=path)
+        projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+        area = Area(-10, 10, 10, -10, projection)
+        dataset = gdal_dataset_of_region(area, 2.0, filename=path)
         dataset.Close()
         assert os.path.exists(path)
 
         with GroupLayer.layer_from_files([path]) as group:
             assert group.area == area
-            assert group.dimensions == (100, 100)
-            assert group._virtual_window == Window(0, 0, 100, 100)
+            assert group.dimensions == (10, 10)
+            assert group.projection == projection
+            with pytest.raises(AttributeError):
+                _ = group.nodata
+
+            # helper generates data with rows incrementing from 0,
+            # with uniform across columns
+            valid_data = group.read_array(0, 0, 10, 10)
+            for idx in range(10):
+                row = valid_data[idx]
+                assert (row == idx).all()
+
+            # Read outside the known area and we should get zeros
+            null_data = group.read_array(10, 0, 10, 10)
+            assert (null_data == 0.0).all()
 
 
 def test_valid_file_list_from_dir() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.tif")
-        area = Area(-10, 10, 10, -10, yg.MapProjection("epsg:4326", 0.2, -0.2))
-        dataset = gdal_dataset_of_region(area, 0.2, filename=path)
+        projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+        area = Area(-10, 10, 10, -10, projection)
+        dataset = gdal_dataset_of_region(area, 2.0, filename=path)
         dataset.Close()
         assert os.path.exists(path)
 
         with GroupLayer.layer_from_directory(tempdir) as group:
             assert group.area == area
-            assert group.dimensions == (100, 100)
-            assert group._virtual_window == Window(0, 0, 100, 100)
+            assert group.dimensions == (10, 10)
+            assert group.projection == projection
+            with pytest.raises(AttributeError):
+                _ = group.nodata
+
+            # helper generates data with rows incrementing from 0,
+            # with uniform across columns
+            valid_data = group.read_array(0, 0, 10, 10)
+            for idx in range(10):
+                row = valid_data[idx]
+                assert (row == idx).all()
+
+            # Read outside the known area and we should get zeros
+            null_data = group.read_array(10, 0, 10, 10)
+            assert (null_data == 0.0).all()
+
+def test_valid_file_list_non_zero_default() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.tif")
+        projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+        area = Area(-10, 10, 10, -10, projection)
+        dataset = gdal_dataset_of_region(area, 2.0, filename=path)
+        dataset.Close()
+        assert os.path.exists(path)
+
+        with GroupLayer.layer_from_files([path], default=-1.0) as group:
+            assert group.area == area
+            assert group.dimensions == (10, 10)
+            assert group.projection == projection
+            with pytest.raises(AttributeError):
+                _ = group.nodata
+
+            # helper generates data with rows incrementing from 0,
+            # with uniform across columns
+            valid_data = group.read_array(0, 0, 10, 10)
+            for idx in range(10):
+                row = valid_data[idx]
+                assert (row == idx).all()
+
+            # Read outside the known area and we should get the default we set
+            null_data = group.read_array(10, 0, 10, 10)
+            assert (null_data == -1.0).all()
 
 
 def test_single_raster_layer_in_group() -> None:
