@@ -2,6 +2,7 @@ from __future__ import annotations
 import contextlib
 import os
 import tempfile
+import warnings
 from multiprocessing import cpu_count
 from pathlib import Path
 from typing import Sequence
@@ -338,7 +339,7 @@ def to_geotiff(
     filename: Path | str,
     bands: Sequence[YirgacheffeLayer],
     labels: list[str] | None = None,
-    parallelism: int | bool | None = None,
+    parallelism: int | bool = False,
     nodata: float | int | None = None,
     sparse: bool = False,
 ) -> None:
@@ -359,6 +360,14 @@ def to_geotiff(
         nodata: Nominate a value to be stored as nodata in the result.
         sparse: If True then save a sparse GeoTIFF as per GDAL's extension to the GeoTIFF standard.
     """
+    # Handle now deprecated version of this argument
+    if parallelism is None:
+        warnings.warn(
+            "Please pass False rather than None as parallelism argument",
+            DeprecationWarning,
+        )
+        parallelism = False
+
     if not bands:
         raise ValueError("Expected one or more layers to be written")
 
@@ -419,13 +428,15 @@ def to_geotiff(
                 bands=len(layer_list),
             ) as output:
                 for index, layer in enumerate(layer_list):
-                    if parallelism is None:
-                        _ = layer.save(output, band=index + 1)
+                    if isinstance(parallelism, bool):
+                        worker_count = cpu_count() if parallelism else 1
+                    elif isinstance(parallelism, int):
+                        if parallelism <= 0:
+                            raise ValueError("Worker count must be 1 or more")
+                        worker_count = parallelism
                     else:
-                        if isinstance(parallelism, bool):
-                            # Parallel save treats None as "work it out"
-                            parallelism = None
-                        _ = layer.parallel_save(output, parallelism=parallelism, band=index + 1)
+                        raise TypeError("Parallelism argument should be int or bool")
+                    _ = layer.parallel_save(output, worker_count, parallelism=worker_count, band=index + 1)
                     if labels:
                         output._dataset.GetRasterBand(index + 1).SetDescription(labels[index])
 

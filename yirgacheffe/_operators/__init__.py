@@ -14,6 +14,7 @@ import tempfile
 import time
 import traceback
 import types
+import warnings
 from collections.abc import Callable
 from contextlib import ExitStack, nullcontext, suppress
 from enum import Enum
@@ -343,7 +344,7 @@ class LayerMathMixin:
         self,
         filename: Path | str,
         and_sum: bool = False,
-        parallelism: int | bool | None = None,
+        parallelism: int | bool = False,
         callback: Callable[[float], None] | None = None,
         nodata: float | int | None = None,
         sparse: bool = False,
@@ -1243,9 +1244,9 @@ class LayerOperation(LayerMathMixin):
     def _parallel_save(
         self,
         destination_layer,
+        worker_count,
         and_sum=False,
         callback=None,
-        parallelism=None,
         band=1
     ) -> float | None:
         assert (destination_layer is not None) or and_sum
@@ -1262,7 +1263,6 @@ class LayerOperation(LayerMathMixin):
             else:
                 raise RuntimeError("Should not be reached") # pylint: disable=W0707
 
-        worker_count = parallelism or multiprocessing.cpu_count()
         work_blocks = len(range(0, computation_window.ysize, self.ystep))
         adjusted_blocks = math.ceil(work_blocks / constants.MINIMUM_CHUNKS_PER_THREAD)
         worker_count = min(adjusted_blocks, worker_count)
@@ -1429,20 +1429,29 @@ class LayerOperation(LayerMathMixin):
     ) -> float | None:
         if destination_layer is None:
             raise ValueError("Layer is required")
-        return self._parallel_save(destination_layer, and_sum, callback, parallelism, band)
+        worker_count = multiprocessing.cpu_count() if parallelism is None else parallelism
+        return self._parallel_save(destination_layer, worker_count, and_sum, callback, band)
 
     def parallel_sum(self, callback=None, parallelism=None, band=1):
-        return self._parallel_save(None, True, callback, parallelism, band)
+        worker_count = multiprocessing.cpu_count() if parallelism is None else parallelism
+        return self._parallel_save(None, worker_count, True, callback, band)
 
     def to_geotiff(
         self,
         filename: Path | str,
         and_sum: bool = False,
-        parallelism: int | bool | None = None,
+        parallelism: int | bool = False,
         callback: Callable[[float], None] | None = None,
         nodata: float | int | None = None,
         sparse: bool = False,
     ) -> float | None:
+        # Handle now deprecated version of this argument
+        if parallelism is None:
+            warnings.warn(
+                "Please pass False rather than None as parallelism argument",
+                DeprecationWarning,
+            )
+            parallelism = False
 
         if sparse and nodata is None:
             raise ValueError("Nodata value must be provided for sparse GeoTIFFs")
@@ -1468,7 +1477,7 @@ class LayerOperation(LayerMathMixin):
         gdal_tiff_threads = None
         if parallelism:
             if isinstance(parallelism, bool):
-                gdal_tiff_threads = cpu_count()
+                gdal_tiff_threads = cpu_count() if parallelism else 1
             else:
                 gdal_tiff_threads = parallelism
 
@@ -1488,13 +1497,15 @@ class LayerOperation(LayerMathMixin):
                     sparse=sparse,
                     threads=gdal_tiff_threads
                 ) as layer:
-                    if parallelism is None:
-                        result = self.save(layer, and_sum=and_sum, callback=callback)
+                    if isinstance(parallelism, bool):
+                        worker_count = cpu_count() if parallelism else 1
+                    elif isinstance(parallelism, int):
+                        if parallelism <= 0:
+                            raise ValueError("Worker count must be 1 or more")
+                        worker_count = parallelism
                     else:
-                        if isinstance(parallelism, bool):
-                            # Parallel save treats None as "work it out"
-                            parallelism = None
-                        result = self.parallel_save(layer, and_sum=and_sum, callback=callback, parallelism=parallelism)
+                        raise TypeError("Parallelism argument should be int or bool")
+                    result = self._parallel_save(layer, worker_count, and_sum=and_sum, callback=callback)
 
                 if not is_vsi_based:
                     os.rename(src=tempory_file.name, dst=filename)
