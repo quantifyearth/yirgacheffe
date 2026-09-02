@@ -28,6 +28,8 @@ Yirgacheffe is available via pypi, so can be installed with pip for example:
 $ pip install yirgacheffe
 ```
 
+Due to limited resources, Yirgacheffe is only officially maintained for [currently supported Python versions](https://devguide.python.org/versions/). This means that Python 3.9, the version that ships with macOS, is not officially supported. Whilst we're not aware of any breakages, if you have issues we recommend you use a supported Python3 release via something like [Homebrew](https://brew.sh).
+
 ## Basic features
 
 ### Layers

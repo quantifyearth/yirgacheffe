@@ -1,3 +1,13 @@
+## v2.1.1 (21/08/2026)
+
+### Fixed
+
+* If you passed `False` explicitly as the `parallelism` parameter to `to_geotiff` it would trigger the parallel path.
+
+### Changes
+
+* The `parallelism` argument of `to_geotiff` now takes a number of CPU cores or a boolean, but no longer expects `None`, this is now deprecated. Currently it will convert `None` to `False`, but that will be removed in 3.x.
+
 ## v2.1.0 (06/08/2026)
 
 ### Added
