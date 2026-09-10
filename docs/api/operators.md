@@ -56,6 +56,7 @@ You can also call the following methods from `yirgacheffe`:
             - exp
             - exp2
             - floor
+            - full_like
             - isin
             - log
             - log10
