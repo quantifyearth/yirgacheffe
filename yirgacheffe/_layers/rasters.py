@@ -361,7 +361,7 @@ class RasterLayer(YirgacheffeLayer):
                     xsize - ((intersection.xoff - window.xoff) + intersection.xsize) + xoffset,
                 )
             )).astype(int)
-            data = backend.pad(subset, region, mode='constant')
+            data = backend.pad(subset, region, mode='constant')  # type: ignore
 
         nodata = self.nodata
         if not self._ignore_nodata and nodata is not None:
