@@ -141,6 +141,10 @@ def as_projection_op(data, projection, method): # pylint: disable=W0613
 def take_op(layer, table):
     return np.take(np.array(table), layer)
 
+def full_like_op(layer, value):
+    # we wrap this in a function so we can use kwargs in our LayerOperator logic
+    return np.full_like(layer, value)
+
 operator_map: dict[op, Callable] = {
     op.ADD: np.ndarray.__add__,
     op.SUB: np.ndarray.__sub__,
@@ -200,4 +204,5 @@ operator_map: dict[op, Callable] = {
     op.LOGICAL_XOR: np.logical_xor,
     op.LOGICAL_NOT: np.logical_not,
     op.TAKE: take_op,
+    op.FULL_LIKE: full_like_op,
 }

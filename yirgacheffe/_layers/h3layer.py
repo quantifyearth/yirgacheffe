@@ -195,20 +195,18 @@ class H3CellLayer(YirgacheffeLayer):
             if target_window == intersection:
                 return backend.promote(subset)
             else:
-                return backend.pad(
-                    backend.promote(subset),
+                region = (
                     (
-                        (
-                            (intersection.yoff - window.yoff) - yoffset,
-                            (ysize - ((intersection.yoff - window.yoff) + intersection.ysize)) + yoffset,
-                        ),
-                        (
-                            (intersection.xoff - window.xoff) - xoffset,
-                            xsize - ((intersection.xoff - window.xoff) + intersection.xsize) + xoffset,
-                        )
+                        (intersection.yoff - window.yoff) - yoffset,
+                        (ysize - ((intersection.yoff - window.yoff) + intersection.ysize)) + yoffset,
                     ),
-                    'constant'
+                    (
+                        (intersection.xoff - window.xoff) - xoffset,
+                        xsize - ((intersection.xoff - window.xoff) + intersection.xsize) + xoffset,
+                    )
                 )
+                return backend.pad(backend.promote(subset), region, 'constant')  # type: ignore
+
         else:
             # This handles the case where the cell wraps over 180˚ longitude
             res = np.zeros((ysize, xsize))

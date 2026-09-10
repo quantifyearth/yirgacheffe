@@ -397,3 +397,22 @@ def merge(layers: Sequence[YirgacheffeLayer]) -> GroupLayer:
         A single new layer.
     """
     return GroupLayer(layers)
+
+def full_like(layer, value):
+    """Creates a new layer with the same projection, area, and datatype as the provided layer, just with every pixel
+    set to the provided value.
+
+    If you wish to change type use the `as_type` operator first on the source layer.
+
+    Args:
+        layer: The layer from which to take the projection, area, and datatype.
+        value: The new value to appear in each pixel.
+
+    Returns:
+        A layer where each pixel has the provided value.
+    """
+    return LayerOperation(
+        layer,
+        op.FULL_LIKE,
+        value=value,
+    )

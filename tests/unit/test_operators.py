@@ -2192,7 +2192,7 @@ def test_virtual_window(origin: tuple[float,float]) -> None:
         assert layer._virtual_window == op_layer._virtual_window
 
 
-def  test_take_operator() -> None:
+def test_take_operator() -> None:
     # To make testing easier, we  just do a *10 crosswalk table
     lut = [x * 10 for x in range(10)]
     projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
@@ -2204,7 +2204,7 @@ def  test_take_operator() -> None:
         assert (result == expected).all()
 
 
-def  test_take_operator_invalid_lut() -> None:
+def test_take_operator_invalid_lut() -> None:
     lut = [x + 10 for x in range(4)]
     projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
@@ -2214,7 +2214,7 @@ def  test_take_operator_invalid_lut() -> None:
             _ = crosswalked.read_array(0, 0, 4, 2)
 
 
-def  test_take_function() -> None:
+def test_take_function() -> None:
     # To make testing easier, we  just do a *10 crosswalk table
     lut = [x * 10 for x in range(10)]
     projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
@@ -2223,4 +2223,28 @@ def  test_take_function() -> None:
         crosswalked = yg.take(lut, layer)
         result = crosswalked.read_array(0, 0, 4, 2)
         expected = data1 * 10
+        assert (result == expected).all()
+
+def test_full_int_to_int() -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = yg.full_like(layer, 42).read_array(0, 0, 4, 2)
+        expected = np.full((2, 4), 42)
+        assert (result == expected).all()
+
+def test_full_int_to_float_is_int() -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = yg.full_like(layer, 42.5).read_array(0, 0, 4, 2)
+        expected = np.full((2, 4), 42)
+        assert (result == expected).all()
+
+def test_full_int_to_float_to_float_is_float() -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = yg.full_like(layer.as_type(yg.DataType.Float32), 42.5).read_array(0, 0, 4, 2)
+        expected = np.full((2, 4), 42.5)
         assert (result == expected).all()

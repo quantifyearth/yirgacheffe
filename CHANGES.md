@@ -1,4 +1,8 @@
-## v2.1.1 (21/08/2026)
+## v2.1.1 (10/09/2026)
+
+### Added
+
+* Added `full_like` operator.
 
 ### Fixed
 

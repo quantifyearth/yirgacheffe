@@ -226,6 +226,10 @@ def take_op(layer, table):
         raise IndexError("Table values outside of range of table")
     return mx.take(mx.array(table), layer)
 
+def full_like_op(layer, value):
+    # we wrap this in a function so we can use kwargs in our LayerOperator logic
+    return mx.full_like(layer, value)
+
 operator_map: dict[op, Callable] = {
     op.ADD: mx.array.__add__,
     op.SUB: mx.array.__sub__,
@@ -281,4 +285,5 @@ operator_map: dict[op, Callable] = {
     op.LOGICAL_XOR: logical_xor_op,
     op.LOGICAL_NOT: mx.logical_not,
     op.TAKE: take_op,
+    op.FULL_LIKE: full_like_op,
 }
