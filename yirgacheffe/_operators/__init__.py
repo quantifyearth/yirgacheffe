@@ -395,6 +395,20 @@ class LayerMathMixin:
         )
 
     def as_area(self, area_or_layer: Any) -> LayerOperation:
+        """Given a layer or calculation adjusts the readable area to a new bounds.
+
+        Note, this opeator is used to influence the size of the final raster, and other uses
+        of `of_area` might change this, with the one closest to the root of the expression winning if
+        multiple `of_area` operators appear. In particular if you use one `of_area` to shrink a layer
+        and another to later expand the area of result, the later will win and the initial one will not
+        clip the original results. If you actually want to clip a layer you should use the `clip` operator.
+
+        Args:
+            area_or_layer: An area to use or another layer who's area should be used.
+
+        Result:
+            A new layer where the area is expanded or shrunk to fit the new area.
+        """
         if area_or_layer is None:
             raise TypeError("Expected layer or area value, not None")
 
