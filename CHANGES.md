@@ -1,3 +1,14 @@
+## v2.1.2 (11/09/2026)
+
+### Added
+
+* Additional unit tests around `as_area`.
+
+### Changed
+
+* Updated docs for `as_area`.
+
+
 ## v2.1.1 (10/09/2026)
 
 ### Added

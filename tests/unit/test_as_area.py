@@ -94,7 +94,7 @@ def test_invalid_areas(area: Any) -> None:
             _ = layer.as_area(area)
 
 
-def test_add_byte_layers_with_union() -> None:
+def test_add_byte_layers_with_union_on_inputs() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
     data2 = np.array([[10, 20], [50, 60]])
     projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
@@ -105,16 +105,38 @@ def test_add_byte_layers_with_union() -> None:
     ):
         layers = [layer1, layer2]
         union = yg.find_union(layers)
-        comp = layer1.as_area(union) + layer2.as_area(union)
+        # We use multiply here as that would otherwise only produce the intersection of the areas
+        comp = layer1.as_area(union) * layer2.as_area(union)
         assert comp.dimensions == (4, 4)
         assert comp.area == union
 
-        expected = np.array([[1, 2, 3, 4], [5, 16, 27, 8], [9, 60, 71, 12], [13, 14, 15, 16]])
+        expected = np.array([[0, 0, 0, 0], [0, 60, 140, 0], [0, 500, 660, 0], [0, 0, 0, 0]])
         actual = comp.read_array(0, 0, 4, 4)
         assert (expected == actual).all()
 
 
-def test_add_byte_layers_with_intersection_with_max_save_raster() -> None:
+def test_add_byte_layers_with_union_on_result() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    data2 = np.array([[10, 20], [50, 60]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
+
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (1, -1), projection) as layer2,
+    ):
+        layers = [layer1, layer2]
+        union = yg.find_union(layers)
+        # We use multiply here as that would otherwise only produce the intersection of the areas
+        comp = (layer1 * layer2).as_area(union)
+        assert comp.dimensions == (4, 4)
+        assert comp.area == union
+
+        expected = np.array([[0, 0, 0, 0], [0, 60, 140, 0], [0, 500, 660, 0], [0, 0, 0, 0]])
+        actual = comp.read_array(0, 0, 4, 4)
+        assert (expected == actual).all()
+
+
+def test_add_byte_layers_with_intersection_with_max_save_raster_on_inputs() -> None:
     data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
     data2 = np.array([[10, 20], [50, 60]])
     projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
@@ -132,6 +154,53 @@ def test_add_byte_layers_with_intersection_with_max_save_raster() -> None:
 
         expected = np.array([[16, 27], [60, 71]])
         actual = comp.read_array(0, 0, 2, 2)
+
+        assert (expected == actual).all()
+
+
+def test_add_byte_layers_with_intersection_with_max_save_raster_on_result() -> None:
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    data2 = np.array([[10, 20], [50, 60]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
+
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (1, -1), projection) as layer2,
+    ):
+        layers = [layer1, layer2]
+        intersection = yg.find_intersection(layers)
+
+        comp = (layer1 + layer2).as_area(intersection)
+        assert comp.dimensions == (2, 2)
+        assert comp.area == intersection
+
+        expected = np.array([[16, 27], [60, 71]])
+        actual = comp.read_array(0, 0, 2, 2)
+
+        assert (expected == actual).all()
+
+
+def test_add_byte_layers_with_intersection_with_max_save_raster_modify_inputs_and_result() -> None:
+    # This is another test that just shows that as_area doesn't do any masking internally: if you clip
+    # a layer with add area, then another part of the expression expands the area again, the last
+    # as area wins. If you want to clip data you need to use the `clip` operator.
+    data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])
+    data2 = np.array([[10, 20], [50, 60]])
+    projection = yg.MapProjection("epsg:4326", 1.0, -1.0)
+
+    with (
+        yg.from_array(data1, (0, 0), projection) as layer1,
+        yg.from_array(data2, (1, -1), projection) as layer2,
+    ):
+        layers = [layer1, layer2]
+        intersection = yg.find_intersection(layers)
+
+        comp = (layer1.as_area(intersection) + layer2.as_area(intersection)).as_area(layer1.area)
+        assert comp.dimensions == (4, 4)
+        assert comp.area == layer1.area
+
+        expected = np.array([[1, 2, 3, 4], [5, 16, 27, 8], [9, 60, 71, 12], [13, 14, 15, 16]])
+        actual = comp.read_array(0, 0, 4, 4)
 
         assert (expected == actual).all()
 
