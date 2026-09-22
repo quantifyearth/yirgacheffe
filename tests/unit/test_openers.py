@@ -479,7 +479,7 @@ def test_from_wkt_with_mapprojection() -> None:
             assert (wkt_layer.read_array(0, 0, 20, 10) == file_layer.read_array(0, 0, 20, 10)).all()
 
 
-def test_from_wkt_with_mapprojection() -> None:
+def test_from_wkt_like_with_mapprojection() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = os.path.join(tempdir, "test.gpkg")
         area = Area(-10.0, 10.0, 10.0, 0.0)
