@@ -1,13 +1,15 @@
 import os
 import resource
 import tempfile
+from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import pytest
 import torch
 
 import yirgacheffe as yg
-from tests.unit.helpers import gdal_dataset_with_data
+from tests.unit.helpers import gdal_dataset_with_data, make_vectors_with_id
 from yirgacheffe._layers import RasterLayer
 from yirgacheffe._operators import LayerOperation
 
@@ -338,3 +340,62 @@ def test_parallel_conv2d() -> None:
 
                 # Torch and MLX give slightly different rounding
                 assert np.isclose(expected, actual).all()
+
+
+@pytest.mark.skipif(
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
+def test_add_raster_and_vector_layers_from_files(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yg.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+            layer1 = yg.read_raster(path1)
+
+            path2 = Path(tempdir) / "test.gpkg"
+            make_vectors_with_id(42, {layer1.area}, path2)
+            layer2 = yg.read_shape(path2, burn_value=2)
+
+            result = RasterLayer.empty_raster_layer_like(layer1)
+
+            comp = layer1 + layer2
+            comp.parallel_save(result)
+
+            expected = data1 + 2
+            actual = result.read_array(0, 0, 4, 2)
+
+            assert (expected == actual).all()
+
+@pytest.mark.skipif(
+    yg._backends.BACKEND != "NUMPY", reason="Only applies for numpy"
+)
+def test_add_raster_file_and_vector_layers_from_memory(monkeypatch) -> None:
+    with monkeypatch.context() as m:
+        m.setattr(yg.constants, "YSTEP", 1)
+        m.setattr(LayerOperation, "save", None)
+        with tempfile.TemporaryDirectory() as tempdir:
+            path1 = os.path.join(tempdir, "test1.tif")
+            data1 = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+            dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1, filename=path1)
+            dataset1.Close()
+            layer1 = yg.read_raster(path1)
+
+            path2 = Path(tempdir) / "test.gpkg"
+            make_vectors_with_id(42, {layer1.area}, path2)
+            gdf = gpd.read_file(path2)
+
+            layer2 = yg.from_wkt(gdf.geometry[0].wkt, burn_value=2)
+
+            result = RasterLayer.empty_raster_layer_like(layer1)
+
+            comp = layer1 + layer2
+            comp.parallel_save(result)
+
+            expected = data1 + 2
+            actual = result.read_array(0, 0, 4, 2)
+
+            assert (expected == actual).all()

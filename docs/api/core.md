@@ -13,6 +13,8 @@ To get started with yirgacheffe you can import data using the following core met
             - read_rasters
             - constant
             - from_array
+            - from_wkt
+            - from_wkt_like
             - area_raster
             - h3_tile
             - to_geotiff

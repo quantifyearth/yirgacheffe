@@ -4,6 +4,7 @@ import tempfile
 from math import ceil, floor
 from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import pytest
 from affine import Affine
@@ -451,3 +452,72 @@ def test_create_simple_with_invalid_affine(transform) -> None:
     data = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
     with pytest.raises(ValueError):
         _ =  yg.from_array(data, transform, projection)
+
+
+def test_from_wkt_with_mapprojection() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        area = Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        gdf = gpd.read_file(path)
+        wkt = gdf.geometry[0].wkt
+
+        projection = MapProjection("epsg:4326", 1.0, -1.0)
+
+        with (
+            yg.from_wkt(wkt, projection) as wkt_layer,
+            yg.read_shape(path, projection) as file_layer,
+        ):
+            assert wkt_layer.area == Area(
+                -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
+            )
+            assert wkt_layer.area.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert wkt_layer.dimensions == (20, 10)
+            assert wkt_layer._virtual_window == Window(0, 0, 20, 10)
+            assert wkt_layer.projection == MapProjection("epsg:4326", 1.0, -1.0)
+            assert (wkt_layer.read_array(0, 0, 20, 10) == file_layer.read_array(0, 0, 20, 10)).all()
+
+
+def test_from_wkt_like_with_mapprojection() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        area = Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        gdf = gpd.read_file(path)
+        wkt = gdf.geometry[0].wkt
+
+        projection = MapProjection("epsg:4326", 1.0, -1.0)
+
+        with (
+            yg.from_array(np.array([[1, 2], [3, 4]]), (0, 0), projection) as target,
+            yg.from_wkt_like(wkt, target) as wkt_layer,
+            yg.read_shape_like(path, target) as file_layer,
+        ):
+            assert wkt_layer.area == Area(
+                -10.0, 10.0, 10.0, 0.0, MapProjection("epsg:4326", 1.0, -1.0)
+            )
+            assert wkt_layer.area.geo_transform == (area.left, 1.0, 0.0, area.top, 0.0, -1.0)
+            assert wkt_layer.dimensions == (20, 10)
+            assert wkt_layer._virtual_window == Window(0, 0, 20, 10)
+            assert wkt_layer.projection == MapProjection("epsg:4326", 1.0, -1.0)
+            assert (wkt_layer.read_array(0, 0, 20, 10) == file_layer.read_array(0, 0, 20, 10)).all()
+
+
+def test_from_wkt_with_no_projection() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = os.path.join(tempdir, "test.gpkg")
+        area = Area(-10.0, 10.0, 10.0, 0.0)
+        make_vectors_with_id(42, {area}, path)
+
+        gdf = gpd.read_file(path)
+        wkt = gdf.geometry[0].wkt
+
+        with yg.from_wkt(wkt) as layer:
+            assert layer.area == area
+            assert layer.projection is None
+            with pytest.raises(ValueError):
+                _ = layer.area.geo_transform
+            with pytest.raises(AttributeError):
+                _ = layer._virtual_window

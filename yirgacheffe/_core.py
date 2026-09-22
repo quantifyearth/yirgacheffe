@@ -9,7 +9,7 @@ from typing import Sequence
 
 import numpy as np
 from affine import Affine
-from osgeo import gdal
+from osgeo import gdal, ogr, osr
 
 from ._layers import UniformAreaLayer
 from ._layers import YirgacheffeLayer
@@ -290,6 +290,92 @@ def from_array(
         dataset.GetRasterBand(1).SetNoDataValue(nodata)
 
     return RasterLayer(dataset)
+
+
+def from_wkt(
+    wkt: str,
+    projection: MapProjection | None = None,
+    datatype: DataType = DataType.Byte,
+    burn_value: int | float | str = 1,
+) -> YirgacheffeLayer:
+    """Create a layer from a WKT polygon description.
+
+    Args:
+        wkt: The WKT description.
+        projection: The map projection to use.
+        datatype: Specify the data type of the raster data generated.
+        burn_value: The value of each pixel in the polygon.
+
+    Returns:
+        An layer representing the vector data.
+    """
+    geometry = ogr.CreateGeometryFromWkt(wkt)
+
+    if projection is not None:
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(projection.epsg)
+    else:
+        srs = None
+
+    datasource = ogr.GetDriverByName('mem').CreateDataSource('mem')
+    layer = datasource.CreateLayer('layer', srs=srs, geom_type=geometry.GetGeometryType())
+
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometry(geometry)
+    layer.CreateFeature(feature)
+
+    return VectorLayer(
+        datasource,
+        layer,
+        projection,
+        datatype=datatype,
+        burn_value=burn_value,
+    )
+
+
+def from_wkt_like(
+    wkt: str,
+    like: YirgacheffeLayer,
+    datatype: DataType = DataType.Byte,
+    burn_value: int | float | str = 1,
+) -> YirgacheffeLayer:
+    """Create a layer from a WKT polygon description.
+
+    Args:
+        wkt: The WKT description.
+        like: Another layer that has a projection and pixel scale set. This layer will
+            use the same projection and pixel scale as that one.
+        datatype: Specify the data type of the raster data generated.
+        burn_value: The value of each pixel in the polygon.
+
+    Returns:
+        An layer representing the vector data.
+    """
+    projection = like.projection
+    if projection is None:
+        raise ValueError("Like layer must have projection")
+
+    geometry = ogr.CreateGeometryFromWkt(wkt)
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(projection.epsg)
+
+    datasource = ogr.GetDriverByName('mem').CreateDataSource('mem')
+    layer = datasource.CreateLayer('layer', srs=srs, geom_type=geometry.GetGeometryType())
+
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetGeometry(geometry)
+    layer.CreateFeature(feature)
+
+    return VectorLayer(
+        datasource,
+        layer,
+        projection,
+        datatype=datatype if datatype is not None else like.datatype,
+        burn_value=burn_value,
+        anchor=(like.area.left, like.area.top),
+    )
+
 
 def area_raster(
     projection: MapProjection | tuple[str, tuple[float, float]],
