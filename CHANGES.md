@@ -1,7 +1,8 @@
-## v2.1.2 (11/09/2026)
+## v2.2.0 (11/09/2026)
 
 ### Added
 
+* Added `from_wkt` and `from_wkt_like` to create vector layers from WKT descriptions.
 * Additional unit tests around `as_area`.
 
 ### Changed

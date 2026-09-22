@@ -14,7 +14,7 @@ except ModuleNotFoundError:
 
 from ._layers import YirgacheffeLayer, ResamplingMethod, find_union, find_intersection
 from ._core import read_raster, read_rasters, read_shape, read_raster_like, read_shape_like, constant, \
-    read_narrow_raster, from_array, area_raster, to_geotiff, h3_tile
+    read_narrow_raster, from_array, area_raster, to_geotiff, h3_tile, from_wkt, from_wkt_like
 from ._datatypes.area import Area
 from ._datatypes.mapprojection import MapProjection
 from ._backends.enumeration import dtype as DataType

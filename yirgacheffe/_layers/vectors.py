@@ -89,6 +89,7 @@ class VectorLayer(YirgacheffeLayer):
                 datatype = DataType.of_gdal(datatype)
 
         vector_layer = VectorLayer(
+            vectors,
             layer,
             projection,
             name=str(filename),
@@ -97,10 +98,6 @@ class VectorLayer(YirgacheffeLayer):
             anchor=(other_layer.area.left, other_layer.area.top),
         )
 
-        # this is a gross hack, but unless you hold open the original file, you'll get
-        # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
-        # the original object being around
-        vector_layer._original = vectors
         vector_layer._dataset_path = filename if isinstance(filename, Path) else Path(filename)
         vector_layer._filter = where_filter
         return vector_layer
@@ -149,6 +146,7 @@ class VectorLayer(YirgacheffeLayer):
             datatype_arg = datatype
 
         vector_layer = VectorLayer(
+            vectors,
             layer,
             projection,
             name=str(filename),
@@ -157,16 +155,13 @@ class VectorLayer(YirgacheffeLayer):
             anchor=anchor
         )
 
-        # this is a gross hack, but unless you hold open the original file, you'll get
-        # a SIGSEGV when using the layers from it later, as some SWIG pointers outlive
-        # the original object being around
-        vector_layer._original = vectors
         vector_layer._dataset_path = filename if isinstance(filename, Path) else Path(filename)
         vector_layer._filter = where_filter
         return vector_layer
 
     def __init__(
         self,
+        datasource: ogr.DataSource,
         layer: ogr.Layer,
         projection: MapProjection | None,
         name: str | None = None,
@@ -174,6 +169,13 @@ class VectorLayer(YirgacheffeLayer):
         burn_value: int | float | str = 1,
         anchor: tuple[float, float] = (0.0, 0.0)
     ):
+        if datasource is None:
+            # A layer is only valid within a data source. In SWIG land if we don't
+            # hold onto the datasource then it will be GC'd and the layer reference
+            # we have will be invalid and we'll get a SIGSEGV.
+            raise ValueError('Layer must have a data source to be valid')
+        self._datasource = datasource
+
         if layer is None:
             raise ValueError('No layer provided')
         self.layer = layer
@@ -187,10 +189,10 @@ class VectorLayer(YirgacheffeLayer):
         # then assume it is a column name in the dataset
         self.burn_value = burn_value
 
-        self._original = None
         self._dataset_path: Path | None = None
         self._filter: str | None = None
         self._anchor: tuple[float, float] = (0.0, 0.0)
+        self._wkb: bytearray | None = None
 
         # work out region for mask
         envelopes = []
@@ -284,33 +286,49 @@ class VectorLayer(YirgacheffeLayer):
 
     def __getstate__(self) -> object:
         # Only support pickling on file backed layers (ideally read only ones...)
-        if self._dataset_path is None or not self._dataset_path.exists():
-            raise ValueError("Can not pickle layer that is not file backed.")
+        # if self._dataset_path is None or not self._dataset_path.exists():
+        #     raise ValueError("Can not pickle layer that is not file backed.")
         odict = self.__dict__.copy()
-        del odict['_original']
+        odict['_datasource'] = None
         del odict['layer']
         return odict
 
-    def __setstate__(self, state):
-        vectors = ogr.Open(state['_dataset_path'])
-        if vectors is None:
-            raise FileNotFoundError(f"Failed to open pickled vectors {state['_dataset_path']}")
-        self.__dict__.update(state)
-        self._original = vectors
-        self.layer = vectors.GetLayer()
-        if self._filter is not None:
-            self.layer.SetAttributeFilter(self._filter)
-
     def _park(self):
-        self._original = None
+        if self._dataset_path is None and self._wkb is None:
+            # There is no file for this, so we covert it to WKB to punt across the
+            # process divide. As a simplification, there are only two public APIs to VectorLayer:
+            # the file based case handled above, or `from_wkt` which means there will  just be one
+            # geometry here
+            #
+            # Note we have to bounce it via a variable here otherwise we race with SWIG lifetimes:
+            # ```
+            # >>> l.GetFeature(0).GetGeometryRef()
+            # <osgeo.ogr.Geometry; proxy of None >
+            # >>> f = l.GetFeature(0)
+            # >>> f.GetGeometryRef()
+            # <osgeo.ogr.Geometry; proxy of <Swig Object of type 'OGRGeometryShadow *' at 0x10a70e460> >
+            # ```
+            feat = self.layer.GetFeature(0)
+            geom = feat.GetGeometryRef()
+            self._wkb = geom.ExportToWkb()
+        self._datasource = None
 
     def _unpark(self):
-        if getattr(self, "_original", None) is None:
-            try:
-                self._original = ogr.Open(self._dataset_path)
-            except RuntimeError as exc:
-                raise FileNotFoundError(f"Failed to open pickled layer {self._dataset_path}") from exc
-            self.layer = self._original.GetLayer()
+        if getattr(self, "_datasource", None) is None:
+            if self._wkb is not None:
+                geometry = ogr.CreateGeometryFromWkb(self._wkb)
+                datasource = ogr.GetDriverByName('mem').CreateDataSource('mem')
+                layer = datasource.CreateLayer('layer', geom_type=geometry.GetGeometryType())
+                feature = ogr.Feature(layer.GetLayerDefn())
+                feature.SetGeometry(geometry)
+                layer.CreateFeature(feature)
+                self._datasource = datasource
+            else:
+                try:
+                    self._datasource = ogr.Open(self._dataset_path)
+                except RuntimeError as exc:
+                    raise FileNotFoundError(f"Failed to open pickled layer {self._dataset_path}") from exc
+            self.layer = self._datasource.GetLayer()
             if self._filter is not None:
                 self.layer.SetAttributeFilter(self._filter)
 
@@ -331,7 +349,7 @@ class VectorLayer(YirgacheffeLayer):
 
     @property
     def attributes(self) -> pd.DataFrame | None:
-        if self._original is None:
+        if self._datasource is None:
             self._unpark()
         raw = [feat.items() for feat in self.layer]
 
@@ -379,7 +397,7 @@ class VectorLayer(YirgacheffeLayer):
         rasterize_offset_x = grid_offset_for_layer[0] - grid_offset_for_read[0]
         rasterize_offset_y = grid_offset_for_layer[1] - grid_offset_for_read[1]
 
-        if self._original is None:
+        if self._datasource is None:
             self._unpark()
         if (width <= 0) or (height <= 0):
             raise ValueError("Request dimensions must be positive and non-zero")

@@ -172,13 +172,9 @@ The alternative is to call aggregation functions such as `sum`, `min`, or `max` 
 
 ```python
 with (
-    RasterLayer.layer_from_file(...) as area_layer,
-    VectorLayer(...) as mask_layer
+    yg.read_raster(...) as area_layer,
+    yg.read_shape(...) as mask_layer
 ):
-    intersection = yg.find_intersection([area_layer, mask_layer])
-    area_layer.set_intersection_window(intersection)
-    mask_layer.set_intersection_window(intersection)
-
     calc = area_layer * mask_layer
 
     total_area = calc.sum()
