@@ -14,3 +14,8 @@ When an update is about to be pushed to pypi, a new version number is needed. Th
 
 There is always going to be awkward updates that break this, but this is the rough guide the project follows.
 
+# AI contributions
+
+Currently LLMs or coding agents may not be used to produce code or documentation for Yirgacheffe. The aim of Yirgacheffe is to provide a small, reliable, well tested core on which other data-science pipelines are built. As such this project relies on the core contributors understanding the code base, and individual contributors understanding how their changes fit in with that.
+
+In time this might change, but for now, whilst you can use whatever tools you like to help your own understanding, any contributions you make must be written by yourself.
