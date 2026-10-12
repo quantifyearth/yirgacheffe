@@ -2248,3 +2248,55 @@ def test_full_int_to_float_to_float_is_float() -> None:
         result = yg.full_like(layer.as_type(yg.DataType.Float32), 42.5).read_array(0, 0, 4, 2)
         expected = np.full((2, 4), 42.5)
         assert (result == expected).all()
+
+
+def test_sin() -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[0.0, np.pi, np.pi / 2, np.pi], [0.0, 1.0, 2.0, 3.0]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = layer.sin().read_array(0, 0, 4, 2)
+        expected = backend.demote_array(backend.sin(backend.promote(data1)))
+        assert (result == expected).all()
+
+
+def test_cos() -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[0.0, np.pi, np.pi / 2, np.pi], [0.0, 1.0, 2.0, 3.0]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = layer.cos().read_array(0, 0, 4, 2)
+        expected = backend.demote_array(backend.cos(backend.promote(data1)))
+        assert (result == expected).all()
+
+
+def test_tan() -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[0.0, np.pi, np.pi / 2, np.pi / 4], [0.0, 1.0, 2.0, 3.0]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = layer.tan().read_array(0, 0, 4, 2)
+        expected = backend.demote_array(backend.tan(backend.promote(data1)))
+        assert (result == expected).all()
+
+
+def test_sinarcsin() -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[0.0, np.pi / 4, np.pi / 2, np.pi/8], [-0.0, -np.pi / 4, -np.pi / 2, -np.pi/8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = layer.sin().arcsin().read_array(0, 0, 4, 2)
+        assert np.isclose(result, data1).all()
+
+
+def test_cosarccos() -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[0.0, np.pi / 4, np.pi / 2, np.pi/8], [0.0, np.pi / 4, np.pi / 2, np.pi]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = layer.cos().arccos().read_array(0, 0, 4, 2)
+        assert np.isclose(result, data1).all()
+
+
+def test_tanarctan() -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[0.0, np.pi / 4, np.pi / 2, np.pi/8], [-0.0, -np.pi / 4, -np.pi / 2, -np.pi/8]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = layer.tan().arctan().read_array(0, 0, 4, 2)
+        expected = backend.demote_array(backend.arctan(backend.tan(backend.promote(data1))))
+        assert np.isclose(result, expected).all()

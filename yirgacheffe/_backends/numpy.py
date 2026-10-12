@@ -57,6 +57,12 @@ abs_op = np.abs
 floor_op = np.floor
 round_op = np.round
 ceil_op = np.ceil
+arccos = np.arccos
+arcsin = np.arcsin
+arctan = np.arctan
+cos = np.cos
+sin = np.sin
+tan = np.tan
 
 def init() -> None:
     gdal.SetCacheMax(constants.GDAL_CACHE_LIMIT)
@@ -205,4 +211,10 @@ operator_map: dict[op, Callable] = {
     op.LOGICAL_NOT: np.logical_not,
     op.TAKE: take_op,
     op.FULL_LIKE: full_like_op,
+    op.SIN: np.sin,
+    op.COS: np.cos,
+    op.TAN: np.tan,
+    op.ARCSIN: np.arcsin,
+    op.ARCCOS: np.arccos,
+    op.ARCTAN: np.arctan,
 }

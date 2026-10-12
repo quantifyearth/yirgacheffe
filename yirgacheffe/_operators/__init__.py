@@ -281,6 +281,48 @@ class LayerMathMixin:
             window_op=WindowOperation.NONE,
         )
 
+    def sin(self):
+        return LayerOperation(
+            self,
+            op.SIN,
+            window_op=WindowOperation.NONE,
+        )
+
+    def cos(self):
+        return LayerOperation(
+            self,
+            op.COS,
+            window_op=WindowOperation.NONE,
+        )
+
+    def tan(self):
+        return LayerOperation(
+            self,
+            op.TAN,
+            window_op=WindowOperation.NONE,
+        )
+
+    def arcsin(self):
+        return LayerOperation(
+            self,
+            op.ARCSIN,
+            window_op=WindowOperation.NONE,
+        )
+
+    def arccos(self):
+        return LayerOperation(
+            self,
+            op.ARCCOS,
+            window_op=WindowOperation.NONE,
+        )
+
+    def arctan(self):
+        return LayerOperation(
+            self,
+            op.ARCTAN,
+            window_op=WindowOperation.NONE,
+        )
+
     def logical_and(self, other):
         return LayerOperation(self, op.LOGICAL_AND, other, window_op=WindowOperation.INTERSECTION)
 

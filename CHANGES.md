@@ -1,3 +1,9 @@
+## v2.2.1 (12/10/2026)
+
+### Added
+
+* Added trig operators: `arccos`, `arcsin`, `arctan`, `cos`, `sin`, and `tan.`
+
 ## v2.2.0 (22/09/2026)
 
 ### Added

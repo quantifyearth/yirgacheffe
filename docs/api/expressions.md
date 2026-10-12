@@ -65,8 +65,12 @@ The following math operators common to numpy and other libraries are currently s
 * abs
 * all
 * any
+* arccos
+* arcsin
+* arctan
 * ceil
 * clip
+* cos
 * exp
 * exp2
 * floor
@@ -78,8 +82,10 @@ The following math operators common to numpy and other libraries are currently s
 * minimum
 * nan_to_num
 * round
+* sin
 * sum
 * take
+* tan
 
 Typically these can be invoked either on a layer as a method:
 
