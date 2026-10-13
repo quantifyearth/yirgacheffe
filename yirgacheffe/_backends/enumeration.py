@@ -62,6 +62,12 @@ class operators(Enum):
     LOGICAL_NOT = 54
     TAKE = 55
     FULL_LIKE = 56
+    SIN = 57
+    COS = 58
+    TAN = 59
+    ARCSIN = 60
+    ARCCOS = 61
+    ARCTAN = 62
 
 class dtype(Enum):
     """Represents the type of data returned by a layer.

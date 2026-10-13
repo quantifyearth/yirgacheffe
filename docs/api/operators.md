@@ -25,12 +25,16 @@ On a layer you can also invoke the following operations using `layer.operator(..
 | Operator |
 |----------|
 | abs |
+| arccos |
+| arcsin |
+| arctan |
 | as_area |
 | as_projection |
 | as_type |
 | ceil |
 | clip |
 | conv2d |
+| cos |
 | exp |
 | exp2 |
 | floor |
@@ -40,7 +44,9 @@ On a layer you can also invoke the following operations using `layer.operator(..
 | log10 |
 | log2 |
 | nan_to_num |
+| sin |
 | take |
+| tan |
 
 You can also call the following methods from `yirgacheffe`:
 

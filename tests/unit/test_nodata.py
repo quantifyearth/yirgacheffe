@@ -191,3 +191,29 @@ def test_simple_operator_mixed_nodata_value_3() -> None:
         data2[data2 == 5.0] = np.nan
         actual = calc.read_array(0, 0, 4, 2)
         assert np.array_equal(data1 + data2, actual, equal_nan=True)
+
+
+def test_reprojection_no_data() -> None:
+    data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 5.0, 8.0]])
+    dataset1 = gdal_dataset_with_data((0.0, 0.0), 0.02, data1)
+    dataset1.GetRasterBand(1).SetNoDataValue(5.0)
+
+    with RasterLayer(dataset1) as layer1:
+        assert layer1.nodata == 5.0
+
+        expected = np.array([[1.0, 2.0, 3.0, 4.0], [float("nan"), 6.0, float("nan"), 8.0]])
+        actual = layer1.read_array(0, 0, 4, 2)
+        assert np.array_equal(expected, actual, equal_nan=True)
+
+        assert layer1.projection
+        target_projection = yg.MapProjection(layer1.projection.name, 0.01, -0.01)
+        reprojected = layer1.as_projection(target_projection, yg.ResamplingMethod.Nearest)
+        assert reprojected.dimensions == (8, 4)
+        expected = np.array([
+            [1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0],
+            [1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0],
+            [float("nan"), float("nan"), 6.0, 6.0, float("nan"), float("nan"), 8.0, 8.0],
+            [float("nan"), float("nan"), 6.0, 6.0, float("nan"), float("nan"), 8.0, 8.0],
+        ])
+        actual = reprojected.read_array(0, 0, 8, 4)
+        assert np.array_equal(expected, actual, equal_nan=True)

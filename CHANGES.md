@@ -1,3 +1,13 @@
+## v2.3.0 (12/10/2026)
+
+### Changed
+
+* Python 3.10 is now deprecated, so switch minimum to 3.11.
+
+### Added
+
+* Added trig operators: `arccos`, `arcsin`, `arctan`, `cos`, `sin`, and `tan.`
+
 ## v2.2.0 (22/09/2026)
 
 ### Added

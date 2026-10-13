@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yirgacheffe"
-version = "2.2.0"
+version = "2.3.0"
 description = "Abstraction of gdal datasets for doing basic math operations"
 readme = "README.md"
 authors = [{ name = "Michael Dales", email = "mwd24@cam.ac.uk" }]
@@ -36,7 +36,7 @@ dependencies = [
     "pyproj",
     "lazy_loader"
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [project.optional-dependencies]
 mlx = [
