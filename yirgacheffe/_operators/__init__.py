@@ -46,8 +46,6 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.image import AxesImage
     import matplotlib.pyplot as plt
-else:
-    plt = lazy.load('matplotlib.pyplot')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -605,6 +603,8 @@ class LayerMathMixin:
         Returns:
             A matplotlib image.
         """
+        import matplotlib.pyplot as plt  # pylint: disable=import-outside-toplevel
+
         if ax is None:
             ax = plt.gca()
 

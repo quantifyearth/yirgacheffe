@@ -2323,7 +2323,7 @@ def test_trig_direct(yirg_func, backend_func) -> None:
 ])
 def test_arc_trig_direct(yirg_func, backend_func) -> None:
     projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
-    data1 = np.array([[0.0, np.pi, np.pi / 2, np.pi / 4], [0.0, 1.0, 2.0, 3.0]])
+    data1 = np.array([[0.0, -np.pi/4, np.pi / 8, np.pi / 4], [0.0, 0.1, 0.2, -0.1]])
     with yg.from_array(data1, (0, 0), projection) as layer:
         result = yirg_func(layer).read_array(0, 0, 4, 2)
         expected = backend.demote_array(backend_func(backend.promote(data1)))
