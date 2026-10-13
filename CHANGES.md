@@ -1,4 +1,8 @@
-## v2.2.1 (12/10/2026)
+## v2.3.0 (12/10/2026)
+
+### Changed
+
+* Python 3.10 is now deprecated, so switch minimum to 3.11.
 
 ### Added
 
