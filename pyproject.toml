@@ -31,7 +31,6 @@ dependencies = [
     "pandas",
     "torch",
     "dill",
-    "tomli",
     "h3",
     "pyproj",
     "lazy_loader"
@@ -54,6 +53,7 @@ dev = [
     "build",
     "graphviz",
     "twine",
+    "properdocs",
     "mkdocs-material",
     "mkdocstrings-python",
     "mike",

@@ -47,7 +47,7 @@ jobs:
         run: python3 -m mypy yirgacheffe tests
 
       - name: Build docs
-        run: mkdocs build
+        run: properdocs build -f mkdocs.yml
 
       - name: Test with numpy backend
         run: python3 -m pytest --cov=yirgacheffe -vv

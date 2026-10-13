@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from osgeo import gdal
-import tomli as tomllib
+import tomllib
 
 try:
     from importlib import metadata
