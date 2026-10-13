@@ -2300,3 +2300,31 @@ def test_tanarctan() -> None:
         result = layer.tan().arctan().read_array(0, 0, 4, 2)
         expected = backend.demote_array(backend.arctan(backend.tan(backend.promote(data1))))
         assert np.isclose(result, expected).all()
+
+@pytest.mark.parametrize("yirg_func,backend_func",[
+    (yg.cos, backend.cos),
+    (yg.sin, backend.sin),
+    (yg.tan, backend.tan),
+])
+def test_trig_direct(yirg_func, backend_func) -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[0.0, np.pi, np.pi / 2, np.pi / 4], [0.0, 1.0, 2.0, 3.0]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = yirg_func(layer).read_array(0, 0, 4, 2)
+        expected = backend.demote_array(backend_func(backend.promote(data1)))
+        print(result)
+        print(expected)
+        assert np.isclose(result, expected).all()
+
+@pytest.mark.parametrize("yirg_func,backend_func",[
+    (yg.arccos, backend.arccos),
+    (yg.arcsin, backend.arcsin),
+    (yg.arctan, backend.arctan),
+])
+def test_arc_trig_direct(yirg_func, backend_func) -> None:
+    projection = yg.MapProjection("epsg:4326", 2.0, -2.0)
+    data1 = np.array([[0.0, -np.pi/4, np.pi / 8, np.pi / 4], [0.0, 0.1, 0.2, -0.1]])
+    with yg.from_array(data1, (0, 0), projection) as layer:
+        result = yirg_func(layer).read_array(0, 0, 4, 2)
+        expected = backend.demote_array(backend_func(backend.promote(data1)))
+        assert np.isclose(result, expected, equal_nan=True).all()

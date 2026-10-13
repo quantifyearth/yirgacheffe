@@ -416,3 +416,87 @@ def full_like(layer, value):
         op.FULL_LIKE,
         value=value,
     )
+
+def arccos(layer):
+    """Returns arccos of the layer.
+
+    Args:
+        layer: The layer of which to compute arccos on.
+
+    Returns:
+        A layer where each value is the arccos of the input.
+
+    Note:
+        Can also be called as `layer.arccos()`.
+    """
+    return layer.arccos()
+
+def arcsin(layer):
+    """Returns arcsin of the layer.
+
+    Args:
+        layer: The layer of which to compute arcsin on.
+
+    Returns:
+        A layer where each value is the arcsin of the input.
+
+    Note:
+        Can also be called as `layer.arcsin()`.
+    """
+    return layer.arcsin()
+
+def arctan(layer):
+    """Returns arctan of the layer.
+
+    Args:
+        layer: The layer of which to compute arctan on.
+
+    Returns:
+        A layer where each value is the arctan of the input.
+
+    Note:
+        Can also be called as `layer.arctan()`.
+    """
+    return layer.arctan()
+
+def cos(layer):
+    """Returns cos of the layer.
+
+    Args:
+        layer: The layer of which to compute cos on.
+
+    Returns:
+        A layer where each value is the cos of the input.
+
+    Note:
+        Can also be called as `layer.cos()`.
+    """
+    return layer.cos()
+
+def sin(layer):
+    """Returns sin of the layer.
+
+    Args:
+        layer: The layer of which to compute sin on.
+
+    Returns:
+        A layer where each value is the sin of the input.
+
+    Note:
+        Can also be called as `layer.sin()`.
+    """
+    return layer.sin()
+
+def tan(layer):
+    """Returns tan of the layer.
+
+    Args:
+        layer: The layer of which to compute tan on.
+
+    Returns:
+        A layer where each value is the tan of the input.
+
+    Note:
+        Can also be called as `layer.tan()`.
+    """
+    return layer.tan()
