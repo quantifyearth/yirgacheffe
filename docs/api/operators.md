@@ -57,8 +57,12 @@ You can also call the following methods from `yirgacheffe`:
             - abs
             - all
             - any
+            - arccos
+            - arcsin
+            - arctan
             - ceil
             - clip
+            - cos
             - exp
             - exp2
             - floor
@@ -76,8 +80,10 @@ You can also call the following methods from `yirgacheffe`:
             - minimum
             - nan_to_num
             - round
+            - sin
             - sum
             - take
+            - tan
             - where
         show_root_heading: false
         show_source: false
