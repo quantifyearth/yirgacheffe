@@ -47,9 +47,9 @@ nav:
     - Classes:
       - Area: api/classes/area.md
       - MapProjection: api/classes/mapprojection.md
-      - Window: api/classes/window.md
     - Enums:
       - DataType: api/enums/datatype.md
       - ResamplingMethod: api/enums/resamplingmethods.md
   - Code of conduct: CODE_OF_CONDUCT.md
+  - Contributing: contributing.md
   - Changelog: changelog.md

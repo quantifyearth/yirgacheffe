@@ -23,7 +23,9 @@ from multiprocessing import Process, Queue, Semaphore, cpu_count
 from multiprocessing.synchronize import Semaphore as SemaphoreType
 from multiprocessing.managers import SharedMemoryManager
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+import lazy_loader as lazy  # type: ignore
 
 import numpy as np
 import numpy.typing as npt
@@ -39,6 +41,13 @@ from .._backends.enumeration import dtype as DataType
 from .._backends.numpy import dtype_to_backend as dtype_to_numpy
 from .._backends.numpy import backend_to_dtype as numpy_to_dtype
 from .cse import CSECacheTable
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+    from matplotlib.image import AxesImage
+    import matplotlib.pyplot as plt
+else:
+    plt = lazy.load('matplotlib.pyplot')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
@@ -577,7 +586,13 @@ class LayerMathMixin:
     def _read_array_for_area(self, _target_area, _target_projection, _x, _y, _w, _h):
         raise NotImplementedError("Must be overridden by subclass")
 
-    def show(self, ax=None, parallelism=False, max_pixels: int | None =1000, **kwargs):
+    def show(
+        self,
+        ax: None | Axes=None,
+        parallelism: bool=False,
+        max_pixels: int | None=1000,
+        **kwargs: Any
+    ) -> AxesImage:
         """Display data using matplotlib.
 
         Args:
@@ -590,8 +605,6 @@ class LayerMathMixin:
         Returns:
             A matplotlib image.
         """
-        import matplotlib.pyplot as plt # pylint: disable=C0415
-
         if ax is None:
             ax = plt.gca()
 
@@ -617,12 +630,12 @@ class LayerMathMixin:
         else:
             data = raw_data
         area = self.area
-        extent = [
+        extent = (
             area.left,
             area.right,
             area.bottom,
             area.top,
-        ]
+        )
         return ax.imshow(data, extent=extent, **kwargs)
 
 

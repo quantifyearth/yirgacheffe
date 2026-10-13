@@ -1,13 +1,17 @@
 from __future__ import annotations
 import math
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 from affine import Affine
 import lazy_loader as lazy # type: ignore
 
 # Pyproj is relatively slow to import, which was adding reasonably to
 # the import time for yirgacheffe, so make it lazy
-pyproj = lazy.load('pyproj')
+if TYPE_CHECKING:
+    import pyproj
+else:
+    pyproj = lazy.load('pyproj')
 
 # As per https://xkcd.com/2170/, we need to stop caring about floating point
 # accuracy at some point as it becomes problematic.
@@ -43,7 +47,7 @@ class MapProjection:
     pixel scales that are below a single metre in resolution.
 
     Args:
-        name: The map projection used in WKT format, or as "epsg:xxxx" or "esri:xxxx".
+        projection_string: The map projection used in WKT format, or as "epsg:xxxx" or "esri:xxxx".
         xstep: The number of units horizontal distance a step of one pixel makes in the map projection.
         ystep: The number of units vertical distance a step of one pixel makes in the map projection.
 
@@ -63,7 +67,7 @@ class MapProjection:
     """
 
     @classmethod
-    def from_affine(cls, crs, transform: Affine) -> MapProjection:
+    def from_affine(cls, crs: str | pyproj.CRS, transform: Affine) -> MapProjection:
         """Build a map projection from a CRS and Affine transform.
 
         Useful for instance when mixing Yirgacheffe with Rasterio.
