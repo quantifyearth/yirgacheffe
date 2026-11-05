@@ -18,7 +18,7 @@ import warnings
 from collections.abc import Callable
 from contextlib import ExitStack, nullcontext, suppress
 from enum import Enum
-from functools import cached_property, reduce
+from functools import cached_property, reduce, partial
 from multiprocessing import Process, Queue, Semaphore, cpu_count
 from multiprocessing.synchronize import Semaphore as SemaphoreType
 from multiprocessing.managers import SharedMemoryManager
@@ -432,8 +432,8 @@ class LayerMathMixin:
     def max(self):
         return LayerOperation(self).max()
 
-    def unique(self, return_counts=False):
-        return LayerOperation(self).unique(return_counts)
+    def unique(self, return_counts=False, parallelism=False):
+        return LayerOperation(self).unique(return_counts, parallelism)
 
     def as_type(self, datatype):
         return LayerOperation(
@@ -1084,16 +1084,122 @@ class LayerOperation(LayerMathMixin):
             res = max(res, chunk_max)
         return res
 
-    def unique(self, return_counts:bool=False) -> np.ndarray | tuple[np.ndarray,np.ndarray]:
+    def _parallel_unique_worker(
+        self,
+        return_counts: bool,
+        computation_window : Window,
+        chunk: tuple[int,int],
+    ) -> tuple[np.ndarray,np.ndarray]:
+        # In the general parallel worker we have an outer try/catch all to avoid
+        # failed child processes hanging everything. We don't do this here as in
+        # theory multiprocessing.Pool should handle that.
+        projection = self.projection
+        assert projection is not None
+
+        yoffset, step = chunk
+
+        # The hashing of python objects isn't stable across processes in general, so we have to do
+        # the cache build once per worker
+        cse_cache = CSECacheTable(self, computation_window)
+        backend.init()
+
+        chunk = self._eval(
+            cse_cache,
+            self._get_operation_area(projection),
+            projection,
+            yoffset,
+            step,
+            computation_window
+        )
+        if return_counts:
+            chunk_uniques, chunk_counts = backend.unique(chunk, return_counts=True)
+        else:
+            chunk_uniques = backend.unique(chunk)
+            chunk_counts = [0] * len(chunk_uniques)
+
+        return (chunk_uniques, chunk_counts)
+
+
+    def _parallel_unique(
+        self,
+        return_counts: bool,
+        worker_count: int,
+    ) -> np.ndarray | tuple[np.ndarray,np.ndarray]:
+        res : dict[int|float,int] = {}
+        computation_window = self._virtual_window
+        projection = self.projection
+        if projection is None:
+            raise ValueError("No map projection")
+
+        chunks = []
+        for yoffset in range(0, computation_window.ysize, self.ystep):
+            step=self.ystep
+            if yoffset+step > computation_window.ysize:
+                step = computation_window.ysize - yoffset
+            chunks.append((yoffset, step))
+
+        with multiprocessing.Pool(worker_count) as p:
+            parts = p.map(
+                partial(
+                    self._parallel_unique_worker,
+                    return_counts,
+                    computation_window,
+                ),
+                chunks
+            )
+            for part_uniques, part_counts in parts:
+                for val, count in zip(part_uniques, part_counts):
+                    if np.isnan(val):
+                        val = "nan"
+                    try:
+                        res[val] = res[val] + count
+                    except KeyError:
+                        res[val] = count
+
+        if return_counts:
+            uniques, counts = [], []
+            for k, v in res.items():
+                if k == "nan":
+                    k = float("nan")
+                uniques.append(k)
+                counts.append(v)
+            np_uniques = np.array(uniques)
+            np_counts = np.array(counts)
+            args = np.argsort(np_uniques)
+            return np_uniques[args], np_counts[args]
+        else:
+            vals = [float("nan") if x == "nan" else x for x in res]
+            return np.sort(np.array(vals))
+
+
+    def unique(
+        self,
+        return_counts:bool=False,
+        parallelism: int | bool = False
+    ) -> np.ndarray | tuple[np.ndarray,np.ndarray]:
         """Returns a list of unique values found in the layer.
 
         Args:
             return_counts: If true, the function returns the counts of each item also.
+            parallelism: If passed, attempt to use multiple CPU cores up to the number provided, or if set to True,
+                yirgacheffe will pick a sensible value.
 
         Returns:
             Either a list of unique items, or two lists, the first being the unique items
             and the second list being the corresponding counts.
         """
+        if parallelism:
+            if isinstance(parallelism, bool):
+                worker_count = cpu_count()
+            elif isinstance(parallelism, int):
+                if parallelism < 1:
+                    raise ValueError("parallelism value must be greater than zero")
+                worker_count = parallelism
+            else:
+                raise TypeError("parallelism value must be bool or int")
+
+            return self._parallel_unique(return_counts, worker_count)
+
         res : dict[int|float,int] = {}
         computation_window = self._virtual_window
         projection = self.projection

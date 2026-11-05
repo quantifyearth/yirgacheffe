@@ -1,3 +1,9 @@
+## v2.3.1 (05/11/2026)
+
+### Added
+
+* Added `parallelism` option to `unique` operator.
+
 ## v2.3.0 (12/10/2026)
 
 ### Changed
