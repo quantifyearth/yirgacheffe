@@ -1907,14 +1907,21 @@ def test_very_slightly_missaligned_layers() -> None:
     np.array([[1, 2, 3, 4], [5, 6, 7, 8], [1, 2, 3, 4]]),
     np.array([[1.1, 2.1, 1.1, float('nan')], [1.1, float('nan'), 1.0, float('nan')]]),
 ])
-def test_simple_unique(monkeypatch, blocksize, data) -> None:
+@pytest.mark.parametrize("parallelism", [False, True, 1, 2, 4])
+def test_simple_unique(monkeypatch, blocksize, data, parallelism) -> None:
     with monkeypatch.context() as m:
         m.setattr(yg.constants, "YSTEP", blocksize)
-        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
-        with yg.from_array(data, (0.0, 0.0), projection) as layer1:
-            unique_vals = layer1.unique()
-            expected = np.unique(data)
-            assert np.allclose(unique_vals, expected, equal_nan=True)
+        with tempfile.TemporaryDirectory() as tempdir:
+            tmp = Path(tempdir)
+            projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+            with yg.from_array(data, (0.0, 0.0), projection) as datalayer:
+                datalayer.to_geotiff(tmp / "test.tif")
+
+            with yg.read_raster(tmp / "test.tif") as layer1:
+                unique_vals = layer1.unique(parallelism=parallelism)
+                print(unique_vals)
+                expected = np.unique(data)
+                assert np.allclose(unique_vals, expected, equal_nan=True)
 
 
 @pytest.mark.parametrize("blocksize", [1, 2, 4])
@@ -1922,15 +1929,21 @@ def test_simple_unique(monkeypatch, blocksize, data) -> None:
     np.array([[1, 2, 3, 4], [5, 6, 7, 8], [1, 2, 3, 4]]),
     np.array([[1.1, 2.1, 1.1, float('nan')], [1.1, float('nan'), 1.0, float('nan')]]),
 ])
-def test_simple_unique_with_counts(monkeypatch, blocksize, data) -> None:
+@pytest.mark.parametrize("parallelism", [False, True, 1, 2, 4])
+def test_simple_unique_with_counts(monkeypatch, blocksize, data, parallelism) -> None:
     with monkeypatch.context() as m:
         m.setattr(yg.constants, "YSTEP", blocksize)
-        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
-        with yg.from_array(data, (0.0, 0.0), projection) as layer1:
-            unique_vals, unique_counts = layer1.unique(return_counts=True)
-            expected_vals, expected_counts = np.unique(data, return_counts=True)
-            assert np.allclose(unique_vals, expected_vals, equal_nan=True)
-            assert (unique_counts == expected_counts).all()
+        with tempfile.TemporaryDirectory() as tempdir:
+            tmp = Path(tempdir)
+            projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+            with yg.from_array(data, (0.0, 0.0), projection) as datalayer:
+                datalayer.to_geotiff(tmp / "test.tif")
+
+            with yg.read_raster(tmp / "test.tif") as layer1:
+                unique_vals, unique_counts = layer1.unique(return_counts=True, parallelism=parallelism)
+                expected_vals, expected_counts = np.unique(data, return_counts=True)
+                assert np.allclose(unique_vals, expected_vals, equal_nan=True)
+                assert (unique_counts == expected_counts).all()
 
 
 @pytest.mark.parametrize("op", [
