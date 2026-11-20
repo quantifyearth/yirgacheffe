@@ -1,6 +1,7 @@
 import json
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 
 import yirgacheffe as yg
@@ -33,7 +34,7 @@ def test_sums_of_calc_int(monkeypatch, step, c, dtype: type, maxval: int) -> Non
 
         rng = np.random.default_rng(seed=42)
 
-        data = rng.integers(0, maxval, size=(1000, 1000), dtype=dtype)
+        data :  npt.NDArray[np.integer] = rng.integers(0, maxval, size=(1000, 1000), dtype=dtype)
         typed_data = backend.promote(data)
 
         assert np.sum(data) == backend.sum_op(typed_data)
@@ -64,7 +65,7 @@ def test_sums_of_calc_float_mlx(monkeypatch, step, c, dtype: type, maxval: int) 
 
         rng = np.random.default_rng(seed=42)
 
-        data = rng.integers(0, maxval, size=(100, 100), dtype=dtype)
+        data : npt.NDArray[np.integer] = rng.integers(0, maxval, size=(100, 100), dtype=dtype)
         typed_data = backend.promote(data)
 
         with yg.from_array(data, (0, 0), ("epsg:4326", (0.01, -0.01))) as layer:
