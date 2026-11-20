@@ -107,6 +107,7 @@ Yirgacheffe was created by [Michael Dales](https://digitalflapjack.com/) whilst 
 Thanks to the following people for help, feedback, and inspiration:
 
 * Alison Eyres
+* Amelia Holcomb
 * Anil Madhavapeddy
 * Dan Wilson
 * Daniele Baisero
@@ -115,4 +116,3 @@ Thanks to the following people for help, feedback, and inspiration:
 * Patrick Ferris
 * Simon Tarr
 * Tom Ball
-

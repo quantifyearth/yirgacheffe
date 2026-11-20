@@ -98,20 +98,44 @@ def test_open_multiband_raster_wrong_band() -> None:
             _ = yg.read_raster(path, 3)
 
 
-def test_open_multiband_raster() -> None:
+def test_open_multiband_raster_by_index() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.tif"
         data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
         data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
-
         datas = [data1, data2]
-        dataset = gdal_multiband_dataset_with_data(
-            (0.0, 0.0), 0.02, datas, filename=path
-        )
-        dataset.Close()
+
+        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+        with (
+            yg.from_array(data1, (0, 0), projection) as layer1,
+            yg.from_array(data2, (0, 0), projection) as layer2,
+        ):
+            yg.to_geotiff(path, [layer1, layer2])
 
         for i in range(2):
             with yg.read_raster(path, i + 1) as layer:
+                data = datas[i]
+                actual = layer.read_array(0, 0, 4, 2)
+                assert (data == actual).all()
+
+
+def test_open_multiband_raster_by_name() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path = Path(tempdir) / "test.tif"
+        data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+        data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+        datas = [data1, data2]
+        names = ["L1", "L2"]
+
+        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+        with (
+            yg.from_array(data1, (0, 0), projection) as layer1,
+            yg.from_array(data2, (0, 0), projection) as layer2,
+        ):
+            yg.to_geotiff(path, [layer1, layer2], names)
+
+        for i in range(2):
+            with yg.read_raster(path, names[i]) as layer:
                 data = datas[i]
                 actual = layer.read_array(0, 0, 4, 2)
                 assert (data == actual).all()
