@@ -1,4 +1,4 @@
-FROM ghcr.io/osgeo/gdal:ubuntu-small-3.12.4
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.13.3
 
 RUN apt-get update -qqy && \
 	apt-get install -qy \
@@ -15,7 +15,7 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN pip install gdal[numpy]==3.12.4
+RUN pip install gdal[numpy]==3.13.3
 RUN pip install mlx
 RUN pip install -e .[dev,matplotlib]
 
