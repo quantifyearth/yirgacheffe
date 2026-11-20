@@ -174,7 +174,7 @@ class RasterLayer(YirgacheffeLayer):
     def layer_from_file(
         cls,
         filename: Path | str,
-        band: int = 1,
+        band: int | str = 1,
         ignore_nodata: bool = False,
     ) -> RasterLayer:
         try:
@@ -197,13 +197,26 @@ class RasterLayer(YirgacheffeLayer):
                     str(filename),
                 ) from exc
             raise
-        try:
-            band_name = dataset.GetRasterBand(band).GetDescription()
-        except RuntimeError as exc:
-            raise InvalidRasterBand(band) from exc
 
-        if not band_name:
-            band_name = str(filename)
+        if isinstance(band, int):
+            try:
+                band_name = dataset.GetRasterBand(band).GetDescription()
+            except RuntimeError as exc:
+                raise InvalidRasterBand(band) from exc
+            if not band_name:
+                band_name = str(filename)
+        elif isinstance(band, str):
+            bands = {
+                dataset.GetRasterBand(i).GetDescription(): i
+                for i in range(1, dataset.RasterCount + 1)
+            }
+            try:
+                band_name = band
+                band = bands[band_name]
+            except KeyError as exc:
+                raise InvalidRasterBand(band) from exc
+        else:
+            raise TypeError("band must be index (index) or name (str)")
 
         return cls(dataset, band_name, band, ignore_nodata)
 

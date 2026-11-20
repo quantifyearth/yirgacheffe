@@ -26,7 +26,7 @@ from ._backends.enumeration import dtype as DataType
 
 def read_raster(
     filename: Path | str,
-    band: int = 1,
+    band: int | str = 1,
     ignore_nodata: bool = False,
 ) -> YirgacheffeLayer:
     """Open a raster file (e.g., GeoTIFF).
@@ -50,7 +50,7 @@ def read_raster_like(
     filename: Path | str,
     like: YirgacheffeLayer,
     method: ResamplingMethod,
-    band: int = 1,
+    band: int | str = 1,
     ignore_nodata: bool = False,
 ) -> YirgacheffeLayer:
     """Open a raster file but reproject it to match another layer.
@@ -65,7 +65,8 @@ def read_raster_like(
         like: Another layer that has a projection and pixel scale set. This layer will
             use the same projection and pixel scale as that one.
         method: The resampling method that will be used during the reprojection.
-        band: For multi-band rasters, which band to use (defaults to first if not specified).
+        band: For multi-band rasters, which band to use (defaults to first if not specified). Can be either an
+            integer index (starting at 1), or a string name.
         ignore_nodata: If the GeoTIFF has a NODATA value, don't substitute that value for NaN.
 
     Returns:
@@ -91,7 +92,7 @@ def read_raster_like(
 
 def read_narrow_raster(
     filename: Path | str,
-    band: int = 1,
+    band: int | str = 1,
     ignore_nodata: bool = False,
 ) -> YirgacheffeLayer:
     """Open a 1 pixel wide raster file as a global raster.
