@@ -100,6 +100,83 @@ def test_raster_different_bands() -> None:
             assert layer1._cse_hash != layer2._cse_hash
 
 
+def test_raster_different_files_no_band_name() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path1 = Path(tempdir) / "test1.tif"
+        data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+        path2 = Path(tempdir) / "test2.tif"
+        data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+
+        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+
+        with (
+            yg.from_array(data1, (0.0, 0.0), projection) as layer1,
+            yg.from_array(data2, (0.0, 0.0), projection) as layer2,
+        ):
+            yg.to_geotiff(path1, [layer1])
+            yg.to_geotiff(path2, [layer2])
+
+        with (
+            yg.read_raster(path1) as layer1,
+            yg.read_raster(path2) as layer2,
+        ):
+            assert layer1._cse_hash is not None
+            assert layer2._cse_hash is not None
+            assert layer1._cse_hash != layer2._cse_hash
+
+
+def test_raster_different_files_different_band_name() -> None:
+    with tempfile.TemporaryDirectory() as tempdir:
+        path1 = Path(tempdir) / "test1.tif"
+        data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+        path2 = Path(tempdir) / "test2.tif"
+        data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+
+        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+
+        with (
+            yg.from_array(data1, (0.0, 0.0), projection) as layer1,
+            yg.from_array(data2, (0.0, 0.0), projection) as layer2,
+        ):
+            yg.to_geotiff(path1, [layer1], ["test1"])
+            yg.to_geotiff(path2, [layer2], ["test2"])
+
+        with (
+            yg.read_raster(path1) as layer1,
+            yg.read_raster(path2) as layer2,
+        ):
+            assert layer1._cse_hash is not None
+            assert layer2._cse_hash is not None
+            assert layer1._cse_hash != layer2._cse_hash
+
+
+def test_raster_different_files_same_band_name() -> None:
+    # Reproing a bug that was found by Emilio Luz-Ricca whereby different GeoTIFFs with the
+    # same band name would end up with the same internal CSE hash
+    with tempfile.TemporaryDirectory() as tempdir:
+        path1 = Path(tempdir) / "test1.tif"
+        data1 = np.array([[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]])
+        path2 = Path(tempdir) / "test2.tif"
+        data2 = np.array([[10.0, 20.0, 30.0, 40.0], [50.0, 60.0, 70.0, 80.0]])
+
+        projection = yg.MapProjection("epsg:4326", 0.02, -0.02)
+
+        with (
+            yg.from_array(data1, (0.0, 0.0), projection) as layer1,
+            yg.from_array(data2, (0.0, 0.0), projection) as layer2,
+        ):
+            yg.to_geotiff(path1, [layer1], ["test"])
+            yg.to_geotiff(path2, [layer2], ["test"])
+
+        with (
+            yg.read_raster(path1) as layer1,
+            yg.read_raster(path2) as layer2,
+        ):
+            assert layer1._cse_hash is not None
+            assert layer2._cse_hash is not None
+            assert layer1._cse_hash != layer2._cse_hash
+
+
 def test_simple_vector_expression() -> None:
     with tempfile.TemporaryDirectory() as tempdir:
         path = Path(tempdir) / "test.gpkg"

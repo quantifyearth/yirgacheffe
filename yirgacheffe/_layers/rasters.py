@@ -239,7 +239,10 @@ class RasterLayer(YirgacheffeLayer):
         assert self._virtual_window == Window(0, 0, dataset.RasterXSize, dataset.RasterYSize)
 
         self._dataset = dataset
-        self._dataset_path = Path(dataset.GetDescription())
+        description = dataset.GetDescription()
+        if description == "mem":
+            description = f"mem:{id(self)}"
+        self._dataset_path = Path(description)
         self._band = band
         self._raster_xsize = dataset.RasterXSize
         self._raster_ysize = dataset.RasterYSize
@@ -289,7 +292,7 @@ class RasterLayer(YirgacheffeLayer):
     @property
     def _cse_hash(self) -> int | None:
         return hash((
-            self.name,
+            self._dataset_path,
             self._underlying_area,
             self.projection,
             self.datatype,
