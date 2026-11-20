@@ -14,11 +14,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: publishing
-    container: ghcr.io/osgeo/gdal:ubuntu-small-3.12.4
+    container: ghcr.io/osgeo/gdal:ubuntu-small-3.13.3
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v6
@@ -31,7 +31,7 @@ jobs:
       - name: Install system
         run: |
           apt-get update -qqy
-          apt-get install -y git python3-pip
+          apt-get install -y git python3-pip g++ make
 
       - name: Install dependencies
         run: |

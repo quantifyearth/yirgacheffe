@@ -104,4 +104,15 @@ If you use Yirgacheffe in your research, please cite our paper:
 
 Yirgacheffe was created by [Michael Dales](https://digitalflapjack.com/) whilst working on multiple geospatial projects as a way to hide the boilerplate associated with working with large raster and polygon geospatial datasets.
 
-The code for Yirgcheffe is [available on Github](https://github.com/quantifyearth/yirgacheffe/).
+Thanks to the following people for help, feedback, and inspiration:
+
+* Alison Eyres
+* Anil Madhavapeddy
+* Dan Wilson
+* Daniele Baisero
+* Emilio Luz-Ricca
+* Francesca Ridley
+* Patrick Ferris
+* Simon Tarr
+* Tom Ball
+

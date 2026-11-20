@@ -1,3 +1,9 @@
+## v2.3.2 (20/11/2026)
+
+### Fixed
+
+* Fixed bug whereby combining different files using the same band names would cause incorrect result - hat tip to Emilio Luz-Ricca for an excellent bug report that helped track this down.
+
 ## v2.3.1 (05/11/2026)
 
 ### Added

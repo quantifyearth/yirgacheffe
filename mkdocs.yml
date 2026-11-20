@@ -1,6 +1,9 @@
 site_name: "Yirgacheffe"
 site_url: "https://yirgacheffe.org"
 
+repo_url: https://github.com/quantifyearth/yirgacheffe
+repo_name: quantifyearth/yirgacheffe
+
 theme:
   name: "material"
   logo: "assets/yirgacheffe-min.svg"
@@ -53,3 +56,4 @@ nav:
   - Code of conduct: CODE_OF_CONDUCT.md
   - Contributing: contributing.md
   - Changelog: changelog.md
+  - Source code: https://github.com/quantifyearth/yirgacheffe
