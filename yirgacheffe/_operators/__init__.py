@@ -397,6 +397,7 @@ class LayerMathMixin:
         callback: Callable[[float], None] | None = None,
         nodata: float | int | None = None,
         sparse: bool = False,
+        label: str | None = None,
     ) -> float | None:
         """Saves a calculation to a raster file, optionally also returning the sum of pixels.
 
@@ -410,6 +411,7 @@ class LayerMathMixin:
                 with a value between 0.0 and 1.0.
             nodata: Nominate a value to be stored as nodata in the result.
             sparse: If True then save a sparse GeoTIFF as per GDAL's extension to the GeoTIFF standard.
+            label: If provided set as the descriptive name for the band in the GeoTIFF.
 
         Returns:
             Either returns None, or the sum of the pixels in the resulting raster if `and_sum` was specified.
@@ -421,6 +423,7 @@ class LayerMathMixin:
             callback=callback,
             nodata=nodata,
             sparse=sparse,
+            label=label,
         )
 
     def sum(self):
@@ -1619,6 +1622,7 @@ class LayerOperation(LayerMathMixin):
         callback: Callable[[float], None] | None = None,
         nodata: float | int | None = None,
         sparse: bool = False,
+        label: str | None = None,
     ) -> float | None:
         # Handle now deprecated version of this argument
         if parallelism is None:
@@ -1681,6 +1685,8 @@ class LayerOperation(LayerMathMixin):
                     else:
                         raise TypeError("Parallelism argument should be int or bool")
                     result = self._parallel_save(layer, worker_count, and_sum=and_sum, callback=callback)
+                    if label:
+                        layer._dataset.GetRasterBand(1).SetDescription(label)
 
                 if not is_vsi_based:
                     os.rename(src=tempory_file.name, dst=filename)

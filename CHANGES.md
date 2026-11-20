@@ -7,6 +7,7 @@
 ### Added
 
 * Allow band name to be used as alternative to index for `band` argument to `read_raster`.
+* Allow band name to be provided on `to_geotiff` on label using `label` parameter.
 
 ## v2.3.1 (05/11/2026)
 

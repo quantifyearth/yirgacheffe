@@ -23,6 +23,28 @@ def test_save_and_read_simple_geotiff() -> None:
             assert layer._virtual_window == Window(0, 0, 4, 2)
             assert layer.nodata is None
             assert layer.datatype == yg.DataType.Int64
+            assert layer.name == str(filename)
+
+            result = layer.read_array(0, 0, 4, 2)
+            assert (result == data).all()
+
+def test_save_and_read_simple_geotiff_with_name() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filename = Path(tmpdir) / "test.tif"
+        projection = yg.MapProjection("esri:54009", 100.0, -100.0)
+
+        data = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+        with yg.from_array(data, (0, 0), projection) as layer:
+            assert layer.datatype == yg.DataType.Int64
+            layer.to_geotiff(filename, label="test")
+
+        with yg.read_raster(filename) as layer:
+            assert layer.area == yg.Area(0, 0, 400.0, -200.0, projection)
+            assert layer.dimensions == (4, 2)
+            assert layer._virtual_window == Window(0, 0, 4, 2)
+            assert layer.nodata is None
+            assert layer.datatype == yg.DataType.Int64
+            assert layer.name == "test"
 
             result = layer.read_array(0, 0, 4, 2)
             assert (result == data).all()
