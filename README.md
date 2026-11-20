@@ -97,8 +97,3 @@ If you use Yirgacheffe in your research, please cite our paper:
 
 </details>
 
-## Thanks
-
-Thanks to discussion and feedback from my colleagues, particularly Alison Eyres, Patrick Ferris, Amelia Holcomb, and Anil Madhavapeddy.
-
-Inspired by the work of Daniele Baisero in his AoH library.
